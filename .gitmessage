@@ -1,0 +1,18 @@
+# ─────────────────────────────────────────────────────────────
+#  K.U.P. 提交信息模板（commit.template 已指向本文件）
+#  格式： <type>(<scope>): <中文摘要 ≤50 字>
+#  空一行后写正文：为什么改 / 影响面 / 兼容性
+#  末尾保留所需的 trailer（Verified / Not-verified / Agent）
+# ─────────────────────────────────────────────────────────────
+#  type ： feat 新功能 | fix 修 BUG | balance 数值平衡 | perf 性能
+#          refactor 重构 | docs 文档 | test 测试 | chore 杂务
+#  scope： config utils store i18n audio data meta entities game
+#          director render ui main css html docs tests repo
+#
+#  <type>(<scope>): 
+#
+#  为什么：
+#  影响面：
+#
+#  Verified: node tests/save.test.cjs
+#  Agent: 

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>神椿市净化中。Kamitsubaki City Under Purification</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23120b26'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='%235ac8ff'%3E%E2%99%AA%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+  <div id="scanlines"></div>
+  <div id="danger"></div>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div id="xp-bar-top"><div id="xp-bar-fill"></div></div>
+    <div id="hud-topleft">
+      <div id="hp-wrap">
+        <div id="hp-bar"></div>
+        <div id="shield-bar"></div>
+        <span id="hp-text">100/100</span>
+      </div>
+      <div id="lv-badge">Lv <span id="lv-num">1</span></div>
+      <div id="survive-row">
+        <div id="dash-pips" title="冲刺 (Shift)"></div>
+        <div id="shield-num"></div>
+        <div id="buff-row"></div>
+      </div>
+      <div id="weapon-row"></div>
+      <div id="hud-companion" class="hud-companion"></div>
+    </div>
+    <div id="hud-topcenter">
+      <div id="timer">00:00</div>
+      <div id="ult-wrap" title="浄化の歌">
+        <div id="ult-label">♪ 浄化の歌</div>
+        <div id="ult-bar-wrap"><div id="ult-fill"></div></div>
+      </div>
+      <div id="boss-wrap" class="hidden">
+        <div id="boss-name">大テセラクター〈消音〉</div>
+        <div id="boss-bar-wrap"><div id="boss-bar"></div></div>
+      </div>
+      <div id="danger-warn" class="hidden" data-i18n="hud.danger">⚠ 危険 —— 回避せよ（Shift 冲刺）</div>
+      <button id="btn-dash" class="hud-btn" data-i18n-title="hud.dashBtn" title="冲刺 (Shift)">»</button>
+      <button id="btn-aim" class="hud-btn" data-i18n-title="hud.aimBtn" title="瞄准模式 (V)">◎</button>
+    </div>
+    <div id="hud-topright">
+      <div id="kills">净化 0</div>
+      <button id="btn-mute" class="hud-btn" data-i18n-title="hud.mute" title="静音 (M)">♪</button>
+      <button id="btn-pause" class="hud-btn" data-i18n-title="hud.pause" title="暂停 (Esc)">‖</button>
+    </div>
+  </div>
+
+  <div id="banner" class="hidden"></div>
+
+  <!-- ============ 主菜单 ============ -->
+  <div id="screen-menu" class="screen">
+    <div class="menu-inner">
+      <div class="logo-jp">神椿市<span class="accent">浄化中。</span></div>
+      <div class="logo-en">KAMITSUBAKI CITY UNDER PURIFICATION — K.U.P.</div>
+      <div id="lang-switch">
+        <button class="lang-btn" data-lang="zh">中文</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="ja">日本語</button>
+      </div>
+      <p class="lore" data-i18n-html="menu.lore">七年前的大黑寂后奇迹复兴的研究学园都市「神椿市」——<br>
+      如今再度被人类恶意与欲望所生的怪异 <b>破维魔</b> 侵蚀。<br>
+      <b>歌即是魔法。</b>唯有五人的 <b>魔女之子</b>——森先化歩、谷置狸眼、朝主派流、夜河世界、輪廻此処——的歌声能够净化怪异。<br>
+      观测者啊，用歌声击碎怪异、收集「音片（フラグメント）」，夺回这条街的和声。</p>
+      <button id="btn-start" class="btn-primary" data-i18n="menu.start">开始净化 ▶</button>
+      <div id="fukkou-menu" class="fukkou-menu">
+        <div id="fukkou-bar-outer"><div id="fukkou-fill"></div></div>
+        <div id="fukkou-label"></div>
+      </div>
+      <div class="best-line" id="best-line"></div>
+      <div class="best-line" id="fukkou-menu-line"></div>
+      <div class="best-line" id="fukkou-menu-tickets"></div>
+      <div class="menu-slot-line" id="menu-slot-line"></div>
+      <div class="menu-btns">
+        <button id="btn-memory" class="btn-ghost btn-memory" data-i18n="menu.memory">🥚 记忆图鉴</button>
+        <button id="btn-shop" class="btn-ghost btn-memory" data-i18n="menu.shop">🍜 瓦利欺（商店）</button>
+        <button id="btn-slots" class="btn-ghost btn-memory" data-i18n="menu.slots">💾 存档 / 观测记录</button>
+      </div>
+      <div class="ctrl-line" data-i18n="menu.ctrl">WASD / 方向键 移动（或按住鼠标） · 自动攻击 · Space 浄化の歌 · Esc 暂停 · M 静音</div>
+      <div class="code-line">SingSong(); // 浄化プロトコル…起動</div>
+      <div class="credit" data-i18n="menu.credit">非官方同人致敬作品 · Inspired by KAMITSUBAKI STUDIO「神椿市建設中。／神椿市協奏中。」</div>
+    </div>
+  </div>
+
+  <!-- ============ 番街选择 ============ -->
+  <div id="screen-area" class="screen hidden">
+    <div class="menu-inner wide">
+      <div class="select-title"><span data-i18n="area.title">选择出撃番街</span> <span class="sub" data-i18n="area.subtitle">神椿市 · 零番街〜陸番街</span></div>
+      <div id="area-cards"></div>
+      <div id="area-detail" data-i18n="area.default"></div>
+      <div class="select-actions">
+        <button id="btn-area-back" class="btn-ghost" data-i18n="select.back">◂ 返回</button>
+        <button id="btn-memory-area" class="btn-ghost" data-i18n="menu.memory">🥚 记忆图鉴</button>
+        <button id="btn-area-next" class="btn-primary" data-i18n="area.next" disabled>选择魔女 ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 记忆图鉴 ============ -->
+  <div id="screen-memory" class="screen hidden">
+    <div class="menu-inner wide">
+      <div class="select-title"><span data-i18n="mem.title">記憶の卵 · 记忆图鉴</span> <span class="sub" data-i18n="mem.subtitle">拾取記憶の卵解锁观测者的记忆</span></div>
+      <div id="memory-count" class="mem-count"></div>
+      <div id="memory-list"></div>
+      <div class="select-actions">
+        <button id="btn-memory-back" class="btn-ghost" data-i18n="select.back">◂ 返回</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 瓦利欺（VALIS 的饭店）：局外强化与培养 ============ -->
+  <div id="screen-shop" class="screen hidden">
+    <div class="menu-inner wide">
+      <div class="select-title"><span data-i18n="shop.title">歌と中華料理の店・瓦利欺</span> <span class="sub" data-i18n="shop.subtitle">VALIS 的饭店 —— 局外强化与培养</span></div>
+      <div class="shop-head">
+        <div class="shop-tabs">
+          <button class="shop-tab active" data-tab="upgrade" data-i18n="shop.tab.upgrade">局外强化</button>
+          <button class="shop-tab" data-tab="recruit" data-i18n="shop.tab.recruit">培养・招募</button>
+        </div>
+        <div id="shop-tickets" class="shop-tickets"></div>
+      </div>
+      <div id="shop-list"></div>
+      <div class="select-actions">
+        <button id="btn-shop-back" class="btn-ghost" data-i18n="select.back">◂ 返回</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 存档 / 观测记录（v0.7 多槽位 + 导入导出） ============ -->
+  <div id="screen-slots" class="screen hidden">
+    <div class="menu-inner wide">
+      <div class="select-title"><span data-i18n="slots.title">观测记录 · 存档</span> <span class="sub" data-i18n="slots.subtitle">进度按槽位隔离；设置跨槽共享</span></div>
+      <div id="slot-warn" class="slot-warn hidden"></div>
+      <div id="slot-list"></div>
+      <div class="slot-io">
+        <button id="btn-slot-new" class="btn-ghost" data-i18n="slots.new">＋ 新建槽位</button>
+        <button id="btn-slot-export" class="btn-ghost" data-i18n="slots.export">⬇ 导出此档</button>
+        <button id="btn-slot-import" class="btn-ghost" data-i18n="slots.import">⬆ 导入存档</button>
+      </div>
+      <div class="slot-io-hint" id="slot-io-hint" data-i18n="slots.ioHint"></div>
+      <textarea id="slot-io-text" class="slot-io-text hidden" spellcheck="false"></textarea>
+      <div id="slot-io-msg" class="slot-io-msg"></div>
+      <div class="select-actions">
+        <button id="btn-slots-back" class="btn-ghost" data-i18n="select.back">◂ 返回</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 角色选择（主角＝魔女之子／魔女候補） ============ -->
+  <div id="screen-select" class="screen hidden">
+    <div class="menu-inner wide">
+      <div class="select-title"><span data-i18n="select.title">选择出击的魔女之子</span> <span class="sub">Witchling / Witch Candidate — 角色 ≠ 声优</span></div>
+      <div id="char-cards"></div>
+      <div id="char-detail" data-i18n="select.default"></div>
+
+      <!-- 皮肤（特殊歌唱用形態）—— 内容随角色类型变化 -->
+      <div class="pick-block">
+        <div class="pick-title" id="form-title" data-i18n="form.title">皮肤 · 特殊歌唱用形態</div>
+        <div id="form-strip" class="mini-strip"></div>
+        <div id="form-detail" class="pick-detail"></div>
+      </div>
+
+      <!-- 同伴（同行支援，需招募） -->
+      <div class="pick-block">
+        <div class="pick-title" data-i18n="companion.title">同行同伴（需招募）</div>
+        <div id="companion-strip" class="mini-strip"></div>
+        <div id="companion-detail" class="pick-detail"></div>
+      </div>
+
+      <!-- 同伴皮肤（復興課 JK 制服：夏服／冬服） -->
+      <div class="pick-block hidden" id="companion-form-wrap">
+        <div class="pick-title" id="companion-form-title" data-i18n="form.title.companion">皮肤 · 復興課 JK制服</div>
+        <div id="companion-form-strip" class="mini-strip"></div>
+        <div id="companion-form-detail" class="pick-detail"></div>
+      </div>
+
+      <div class="select-actions">
+        <button id="btn-back-menu" class="btn-ghost" data-i18n="select.back">◂ 返回</button>
+        <button id="btn-depart" class="btn-primary" data-i18n="select.depart" disabled>浄化開始 ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 升级三选一 ============ -->
+  <div id="screen-levelup" class="screen hidden">
+    <div class="menu-inner">
+      <div class="lu-title">LEVEL UP <span id="lu-lv">Lv 2</span></div>
+      <div class="lu-sub" data-i18n="lu.sub">歌声愈发响亮——选择成长的方向</div>
+      <div id="lu-cards"></div>
+      <div class="lu-actions">
+        <button id="btn-reroll" class="btn-ghost lu-btn">⟳ <span data-i18n="lu.reroll">重掷</span> <b id="reroll-n">3</b></button>
+        <button id="btn-banmode" class="btn-ghost lu-btn">✕ <span data-i18n="lu.ban">封禁</span></button>
+      </div>
+      <div class="lu-hint" id="lu-hint" data-i18n="lu.hint">按 1 / 2 / 3 快速选择</div>
+    </div>
+  </div>
+
+  <!-- ============ 暂停 ============ -->
+  <div id="screen-pause" class="screen hidden">
+    <div class="menu-inner">
+      <div class="lu-title" data-i18n="pause.title">一時停止</div>
+      <div class="pause-box">
+        <div class="pause-row"><span data-i18n="pause.vol">音量</span><input id="vol-slider" type="range" min="0" max="100" value="70"></div>
+        <div class="pause-row">
+          <button id="btn-bgm-toggle" class="btn-ghost">BGM: ON</button>
+          <button id="btn-sfx-toggle" class="btn-ghost">音效: ON</button>
+        </div>
+      </div>
+      <div class="select-actions">
+        <button id="btn-resume" class="btn-primary" data-i18n="pause.resume">继续 ▶</button>
+        <button id="btn-restart" class="btn-ghost" data-i18n="pause.restart">重新开始</button>
+        <button id="btn-quit" class="btn-ghost" data-i18n="pause.quit">主菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 失败 ============ -->
+  <div id="screen-over" class="screen hidden">
+    <div class="menu-inner">
+      <div class="end-title lose" data-i18n="end.lose.title">信号消失……</div>
+      <div class="end-sub" data-i18n="end.lose.sub">魔女的歌声被噪音吞没了</div>
+      <div id="over-stats" class="end-stats"></div>
+      <div class="select-actions">
+        <button id="btn-retry" class="btn-primary" data-i18n="end.retry">再挑战 ▶</button>
+        <button id="btn-menu1" class="btn-ghost" data-i18n="pause.quit">主菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 胜利 ============ -->
+  <div id="screen-victory" class="screen hidden">
+    <div class="menu-inner">
+      <div class="end-title win" data-i18n="end.win.title">浄化完了。</div>
+      <div class="end-sub" id="win-sub" data-i18n="end.win.sub">神椿市の歌声、再び。——街区恢复了和声</div>
+      <div id="win-stats" class="end-stats"></div>
+      <div class="select-actions">
+        <button id="btn-retry2" class="btn-primary" data-i18n="end.again">再次净化 ▶</button>
+        <button id="btn-menu2" class="btn-ghost" data-i18n="pause.quit">主菜单</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/config.js?v=0.10"></script>
+<script src="js/utils.js?v=0.10"></script>
+<!-- 存档层：必须在 i18n/audio/meta 之前（它们都经由 KUP.STORE 读写持久化数据） -->
+<script src="js/store.js?v=0.10"></script>
+<script src="js/i18n.js?v=0.10"></script>
+<script src="js/audio.js?v=0.10"></script>
+<script src="js/data.js?v=0.10"></script>
+<script src="js/meta.js?v=0.10"></script>
+<script src="js/entities.js?v=0.10"></script>
+<script src="js/game.js?v=0.10"></script>
+<script src="js/director.js?v=0.10"></script>
+<script src="js/render.js?v=0.10"></script>
+<script src="js/ui.js?v=0.10"></script>
+<script src="js/main.js?v=0.10"></script>
+</body>
+</html>

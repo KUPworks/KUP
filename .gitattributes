@@ -1,0 +1,52 @@
+# ============================================================
+#  K.U.P. .gitattributes
+#  目的：让任何 Agent / 任何机器检出的文件字节完全一致。
+#  现状：全仓库为 UTF-8（无 BOM）+ LF，本文件把这一点钉死。
+# ============================================================
+
+# 默认：文本按 LF 存储、按 LF 检出（不做 CRLF 转换）
+* text=auto eol=lf
+
+# --- 明确文本类型（必须保持 LF、可按行 diff）---
+*.md    text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.cjs   text eol=lf
+*.mjs   text eol=lf
+*.json  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.ps1   text eol=lf
+.gitignore   text eol=lf
+.gitattributes text eol=lf
+.gitmessage  text eol=lf
+
+# --- 二进制：禁止行尾转换与文本 diff ---
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.bmp   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.mp3   binary
+*.ogg   binary
+*.wav   binary
+*.mp4   binary
+*.webm  binary
+*.zip   binary
+*.pdf   binary
+
+# --- 备份/补丁残渣：不产生 diff 噪音 ---
+*.bak  -diff
+*.orig -diff
+*.rej  -diff
+
+# --- 语言统计：不要把研究笔记算成"源代码"，以免误判项目构成 ---
+.chatecnu-work/**/*.md linguist-documentation
+*.md linguist-documentation

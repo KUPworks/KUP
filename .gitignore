@@ -1,0 +1,44 @@
+# ============================================================
+#  K.U.P. .gitignore
+#  原则：只忽略「可再生成的二进制产物 / 本机私有文件」。
+#        Agent 的研究笔记（.md）与校验脚本（.js）必须入库，
+#        因为它们是后续 Agent 理解项目的证据来源。
+# ============================================================
+
+# --- Agent 浏览器工作区：截图是大体积二进制，可随时重拍，不入库 ---
+.chatecnu-work/browser/
+.chatecnu-work/**/screenshot-*.png
+screenshot-*.png
+
+# --- Agent 临时/中间产物（研究笔记与脚本不在此列，务必保留）---
+.chatecnu-work/tmp/
+.chatecnu-work/out/
+.chatecnu-work/cache/
+.chatecnu-work/**/*.tmp
+
+# --- 依赖与构建产物（本项目当前零依赖、零构建，预留防误提交）---
+node_modules/
+dist/
+build/
+*.tgz
+
+# --- 运行 / 调试产物 ---
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+*.stackdump
+
+# --- 编辑器 / 操作系统 ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- 本机私有配置与密钥（永不入库）---
+.env
+.env.*
+*.pem
+*.key
