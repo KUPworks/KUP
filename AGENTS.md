@@ -126,7 +126,29 @@ git revert <sha>                             # 已提交且已共享时，用 re
 | `commit.template` | `.gitmessage` | 统一提交信息骨架 |
 | `commit.gpgsign` | `false` | 无人值守提交不因签名失败 |
 
-## 8. 常用命令速查
+## 8. 推送与发布（**仅人类明确要求时**）
+
+**推送不是任务收尾动作**：不要每次改完就 `git push`。只有人类明确说「发布 / 推送 / 同步到远端」时才推；日常改动提交到本地 `main` 即可，人类没要求就让提交留在本地。
+
+- **远端**：`origin` = `https://github.com/KUPworks/KUP.git`（**私有**），主分支 `main`，已设置上游跟踪。
+- **代理必需**：本仓库已配置 `http.proxy=http://127.0.0.1:7890`（本机 Clash）。直连 `github.com` 实测会 `ETIMEDOUT`（16s+ 或直接失败），走代理约 1s。**代理没开时推送会立刻连接失败——先确认代理在跑，不要盲目重试。**
+- **凭据不落盘（有意为之）**：本机**不保存任何 GitHub 凭据**，直接 `git push` 会因拿不到用户名而失败（系统凭据助手 GCM 在本沙箱下不可用，见下条）。需要推送时：
+  1. **向人类索取授权**。推荐走设备码：本机现成脚本 `.chatecnu-work/tmp/github-device-login.js`（**位于 .gitignore 忽略的目录、不在仓库里**，缺失时按同样思路重写即可）：
+     ```powershell
+     node .chatecnu-work/tmp/github-device-login.js --proxy=http://127.0.0.1:7890
+     # 输出 USER_CODE + URL 让人类在浏览器授权；支持 --resume 续用未过期的设备码（授权后无需再输一次）
+     ```
+  2. 用**一次性**参数携带凭据推送，任何情况下都**不要**写进配置、文件或提交：
+     ```powershell
+     $b64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("x-access-token:$tok"))
+     git -c credential.helper= -c "http.extraheader=Authorization: Basic $b64" push origin main
+     ```
+  3. 推送后**必须核对**：`git ls-remote origin` 的 `refs/heads/main` 要与本地 `git rev-parse HEAD` **哈希一致**，再向人类汇报；不一致视为未完成。
+- **沙箱限制（本机实测，省得再踩一遍）**：DSH 沙箱屏蔽了 Windows 加密/凭据子系统（SChannel）。系统 `curl.exe`、PowerShell 的 .NET HTTPS（`Invoke-RestMethod`）、GCM（`git-credential-manager`）都会报 `SEC_E_NO_CREDENTIALS` 或「基础连接已经关闭」；能正常出网的只有 **Git 自带的 OpenSSL 传输**与 **Node（自带 OpenSSL）**。不要用系统 curl 或 .NET 访问 GitHub API。
+- **凭据卫生**：token 一律视为一次性。**不要**把 token 留在提交、文档、`.git/config`、脚本常量或长期记忆里；人类给的 PAT 同样只在命令行用一次。token 泄漏后提示人类去 https://github.com/settings/applications 撤销授权。
+- **禁止** `git push --force`（历史由多 Agent 共享）。非快进被拒时：先 `git fetch` 看清远端新提交，**向人类确认**后再决定合并方式，不要自行强推。
+
+## 9. 常用命令速查
 
 ```powershell
 git status --porcelain=v1              # 机器可读的状态
@@ -138,9 +160,11 @@ git show --stat <sha>                  # 单个提交的改动面
 git blame -L 100,140 js/game.js        # 某段代码的责任提交（为什么变成这样）
 git restore --source=HEAD -- <path>    # 丢弃某文件的未提交改动（仅自己的）
 git log --oneline -- js/store.js       # 某文件的改动历史
+git ls-remote origin                   # 核对远端 refs（推送后必查，与本地 HEAD 比哈希）
+git fetch --prune                      # 取回远端新提交（非快进被拒时先做）
 ```
 
-## 9. 安全与边界
+## 10. 安全与边界
 
 - **绝不入库**：浏览器截图（`.chatecnu-work/browser/`）、导出的存档 base64、`.env`/密钥/令牌。
 - **不要**把 `localStorage` 里的真实进度数据提交进来；需要样例请写成精简 fixture。
