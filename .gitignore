@@ -10,6 +10,9 @@
 .chatecnu-work/**/screenshot-*.png
 screenshot-*.png
 
+# --- PDF 转出的页面图片：可由 pdftoppm 随时重建，不入库 ---
+.chatecnu-work/research/pdfpages/
+
 # --- Agent 临时/中间产物（研究笔记与脚本不在此列，务必保留）---
 .chatecnu-work/tmp/
 .chatecnu-work/out/

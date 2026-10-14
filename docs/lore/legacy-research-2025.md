@@ -1,6 +1,6 @@
 # KAMITSUBAKI STUDIO「神椿市」世界观调研（用于同人游戏《神椿市净化中。》）
 
-> ⚠️ **本文为 2025 年的首轮调研，已被 [kamitsubaki_worldview.md](kamitsubaki_worldview.md)（v2）取代。**
+> ⚠️ **本文为 2025 年的首轮调研，已被 [worldview.md](worldview.md)（v2）取代。**
 > 当时采集环境多数站点不可达，导致：① 基线偏重 NARRATIVE（TRPG）与二手来源；
 > ② 「REGENERATE 由 G-MODE 发行」**已被证伪**（官方为开发 **orange inc.**、发行 THINKR/KAMITSUBAKI）；
 > ③ 动画各话副标题、REGENERATE 系统与 CAST 全表、協奏中「复兴率解锁剧情」等**本文缺载**。
