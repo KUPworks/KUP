@@ -113,8 +113,8 @@ KUP.I18N = {
       'end.stat.eggs': '記憶の卵',
       'end.win.sub.pyrrhic': '歌声在暴走之后才抵达——这是惨胜的浄化',
       'menu.memory': '🥚 记忆图鉴',
-      /* v0.6 局外经济：市民票 / 瓦利欺 / 培养招募 */
-      'menu.shop': '🍜 瓦利欺（商店）',
+      /* v0.6 局外经济：市民票 / 瓦利斯 / 培养招募 */
+      'menu.shop': '🍜 瓦利斯（商店）',
       'shop.title': '歌と中華料理の店・瓦利欺',
       'shop.subtitle': 'VALIS 的饭店 —— 用市民票做局外强化与培养（REGENERATE 官方店名）',
       'shop.tab.upgrade': '局外强化',
@@ -128,7 +128,7 @@ KUP.I18N = {
       'shop.gateFukkou': '復興率 {n}% 后可招募',
       'shop.none': '暂无可招募对象。',
       'end.tickets': '市民票 +{n}（共 {t}）',
-      'end.recruitable': '🎫 可在瓦利欺招募：{name}',
+      'end.recruitable': '🎫 可在瓦利斯招募：{name}',
       'banner.bossPhase': '第二形态 —— 强化',
       'end.stat.boss': 'Boss',
       /* v0.7 存档层：多槽位 / 导入导出 / 存档健康 */
@@ -262,8 +262,8 @@ KUP.I18N = {
       'end.win.sub.pyrrhic': "The song arrived only after the rampage — a pyrrhic purification",
       'menu.memory': '🥚 Memory Archive',
       /* v0.6 meta economy */
-      'menu.shop': '🍜 Waliqi (Shop)',
-      'shop.title': 'Song & Chinese Restaurant · Waliqi',
+      'menu.shop': '🍜 VALIS (Shop)',
+      'shop.title': 'Song & Chinese Restaurant · VALIS',
       'shop.subtitle': 'VALIS\'s restaurant — spend Citizen Tickets on meta upgrades and training',
       'shop.tab.upgrade': 'Upgrades',
       'shop.tab.recruit': 'Train & Recruit',
@@ -276,7 +276,7 @@ KUP.I18N = {
       'shop.gateFukkou': 'Recruitable at {n}% restoration',
       'shop.none': 'Nobody available to recruit yet.',
       'end.tickets': 'Citizen Tickets +{n} (total {t})',
-      'end.recruitable': '🎫 Recruitable at Waliqi: {name}',
+      'end.recruitable': '🎫 Recruitable at VALIS: {name}',
       'banner.bossPhase': 'SECOND FORM — empowered',
       'end.stat.boss': 'Boss',
       /* v0.7 save layer: slots / import-export / save health */
@@ -409,7 +409,7 @@ KUP.I18N = {
       'end.stat.eggs': '記憶の卵',
       'end.win.sub.pyrrhic': '暴走の後にようやく届いた歌——これは痛み分えの浄化',
       'menu.memory': '🥚 記憶図鑑',
-      /* v0.6 局外経済：市民票 / 瓦利欺 / 育成・招募 */
+      /* v0.6 局外経済：市民票 / 瓦利欺（公式当て字） / 育成・招募 */
       'menu.shop': '🍜 瓦利欺（商店）',
       'shop.title': '歌と中華料理の店・瓦利欺',
       'shop.subtitle': 'VALIS の店——市民票で局外強化と育成を行う（REGENERATE 公式の店名）',

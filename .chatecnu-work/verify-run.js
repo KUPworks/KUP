@@ -1,6 +1,6 @@
 /* 一次性验证脚本：run 配置（seed/area/mod）的可复现性、修正乘数接线、
  * v0.4–v0.6 新系统（復興率 / 番街解锁 / 覚醒 / 浄化の歌 / 記憶の卵 / 每区波次与事件 /
- *   角色≠声优 / 招募 / 皮肤 / **市民票与瓦利欺商店** / **新武器组** / **每关卡 Boss**）。
+ *   角色≠声优 / 招募 / 皮肤 / **市民票与瓦利斯商店** / **新武器组** / **每关卡 Boss**）。
  * v0.7：加载顺序对齐 index.html（含 js/store.js）；持久化断言改为槽位存档 kup.save.<id>。
  * 用法：node .chatecnu-work/verify-run.js  （从仓库根运行） */
 const fs = require('fs'), vm = require('vm'), path = require('path');
@@ -284,7 +284,7 @@ check('市民票：败北也计入（4+3+0+10+6=23）', inc2 === 23, 'income=' +
 KUP.META.addTickets(inc1);
 check('市民票入账', KUP.META.tickets() === 35);
 
-// 20. 瓦利欺商店：价格递增、购买扣款、等级上限、乘积/加和汇总
+// 20. 瓦利斯商店：价格递增、购买扣款、等级上限、乘积/加和汇总
 KUP.META.reset();
 KUP.META.addTickets(500);
 const bun = KUP.SHOP_ITEM('bun');
@@ -547,7 +547,7 @@ check('JK 冬服数值并入（生命 +6%、冷却 -3%）', pJK.maxhp === Math.r
 // 25d. v0.9：局内道具（护盾/MISS/回血）＋持续回血 ＋ orbit 体积/转速可调 ＋ 瞄准
 check('局内道具齐备（护盾/MISS/回血/余韵）', ['ward', 'veil', 'salve', 'echo'].every(id => KUP.ITEMS[id] && KUP.ITEMS[id].name.zh));
 check('新被动：余韵之癒（回血）与無傷の譜（MISS 回血）', KUP.PASSIVES.regen && KUP.PASSIVES.grace);
-check('瓦利欺新增回血/回避强化', KUP.SHOP_ITEM('soup') && KUP.SHOP_ITEM('instinct'));
+check('瓦利斯新增回血/回避强化', KUP.SHOP_ITEM('soup') && KUP.SHOP_ITEM('instinct'));
 /* 回血：随时间持续回血（被动＋商店） */
 const gRg = new KUP.Game(canvas);
 gRg.start({ char: 'kaf', area: 'area0', seed: 101 });

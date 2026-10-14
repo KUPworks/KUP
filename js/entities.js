@@ -15,7 +15,7 @@ window.KUP = window.KUP || {};
       this.recruit = opt.recruit || null;
       this.recruitForm = opt.recruitForm || KUP.FORM('none');
       this.perk = opt.perk || null;   // 同伴 perk（gather 型在此结算；regen 型由 game.update 计时）
-      this.shopMods = opt.shopMods || null; // 瓦利欺局外强化（小幅永久强化）
+      this.shopMods = opt.shopMods || null; // 瓦利斯局外强化（小幅永久强化）
       this.color = this.form.id !== 'none' ? this.form.color : def.color;
       this.color2 = this.form.id !== 'none' ? this.form.color2 : def.color2;
       this.x = C.ARENA / 2; this.y = C.ARENA / 2;
@@ -45,7 +45,7 @@ window.KUP = window.KUP || {};
       /* 形態/皮膚修正（缺省 1）：魔女之子的特殊歌唱用形態 × 同伴皮膚 */
       const fmod = (obj, k) => (obj && obj.mods && obj.mods[k] !== undefined ? obj.mods[k] : 1);
       const fm = k => fmod(this.form, k) * fmod(this.recruitForm, k);
-      /* 瓦利欺局外强化（市民票购买的小幅永久强化） */
+      /* 瓦利斯局外强化（市民票购买的小幅永久强化） */
       const sm = k => (this.shopMods && this.shopMods[k] !== undefined ? this.shopMods[k] : 1);
       /* 同伴 perk（魔女候補）：gather 型在此并入拾取/经验；regen 型由 game.update 计时 */
       const pk = this.perk || {};
@@ -63,11 +63,11 @@ window.KUP = window.KUP || {};
       this.shieldMax = Math.round(22 * lv('shield'));
       if (this.shieldMax > prevShieldMax) this.shield = Math.min(this.shieldMax, (this.shield || 0) + (this.shieldMax - prevShieldMax));
       if (this.shieldMax < (this.shield || 0)) this.shield = this.shieldMax;
-      /* 回避率 = 被动「残响回避」7%/级 ＋ 瓦利欺「常連の勘」3%/级，上限 60% */
+      /* 回避率 = 被动「残响回避」7%/级 ＋ 瓦利斯「常連の勘」3%/级，上限 60% */
       this.dodgeChance = Math.min(0.6, 0.07 * lv('dodge') + (this.shopMods && this.shopMods.dodgeAdd ? this.shopMods.dodgeAdd : 0));
       this.drainPct = 0.006 * lv('drain');
       this.retaliateDmg = 15 * lv('retaliate');
-      /* 随时间持续回血 = 被动「余韵之癒」1.0/级 ＋ 瓦利欺「薬膳スープ」0.5/级（HP/秒） */
+      /* 随时间持续回血 = 被动「余韵之癒」1.0/级 ＋ 瓦利斯「薬膳スープ」0.5/级（HP/秒） */
       this.regenRate = 1.0 * lv('regen') + (this.shopMods && this.shopMods.regenAdd ? this.shopMods.regenAdd : 0);
       /* 回避成功（MISS）时回血：最大生命的 1.5%/级（被动「無傷の譜」） */
       this.missHeal = 0.015 * lv('grace');
@@ -84,9 +84,9 @@ window.KUP = window.KUP || {};
       if (kind === 'miss') { b.miss = Math.max(b.miss, 0) + seconds; b.missAmt = Math.max(b.missAmt, amount); }
       else if (kind === 'regen') { b.regen = Math.max(b.regen, 0) + seconds; b.regenAmt = Math.max(b.regenAmt, amount); }
     }
-    /* 有效回避率（被动＋瓦利欺＋限时道具） */
+    /* 有效回避率（被动＋瓦利斯＋限时道具） */
     effDodge() { return Math.min(0.85, this.dodgeChance + (this.buffs.miss > 0 ? this.buffs.missAmt : 0)); }
-    /* 有效每秒回血（被动＋瓦利欺＋限时道具） */
+    /* 有效每秒回血（被动＋瓦利斯＋限时道具） */
     effRegen() { return this.regenRate + (this.buffs.regen > 0 ? this.buffs.regenAmt : 0); }
     /* BUFF 计时（由 game.update 调用） */
     tickBuffs(dt) {

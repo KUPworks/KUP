@@ -576,7 +576,7 @@ KUP.PASSIVES = {
  * 与「被动强化」分开：
  *   - 不占被动槽（被动上限 5 种），可**重复选择**、可叠加生效时间
  *   - 效果为**立即生效**或**限时 BUFF**，用于应急（血线危险时升级池会出现更多生存道具）
- * 与瓦利欺的**局外强化**（護盾被动/常連の勘/薬膳スープ）互为补充：局外是永久小幅，局内是即时道具。 */
+ * 与瓦利斯的**局外强化**（護盾被动/常連の勘/薬膳スープ）互为补充：局外是永久小幅，局内是即时道具。 */
 KUP.ITEMS = {
   ward: {
     id: 'ward', icon: '盾', color: '#8fd0ff', kind: 'shield', amount: 60,
@@ -898,8 +898,9 @@ KUP.BOSS = id => KUP.BOSSES[id] || KUP.BOSSES.boss0;
 for (const k in KUP.BOSSES) KUP.ENEMIES[k] = KUP.BOSSES[k];
 KUP.ENEMIES.boss = KUP.BOSSES.boss0;
 
-/* ========== 瓦利欺（VALIS 的饭店）· 局外强化（2026-10 追加） ==========
+/* ========== 瓦利斯（VALIS 的饭店）· 局外强化（2026-10 追加） ==========
  * ★ 出处：REGENERATE 官方页——**弐番街「歌と中華料理の店・瓦利欺」**，VALIS 六人店员（白銀千埜店長 等）【官方】。
+ * ※ 表记约定：**日语原文（ja 文案、官方引述）保留官方当て字「瓦利欺」**；**中文（zh 文案）写作「瓦利斯」**。
  * 本作把它作为**局外强化商店**：用**市民票**（REGENERATE 术语）购买**小幅**永久强化。
  * cost(lv) = base + lv * inc（lv 从 0 起算） */
 KUP.SHOP = [
@@ -935,7 +936,7 @@ KUP.SHOP = [
   },
   {
     id: 'sign', icon: '看', maxLv: 3, base: 16, inc: 10, mods: { startUlt: 15 },
-    name: { zh: '瓦利欺招牌', en: 'Waliqi Signboard', ja: '瓦利欺の看板' },
+    name: { zh: '瓦利斯招牌', en: 'VALIS Signboard', ja: '瓦利欺の看板' },
     desc: { zh: '老主顾的证明。开局<b>浄化の歌充能 +15%</b>／级。', en: 'Proof of a regular. <b>Song charge +15%</b> at run start per level.', ja: '常連の証。開局の<b>浄化の歌チャージ +15%</b>／レベル。' },
   },
   {

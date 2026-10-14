@@ -99,7 +99,7 @@ window.KUP = window.KUP || {};
       /* 升级屏：重掷 / 封禁模式（v0.10） */
       if ($('btn-reroll')) $('btn-reroll').addEventListener('click', () => { if (KUP.game) KUP.game.rerollChoices(); });
       if ($('btn-banmode')) $('btn-banmode').addEventListener('click', () => { this.toggleBanMode(); });
-      /* 瓦利欺（商店）：入口 + 分页 */
+      /* 瓦利斯（商店）：入口 + 分页 */
       $('btn-shop').addEventListener('click', () => { KUP.Audio.sfx('select'); this.shopTab = 'upgrade'; this.showShop(); });
       $('btn-shop-back').addEventListener('click', () => { this.showScreen('screen-menu'); this.showBest(); });
       document.querySelectorAll('.shop-tab').forEach(t => {
@@ -320,8 +320,8 @@ window.KUP = window.KUP || {};
       }
     },
 
-    /* ---------- 瓦利欺（VALIS 的饭店）· 局外强化与培养 ----------
-     * ★ 出处：REGENERATE 官方页「弐番街 歌と中華料理の店・瓦利欺」（VALIS 六人店员）。
+    /* ---------- 瓦利斯（VALIS 的饭店）· 局外强化与培养 ----------
+     * ★ 出处：REGENERATE 官方页「弐番街 歌と中華料理の店・瓦利斯」（VALIS 六人店员）。
      * 用**市民票**购买小幅永久强化；也可在此**培养（招募）魔女候補**与**招募復興課同伴**。 */
     showShop() {
       this.showScreen('screen-shop');
@@ -1058,7 +1058,7 @@ window.KUP = window.KUP || {};
         if (meta.newlyRecruitable && meta.newlyRecruitable.length) {
           line += '<div class="fukkou-unlock">' + KUP.I18N.t('end.recruitable', { name: meta.newlyRecruitable.join(' / ') }) + '</div>';
         }
-        /* 市民票收入（瓦利欺的局外货币） */
+        /* 市民票收入（瓦利斯的局外货币） */
         if (meta.tickets) {
           line += '<div class="ticket-gain">🎫 ' + KUP.I18N.t('end.tickets', { n: meta.tickets, t: meta.ticketsTotal }) + '</div>';
         }

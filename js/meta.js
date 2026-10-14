@@ -245,7 +245,7 @@ window.KUP = window.KUP || {};
       return d.tickets;
     },
 
-    /* ---------- 瓦利欺：局外强化（小幅永久强化） ---------- */
+    /* ---------- 瓦利斯：局外强化（小幅永久强化） ---------- */
     shopLv(id) { return this.ensure().shop[id] || 0; },
     shopMax(id) { const it = KUP.SHOP_ITEM(id); return it ? this.shopLv(id) >= it.maxLv : true; },
     shopNextCost(id) {
@@ -313,7 +313,7 @@ window.KUP = window.KUP || {};
       return true;
     },
     /* 检查并解锁满足条件的招募角色/同伴，返回 { chars:[], companions:[] }
-     * ⚠️ v0.6 起：**仅条件达成不再自动加入**——需在「瓦利欺」支付市民票招募（见 payRecruit）。 */
+     * ⚠️ v0.6 起：**仅条件达成不再自动加入**——需在「瓦利斯」支付市民票招募（见 payRecruit）。 */
     checkRecruits() {
       const d = this.ensure(), added = { chars: [], companions: [] };
       const meets = (u) => (u && ((u.area && this.clearedCount(u.area) > 0) || (u.fukkou && this.total() >= u.fukkou)));

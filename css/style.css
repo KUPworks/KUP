@@ -333,7 +333,7 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 /* HUD 同伴标识 */
 .hud-companion { margin-top: 6px; font-size: 11px; color: #5ad0ff; letter-spacing: .1em; text-shadow: 0 0 8px rgba(90,208,255,.6); }
 
-/* ============ 瓦利欺（商店）：局外强化与培养 ============ */
+/* ============ 瓦利斯（商店）：局外强化与培养 ============ */
 .menu-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px; }
 .shop-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 18px 0 14px; }
 .shop-tabs { display: flex; gap: 8px; }

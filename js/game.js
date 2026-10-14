@@ -397,7 +397,7 @@ window.KUP = window.KUP || {};
         }
       }
       if (this.debug.lv > 1) { this.level = this.debug.lv; }
-      /* 瓦利欺局外强化：开局等级 / 浄化の歌充能 */
+      /* 瓦利斯局外强化：开局等级 / 浄化の歌充能 */
       if (shopMods.startLevel) this.level = Math.max(this.level, 1 + shopMods.startLevel);
       if (shopMods.startUlt) this.ult.charge = Math.min(100, this.ult.charge + shopMods.startUlt);
       if (this.debug.god) this.player.invuln = true;
@@ -461,7 +461,7 @@ window.KUP = window.KUP || {};
       this.collide();
       for (const r of this.rings) r.update(dt, this);
       for (const b of this.beams) b.update(dt);
-      /* 随时间持续回血（被动「余韵之癒」＋瓦利欺「薬膳スープ」＋道具「余韵の符」） */
+      /* 随时间持续回血（被动「余韵之癒」＋瓦利斯「薬膳スープ」＋道具「余韵の符」） */
       const pl = this.player;
       if (pl) {
         pl.tickBuffs(dt);
@@ -654,7 +654,7 @@ window.KUP = window.KUP || {};
       const p = this.player;
       if (p.invuln || p.hitT > 0) return;
       p.noHitT = 0;
-      /* 残響回避（被动 dodge ＋瓦利欺「常連の勘」＋道具「無傷の符」）：完全回避 */
+      /* 残響回避（被动 dodge ＋瓦利斯「常連の勘」＋道具「無傷の符」）：完全回避 */
       const dc = p.effDodge();
       if (dc > 0 && U.rng() < dc) {
         this.addText(p.x, p.y - 24, KUP.I18N.t('hud.dodge'), '#c9ffe8', 14);
