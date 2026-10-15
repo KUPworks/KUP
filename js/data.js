@@ -134,10 +134,14 @@ KUP.CHARS = [
 KUP.CHAR = id => KUP.CHARS.find(c => c.id === id) || KUP.CHARS[0];
 KUP.charUnlockText = c => (c.unlock && c.unlock.desc) || null;
 
-/* ---------- 武器（歌＝魔法） ---------- */
+/* ---------- 武器（歌＝魔法） ----------
+ * ★ v0.11「武装解锁」：owner ＝ 该武器的持有角色 id（KUP.CHARS）。
+ *   - **未招募该角色前，这把武器不会进入升级卡池**（rollChoices 过滤，见 game.js）；
+ *   - 招募后该角色的专属武器才会作为「新武器」出现在三选一里；
+ *   - owner 为 null/undefined 的武器（通用组：滞留・投掷系等）任何角色都能抽到。 */
 KUP.WEAPONS = {
   note: {
-    id: 'note', icon: '♪', color: '#4ee6ff', behavior: 'note', maxLv: 5,
+    id: 'note', icon: '♪', color: '#4ee6ff', behavior: 'note', maxLv: 5, owner: 'kaf',
     name: { zh: '分形音符', en: 'Fractal Note', ja: 'フラクタル・ノート' },
     desc: {
       zh: '声之代表曲「わたしの声」化作追尾敌人的音符。森先化歩的初期武装。',
@@ -170,7 +174,7 @@ KUP.WEAPONS = {
     },
   },
   orbit: {
-    id: 'orbit', icon: '◎', color: '#ff6bb5', behavior: 'orbit', maxLv: 5,
+    id: 'orbit', icon: '◎', color: '#ff6bb5', behavior: 'orbit', maxLv: 5, owner: 'rim',
     name: { zh: '暴食音球', en: 'Carnivorous Bit', ja: 'カーニヴォラス・ビット' },
     desc: {
       zh: '声之代表曲「食虫植物」般环绕捕食的音球。谷置狸眼的初期武装。<br><span class="cv-note">体积随「范围」、转速随「冷却」成长</span>',
@@ -202,7 +206,7 @@ KUP.WEAPONS = {
     },
   },
   bass: {
-    id: 'bass', icon: '低', color: '#ffb25a', behavior: 'bass', maxLv: 5,
+    id: 'bass', icon: '低', color: '#ffb25a', behavior: 'bass', maxLv: 5, owner: 'harusaruhi',
     name: { zh: '泰拉坠击', en: 'Terra Drop', ja: 'テラ・ドロップ' },
     desc: {
       zh: '令大地震颤的低音冲击波，取自声之代表曲「テラ」。朝主派流的初期武装。',
@@ -234,7 +238,7 @@ KUP.WEAPONS = {
     },
   },
   lance: {
-    id: 'lance', icon: '槍', color: '#b06bff', behavior: 'lance', maxLv: 5,
+    id: 'lance', icon: '槍', color: '#b06bff', behavior: 'lance', maxLv: 5, owner: 'koko',
     name: { zh: '终末枪音', en: 'Last Bullet', ja: 'ラスト・バレット' },
     desc: {
       zh: '贯穿敌列的音之枪击，取自声之代表曲「the last bullet」。輪廻此処的初期武装。',
@@ -266,7 +270,7 @@ KUP.WEAPONS = {
     },
   },
   laser: {
-    id: 'laser', icon: '光', color: '#7aa0ff', behavior: 'laser', maxLv: 5,
+    id: 'laser', icon: '光', color: '#7aa0ff', behavior: 'laser', maxLv: 5, owner: 'isekaijoucho',
     name: { zh: '消失光束', en: 'Vanish Beam', ja: 'ヴァニッシュ・ビーム' },
     desc: {
       zh: '描摹声之代表曲「キミ消失セカイ」的贯穿光束。夜河世界的初期武装。',
@@ -301,7 +305,7 @@ KUP.WEAPONS = {
    * ⚠ 这两把官方乐曲名（存流／明透的代表曲未在 lore 中列出）——
    *   为本作同人命名，取自「ヰ世界救済教団」的祈祷意象（教団用语见 lore §4.7）。 */
   prayer: {
-    id: 'prayer', icon: '鐘', color: '#8fa8ff', behavior: 'bass', maxLv: 5,
+    id: 'prayer', icon: '鐘', color: '#8fa8ff', behavior: 'bass', maxLv: 5, owner: 'aru',
     name: { zh: '救済之钟', en: 'Bell of Salvation', ja: '救済の鐘' },
     desc: {
       zh: '教团的祈祷化作钟声冲击环。天祢亜留的初期武装（本作同人命名）。',
@@ -333,7 +337,7 @@ KUP.WEAPONS = {
     },
   },
   follow: {
-    id: 'follow', icon: '矢', color: '#7de0c8', behavior: 'lance', maxLv: 5,
+    id: 'follow', icon: '矢', color: '#7de0c8', behavior: 'lance', maxLv: 5, owner: 'asu',
     name: { zh: '追唱之矢', en: 'Arrows of the Refrain', ja: '追唱の矢' },
     desc: {
       zh: '追随的歌声化作贯穿之矢。地邑阿栖的初期武装（本作同人命名）。',

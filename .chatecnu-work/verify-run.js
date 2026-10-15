@@ -690,6 +690,34 @@ let mgSeen = false;
 for (let i = 0; i < 200; i++) if (gMc.rollChoices().some(c => c.kind === 'item' && c.id === 'magnet')) mgSeen = true;
 check('磁石の符进入升级池道具桶', mgSeen);
 
+// 25g. v0.11：武装解锁——招募前角色武器不入卡池
+check('武器表标注持有角色（5 魔女之子 + 2 候補）', KUP.WEAPONS.note.owner === 'kaf' && KUP.WEAPONS.orbit.owner === 'rim' &&
+  KUP.WEAPONS.bass.owner === 'harusaruhi' && KUP.WEAPONS.laser.owner === 'isekaijoucho' && KUP.WEAPONS.lance.owner === 'koko' &&
+  KUP.WEAPONS.prayer.owner === 'aru' && KUP.WEAPONS.follow.owner === 'asu');
+check('通用武器组无持有者（任何角色可抽）', ['toss', 'bomb', 'mine'].every(id => !KUP.WEAPONS[id].owner));
+/* 新档：亜留/阿栖未招募 → 救済之鐘／追唱の矢不入池；化歩（魔女之子）武器恒在池 */
+KUP.META.reset();
+const gWl = new KUP.Game(canvas);
+gWl.start({ char: 'kaf', area: 'area0', seed: 131 });
+check('未招募：救済之鐘/追唱の矢判定为未解锁', !KUP.META.isWeaponUnlocked('prayer') && !KUP.META.isWeaponUnlocked('follow'));
+check('已招募角色（化歩）的武器判定解锁', KUP.META.isWeaponUnlocked('note'));
+let leakLocked = false;
+for (let i = 0; i < 400; i++) {
+  const roll = gWl.rollChoices();
+  if (roll.some(c => c.kind === 'weapon-new' && (c.id === 'prayer' || c.id === 'follow'))) leakLocked = true;
+}
+check('招募前：救済之鐘/追唱の矢 400 次抽取均不入池', !leakLocked);
+let genSeen = false;
+for (let i = 0; i < 200; i++) if (gWl.rollChoices().some(c => c.kind === 'weapon-new' && c.id === 'toss')) genSeen = true;
+check('通用武器组仍在池（toss 可抽出）', genSeen);
+/* 招募亜留后：救済之鐘立即入池 */
+KUP.META.data.chars.push('aru');
+check('招募亜留后救済之鐘解锁', KUP.META.isWeaponUnlocked('prayer'));
+let aruSeen = false;
+for (let i = 0; i < 400; i++) if (gWl.rollChoices().some(c => c.kind === 'weapon-new' && c.id === 'prayer')) aruSeen = true;
+check('招募后：救済之鐘进入卡池', aruSeen);
+KUP.META.reset();
+
 // 25e. v0.10：升级池体验（分桶保底 / 重掷 / 封禁）
 const gLu = new KUP.Game(canvas);
 gLu.start({ char: 'kaf', area: 'area0', seed: 111 });

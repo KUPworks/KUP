@@ -290,6 +290,16 @@ window.KUP = window.KUP || {};
     },
     isCompanionUnlocked(id) { return this.ensure().companions.indexOf(id) >= 0; },
     isRecruitUnlocked(id) { return this.isCharUnlocked(id) || this.isCompanionUnlocked(id); },
+    /* ---------- 武装解锁（v0.11）----------
+     * 「招募对应角色前，角色武器不会出现在卡池」：
+     *   - 无 owner 的武器（滞留・投掷系等通用组）恒解锁；
+     *   - 有 owner 的武器＝其持有角色已可选用（魔女之子恒解锁，魔女候補需招募）。
+     * META 不存在（极端环境）时按解锁处理，保证池子不至于空。 */
+    isWeaponUnlocked(id) {
+      const w = KUP.WEAPONS[id];
+      if (!w || !w.owner) return true;
+      return this.isCharUnlocked(w.owner);
+    },
     gateMet(unlock) {
       if (!unlock) return true;
       if (unlock.area && this.clearedCount(unlock.area) > 0) return true;

@@ -768,10 +768,12 @@ window.KUP = window.KUP || {};
       const ownedW = p.weapons.map(w => w.def.id);
       const banned = this.banned || new Set();
       const buckets = { awaken: [], weapon: [], passive: [], item: [] };
-      /* 武器桶：新武器 / 武器升级（セットリスト上限 5 ◇：武器槽 5） */
+      /* 武器桶：新武器 / 武器升级（セットリスト上限 5 ◇：武器槽 5）
+       * v0.11「武装解锁」：未招募对应角色前，其专属武器不入池（META.isWeaponUnlocked）。 */
       if (ownedW.length < 5) {
         for (const id in KUP.WEAPONS) {
-          if (ownedW.indexOf(id) < 0 && !banned.has(id)) buckets.weapon.push({ kind: 'weapon-new', id });
+          if (ownedW.indexOf(id) < 0 && !banned.has(id) &&
+              (!KUP.META || KUP.META.isWeaponUnlocked(id))) buckets.weapon.push({ kind: 'weapon-new', id });
         }
       }
       for (const w of p.weapons) {
