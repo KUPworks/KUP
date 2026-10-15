@@ -323,7 +323,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 游戏里用到的官方设定、术语统一表、以及「哪些是官方 / 哪些是本作自创」，**全部整理在 [docs/lore/](docs/lore/README.md)**：
 
 - **[docs/lore/README.md](docs/lore/README.md)** —— **一页总览**：三条铁律、世界观骨架 10 条、用了/没用什么、查询速查表
-- [docs/lore/worldview.md](docs/lore/worldview.md) —— 主世界观详录（术语统一表、世界线总图、13 话副标题表、REGENERATE CAST、交叉核对 39 行、玩法映射、二创合规）
+- [docs/lore/worldview.md](docs/lore/worldview.md) —— 主世界观详录（术语统一表、世界线总图、13 话副标题表、REGENERATE CAST、交叉核对 40 行、玩法映射、二创合规）
 - [docs/lore/related-settings.md](docs/lore/related-settings.md) —— 周边考据（官方年表、角色读音全表、术语词典、官方小说章目）
 - [docs/lore/legacy-research-2025.md](docs/lore/legacy-research-2025.md) —— ⚠️ 2025 年早期调研，**多处结论已被推翻，勿当依据**
 

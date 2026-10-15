@@ -52,7 +52,7 @@
 
 | 文件 | 内容 | 什么时候看 |
 |---|---|---|
-| **[worldview.md](worldview.md)** | **主世界观详录**：§0.5 术语统一表／§1 世界线总图／TV 动画 13 话副标题表与 CAST／REGENERATE 制作人笔记／協奏中／NARRATIVE／§11 交叉核对（39 行）／§12 玩法映射／§13 二创合规 | **改任何世界观相关内容前必读** |
+| **[worldview.md](worldview.md)** | **主世界观详录**：§0.5 术语统一表／§1 世界线总图／TV 动画 13 话副标题表与 CAST／REGENERATE 制作人笔记／協奏中／NARRATIVE／§11 交叉核对（40 行）／§12 玩法映射／§13 二创合规 | **改任何世界观相关内容前必读** |
 | **[related-settings.md](related-settings.md)** | **周边考据**：官方名册与 HISTORY 年表、番街分区、角色读音全表、索菲娅/台風眼、深脊界・VALIS・CIEL・少女革命計画・御伽噺、深化＝SINKA、現象・不可解・特殊歌唱用形態等术语考据；**§17 官方小说章目与内容** | 查角色读音、查某术语到底有没有官方出处 |
 | **[legacy-research-2025.md](legacy-research-2025.md)** | 2025 年**首轮**调研 | ⚠️ **多处结论已被推翻**（如 G-MODE 说），仅作历史留存，**不要当依据** |
 
@@ -83,7 +83,7 @@
 | 番街的官方定位／势力 | `worldview.md` §2 ／ `related-settings.md` §2 |
 | 这个设定能不能用 | `worldview.md` §12 映射建议 ＋ 本文件 §2 |
 | 二创的合规边界 | `worldview.md` §13（官方 GUIDELINES 2023.4.1） |
-| 已知的矛盾／易错点 | `worldview.md` **§11 交叉核对**（39 行，最易踩坑） |
+| 已知的矛盾／易错点 | `worldview.md` **§11 交叉核对**（40 行，最易踩坑） |
 | 还没查清的 | `related-settings.md` §14 待解与查证中 |
 
 ---
