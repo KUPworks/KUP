@@ -614,6 +614,16 @@ KUP.ITEMS = {
       ja: '余韻が低く鳴り続ける——<b>20 秒間、毎秒 4 回復</b>。',
     },
   },
+  /* v0.11 经验磁铁：激活期间拾取半径近乎全场（Gem.update 消费 buffs.magnet） */
+  magnet: {
+    id: 'magnet', icon: '磁', color: '#5ad0ff', kind: 'magnet', amount: 1, seconds: 8,
+    name: { zh: '磁石の符', en: 'Ward of Magnetism', ja: '磁石の符' },
+    desc: {
+      zh: '歌声化作磁场——<b>8 秒内全场音片被吸向魔女</b>（回复 ♥ 与記憶の卵同样被吸引）。',
+      en: 'Your song becomes a magnetic field — <b>every note shard is pulled to you for 8s</b> (hearts and Eggs of Memory too).',
+      ja: '歌が磁場となる——<b>8 秒間、場の音片すべてが引き寄せられる</b>（回復♥と記憶の卵も）。',
+    },
+  },
 };
 KUP.ITEM = id => KUP.ITEMS[id] || null;
 

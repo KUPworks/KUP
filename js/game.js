@@ -911,6 +911,10 @@ window.KUP = window.KUP || {};
           } else if (it.kind === 'regen') {
             p.addBuff('regen', it.seconds, it.amount);
             this.addText(p.x, p.y - 26, '+' + it.amount + '/s', '#8affc9', 15);
+          } else if (it.kind === 'magnet') {
+            /* v0.11 经验磁铁：限时全场吸引（时长可叠加） */
+            p.addBuff('magnet', it.seconds, 1);
+            this.addText(p.x, p.y - 26, KUP.I18N.t('item.magnet.text', { s: it.seconds }), '#5ad0ff', 15);
           }
           KUP.Audio.sfx('heal');
         }

@@ -655,6 +655,41 @@ check('瞄准 mouse：朝指针（更自由的瞄准）', Math.abs(ad3.x - Math.
 check('瞄准模式默认 auto（全部自动瞄准）', (new KUP.Game(canvas)).run.aim === 'auto');
 check('瞄准模式切换循环', (() => { const g = new KUP.Game(canvas); g.start({ char: 'kaf', area: 'area0', seed: 107 }); return g.cycleAim() === 'mouse' && g.player.aimMode === 'mouse' && g.cycleAim() === 'move' && g.cycleAim() === 'auto'; })());
 
+// 25f. v0.11：经验磁铁（磁石の符）
+check('局内道具磁石の符（经验磁铁）齐备', KUP.ITEMS.magnet && KUP.ITEMS.magnet.kind === 'magnet' && KUP.ITEMS.magnet.seconds > 0 && KUP.ITEMS.magnet.name.zh === '磁石の符');
+/* 无磁铁：拾取半径外的音片不被拉动（只会缓慢漂移） */
+const gMg = new KUP.Game(canvas);
+gMg.start({ char: 'kaf', area: 'area0', seed: 121 });
+gMg.gems.length = 0;
+const gemFar = new KUP.Gem(gMg.player.x + 600, gMg.player.y, 5);
+gMg.gems.push(gemFar);
+for (let i = 0; i < 20; i++) gMg.update(0.02);
+const drift = Math.hypot(gemFar.x - gMg.player.x, gemFar.y - gMg.player.y);
+check('无磁铁：600px 外的音片不被拉动', drift > 400, 'd=' + drift.toFixed(0));
+/* 磁铁激活：全场音片被吸向魔女直至拾取 */
+gMg.gems.length = 0;
+const gemFar2 = new KUP.Gem(gMg.player.x + 600, gMg.player.y, 5);
+gMg.gems.push(gemFar2);
+gMg.player.addBuff('magnet', 8, 1);
+check('磁石の符：BUFF 计时激活', gMg.player.buffs.magnet > 0);
+for (let i = 0; i < 20; i++) gMg.update(0.02);
+const dAfter = Math.hypot(gemFar2.x - gMg.player.x, gemFar2.y - gMg.player.y);
+check('磁铁激活：600px 外的音片被吸近', dAfter < 300, '600→' + dAfter.toFixed(0));
+for (let i = 0; i < 40; i++) gMg.update(0.02);
+check('磁铁把远处音片吸到拾取圈内（自动收集）', gemFar2.dead);
+const tMg = gMg.player.buffs.magnet;
+check('磁铁计时随时间递减且归零', tMg < 8 && tMg >= 0, 't=' + tMg.toFixed(2));
+/* 选择通路：升级池选磁石の符 → BUFF 生效 */
+const gMc = new KUP.Game(canvas);
+gMc.start({ char: 'kaf', area: 'area0', seed: 122 });
+gMc.state = 'levelup'; gMc.pendingLevels = 1; gMc.choices = [{ kind: 'item', id: 'magnet' }];
+gMc.choose(0);
+check('升级池选择磁石の符 → 磁铁生效并回到战斗', gMc.player.buffs.magnet > 0 && gMc.state === 'playing');
+/* 入池：磁石の符作为道具桶的一员正常出现（200 次抽样） */
+let mgSeen = false;
+for (let i = 0; i < 200; i++) if (gMc.rollChoices().some(c => c.kind === 'item' && c.id === 'magnet')) mgSeen = true;
+check('磁石の符进入升级池道具桶', mgSeen);
+
 // 25e. v0.10：升级池体验（分桶保底 / 重掷 / 封禁）
 const gLu = new KUP.Game(canvas);
 gLu.start({ char: 'kaf', area: 'area0', seed: 111 });

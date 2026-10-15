@@ -27,8 +27,8 @@ window.KUP = window.KUP || {};
       this.shield = 0; this.shieldMax = 0; this.noHitT = 0;
       this.dodgeChance = 0; this.drainPct = 0; this.retaliateDmg = 0;
       this.regenRate = 0; this.missHeal = 0;   // 持续回血 / 回避成功回血
-      /* 局内道具的限时 BUFF（v0.8）：MISS 加成与回血加成 */
-      this.buffs = { miss: 0, missAmt: 0, regen: 0, regenAmt: 0 };
+      /* 局内道具的限时 BUFF（v0.8）：MISS/回血加成；v0.11 追加磁石の符（经验磁铁） */
+      this.buffs = { miss: 0, missAmt: 0, regen: 0, regenAmt: 0, magnet: 0 };
       this.dashMax = C.DASH.CHARGES; this.dashCharge = this.dashMax;
       this.dashT = 0; this.dashCd = 0; this.dashCdMax = C.DASH.CD;
       this.dashX = 0; this.dashY = 0; this.ghosts = [];
@@ -83,6 +83,7 @@ window.KUP = window.KUP || {};
       const b = this.buffs;
       if (kind === 'miss') { b.miss = Math.max(b.miss, 0) + seconds; b.missAmt = Math.max(b.missAmt, amount); }
       else if (kind === 'regen') { b.regen = Math.max(b.regen, 0) + seconds; b.regenAmt = Math.max(b.regenAmt, amount); }
+      else if (kind === 'magnet') { b.magnet = Math.max(b.magnet, 0) + seconds; } // 可重复选 → 时长叠加
     }
     /* 有效回避率（被动＋瓦利斯＋限时道具） */
     effDodge() { return Math.min(0.85, this.dodgeChance + (this.buffs.miss > 0 ? this.buffs.missAmt : 0)); }
@@ -93,6 +94,7 @@ window.KUP = window.KUP || {};
       const b = this.buffs;
       if (b.miss > 0) { b.miss -= dt; if (b.miss <= 0) { b.miss = 0; b.missAmt = 0; } }
       if (b.regen > 0) { b.regen -= dt; if (b.regen <= 0) { b.regen = 0; b.regenAmt = 0; } }
+      if (b.magnet > 0) { b.magnet -= dt; if (b.magnet <= 0) b.magnet = 0; }
     }
     /* 冲刺：向当前瞄准方向位移，带无敌帧（可躲开 Danger 的预警攻击） */
     dash() {
@@ -475,10 +477,15 @@ window.KUP = window.KUP || {};
       const p = game.player;
       const dx = p.x - this.x, dy = p.y - this.y;
       const d2 = dx * dx + dy * dy;
-      const pr = p.pickup;
+      /* v0.11 经验磁铁（磁石の符）：激活期间拾取半径近乎全场，
+       * 音片（含回复 ♥／記憶の卵）被强吸向魔女；远处吸力更大，保证能穿越半张图收回。 */
+      const magnet = p.buffs && p.buffs.magnet > 0;
+      const pr = magnet ? 4200 : p.pickup;
       if (d2 < pr * pr) {
         const d = Math.sqrt(d2) || 1;
-        const pull = 320 + (1 - d / pr) * 520;
+        const pull = magnet
+          ? 950 + 850 * (1 - Math.min(1, d / pr))
+          : 320 + (1 - d / pr) * 520;
         this.vx = dx / d * pull; this.vy = dy / d * pull;
       } else {
         this.vx *= Math.max(0, 1 - 4 * dt); this.vy *= Math.max(0, 1 - 4 * dt);

@@ -984,15 +984,16 @@ window.KUP = window.KUP || {};
         const show = !!g.dangerNear && g.state === 'playing';
         this.els['danger-warn'].classList.toggle('hidden', !show);
       }
-      /* 局内道具 BUFF（MISS／回血）剩余时间 */
+      /* 局内道具 BUFF（MISS／回血／磁石）剩余时间 */
       if (this.els['buff-row']) {
-        const b = p.buffs || { miss: 0, regen: 0 };
-        const bsig = Math.ceil(b.miss) + '/' + Math.ceil(b.regen);
+        const b = p.buffs || { miss: 0, regen: 0, magnet: 0 };
+        const bsig = Math.ceil(b.miss) + '/' + Math.ceil(b.regen) + '/' + Math.ceil(b.magnet || 0);
         if (bsig !== this.lastBuffSig) {
           this.lastBuffSig = bsig;
           let h = '';
           if (b.miss > 0) h += '<span class="buff b-miss">避 ' + Math.ceil(b.miss) + 's</span>';
           if (b.regen > 0) h += '<span class="buff b-regen">潤 ' + Math.ceil(b.regen) + 's</span>';
+          if (b.magnet > 0) h += '<span class="buff b-magnet">磁 ' + Math.ceil(b.magnet) + 's</span>';
           this.els['buff-row'].innerHTML = h;
         }
       }

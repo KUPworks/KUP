@@ -406,6 +406,7 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 }
 #buff-row .b-miss { color: #c9ffe8; box-shadow: 0 0 8px rgba(201,255,232,.5); }
 #buff-row .b-regen { color: #8affc9; box-shadow: 0 0 8px rgba(138,255,201,.5); }
+#buff-row .b-magnet { color: #5ad0ff; box-shadow: 0 0 8px rgba(90,208,255,.5); }
 /* 局内道具卡（护盾/MISS/回血）：虚线边框 + 专用标签色，与被动卡区分 */
 .lu-card .lu-tag.item { background: linear-gradient(120deg, #bff7ff, #7de0c8); color: #08202a; }
 .lu-card:has(.lu-tag.item) { border-style: dashed; }
