@@ -1488,5 +1488,85 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
     new KUP.Ring(0, 0, { maxR: 100, arc: 1.6, dir: 0, color: '#fff', dmg: 1 }).edges === true);
 }
 
+/* ========== v0.13.1 追加：武器模组注册表（模组 ↔ 具体武器）与「范围」生效面 ========== */
+
+// 25p. 注册表结构：模组 → 具体武器 的对应、参数键校验、反向查询
+{
+  const MODS = KUP.WEAPON_MODULES;
+  const modIds = Object.keys(MODS);
+  check('模组注册表存在且每个模组 id 自洽',
+    modIds.length >= 9 && modIds.every(id => MODS[id].id === id && MODS[id].name && MODS[id].name.zh));
+  /* 每把具体武器的 behavior 都必须能在注册表里找到实现（否则这把武器是死数据） */
+  const orphan = Object.keys(KUP.WEAPONS).filter(id => !KUP.MODULE_OF(id));
+  check('每把武器的 behavior 都能在注册表找到模组', orphan.length === 0, orphan.join(',') || '无孤儿');
+  /* 反向查询：模组 → 具体武器（人类点名的例子：bass 共用テラ・ドロップ与救済の鐘） */
+  const bassW = KUP.WEAPONS_OF('bass').map(w => w.id).sort().join(',');
+  const lanceW = KUP.WEAPONS_OF('lance').map(w => w.id).sort().join(',');
+  check('bass 模组被两把武器共用（テラ・ドロップ ＋ 救済の鐘）', bassW === 'bass,prayer', bassW);
+  check('lance 模组被两把武器共用（追唱の矢 ＋ 追唱の矢〈亜留〉）', lanceW === 'follow,lance', lanceW);
+  check('每个模组都至少有一把武器在用',
+    modIds.every(id => KUP.WEAPONS_OF(id).length >= 1),
+    modIds.map(id => id + ':' + KUP.WEAPONS_OF(id).length).join(' '));
+  check('武器 → 模组 → 武器 往返一致', Object.keys(KUP.WEAPONS).every(id => KUP.MODULE_OF(id) === KUP.MODULE(KUP.WEAPONS[id].behavior)));
+  /* 参数键校验：等级表（含覚醒后 stats）里出现的键必须在该模组的 params 白名单里 */
+  const bad = [];
+  for (const id of Object.keys(KUP.WEAPONS)) {
+    const w = KUP.WEAPONS[id], mod = KUP.MODULE_OF(id);
+    const checkRow = (row, tag) => {
+      if (!row) return;
+      for (const k in row) if (mod.params.indexOf(k) < 0) bad.push(`${id}.${tag}.${k}`);
+    };
+    for (const row of w.levels) checkRow(row, 'lv');
+    checkRow(w.evolved && w.evolved.stats, 'evolved');
+  }
+  check('等级表参数键都在模组白名单内（写错键名会当场失效）', bad.length === 0, bad.join(',') || '全部合法');
+  /* 每个模组都要声明「受范围放大」的键——否则「范围」对它是废属性 */
+  check('每个模组都声明了受「范围」放大的键',
+    modIds.every(id => Array.isArray(MODS[id].area) && MODS[id].area.length >= 1),
+    modIds.filter(id => !(MODS[id].area || []).length).join(',') || '全部已声明');
+}
+
+// 25p-2. 「范围」生效面：逐模组实测 areaMult 1 → 2 时几何量是否成比例放大
+{
+  const probe = (wid, area) => {
+    const g = new KUP.Game(canvas);
+    g.debug.w = wid;                                  // 开局带这把武器（Lv5）
+    g.start({ char: 'kaf', area: 'area0', seed: 777 });
+    g.director = () => {};                            // 不刷怪，只看这一次开火产出
+    g.player.areaMult = area;
+    const w = g.player.weapons.find(x => x.def.id === wid);
+    g.projs.length = 0; g.rings.length = 0; g.slashes.length = 0; g.beams.length = 0;
+    g.zones.length = 0; g.tosses.length = 0;
+    w.t = 0; w.update(1 / 60, g);
+    return { g, w };
+  };
+  const CASES = [
+    ['note', '追踪音符', r => r.g.projs[0] && r.g.projs[0].r],
+    ['orbit', '环绕音球（球体体积）', r => r.w.orbR],
+    ['orbit', '环绕音球（环绕半径）', r => r.w.orbitR],
+    ['bass', 'テラ・ドロップ（冲击环半径）', r => r.g.rings[0] && r.g.rings[0].maxR],
+    ['prayer', '救済の鐘（共用 bass 模组）', r => r.g.rings[0] && r.g.rings[0].maxR],
+    ['slash', '斩音太刀（刀长）', r => r.g.slashes[0] && r.g.slashes[0].len],
+    ['laser', '贯穿光束（长度）', r => r.g.beams[0] && r.g.beams[0].len],
+    ['lance', '追唱の矢（命中半径）', r => r.g.projs[0] && r.g.projs[0].r],
+    ['follow', '追唱の矢〈亜留〉（共用 lance 模组）', r => r.g.projs[0] && r.g.projs[0].r],
+    ['toss', '残留音块（音场半径）', r => r.g.tosses[0] && r.g.tosses[0].zone.r],
+    ['toss', '残留音块（投掷距离）', r => r.g.tosses[0] && Math.hypot(r.g.tosses[0].tx - r.g.player.x, r.g.tosses[0].ty - r.g.player.y)],
+    ['bomb', '随机空爆（爆炸半径）', r => r.g.zones[0] && r.g.zones[0].r],
+    ['mine', '音之地雷（作用半径）', r => r.g.zones[0] && r.g.zones[0].r],
+  ];
+  for (const [wid, label, get] of CASES) {
+    const a = probe(wid, 1), b = probe(wid, 2);
+    const v1 = get(a), v2 = get(b);
+    const ok = (v1 > 0) && (v2 > 0) && Math.abs(v2 - v1 * 2) < 0.01;
+    check('「范围」×2 → ' + label + ' ×2', ok, v1 + ' → ' + v2);
+  }
+  /* 判定之外：不随范围变化的量要明确保持（口径写进模组 area 声明） */
+  const lz1 = probe('laser', 1), lz2 = probe('laser', 2);
+  check('光束宽度不随「范围」变化（模组未声明 w）', lz1.g.beams[0].w === lz2.g.beams[0].w);
+  const nt1 = probe('note', 1), nt2 = probe('note', 2);
+  check('音符飞行距离不随「范围」变化（模组未声明 life）', nt1.g.projs[0].life === nt2.g.projs[0].life);
+}
+
 console.log(fail === 0 ? '\nALL PASS' : '\n' + fail + ' FAILED');
 process.exit(fail === 0 ? 0 : 1);
