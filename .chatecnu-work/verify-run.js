@@ -1421,5 +1421,72 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   KUP.U.rng = realRng;
 }
 
+/* ========== v0.13.1 追加（2026-10-16 玩家反馈四条） ========== */
+
+// 25n. 治安战：Boss 排期改为「首次 4 分钟、之后每 2 分钟」＋ 多体并存不再互相顶掉
+{
+  const EN = KUP.CONFIG.ENDLESS;
+  check('治安战 Boss 排期：首次 4 分钟、之后每 2 分钟（240 / 120）',
+    EN.BOSS_FIRST === 240 && EN.BOSS_EVERY === 120, 'first=' + EN.BOSS_FIRST + ' every=' + EN.BOSS_EVERY);
+  const gB2 = new KUP.Game(canvas);
+  gB2.start({ char: 'kaf', area: 'order', seed: 601 });
+  gB2.time = 240; gB2.orderBossT = 0.01; gB2.director(0.02);
+  const b1 = gB2.boss;
+  gB2.time = 360; gB2.orderBossT = 0.01; gB2.director(0.02);
+  const b2 = gB2.boss;
+  check('治安战可同时存在多体 Boss（前一体未击破又到点）',
+    !!b1 && !!b2 && b1 !== b2 && gB2.enemies.filter(e => e.boss && !e.dead).length === 2);
+  /* 逐体处理：两体的行为计时器都应在走（旧版只跑最新的一体 ⇒ 旧的一体从此不动） */
+  b1.minionT = 5; b2.minionT = 5;
+  gB2.updateBossBehavior(0.02);
+  check('多体 Boss 各自行动（两体计时器都在走）',
+    b1.minionT < 5 && b2.minionT < 5, 'minionT ' + b1.minionT.toFixed(2) + ' / ' + b2.minionT.toFixed(2));
+  /* 击破旧的一体不得清掉还活着的那一体的指针（旧版无条件 this.boss = null） */
+  gB2.killEnemy(b1);
+  check('击破旧 Boss 不影响还活着的那一体', gB2.boss === b2 && !gB2.boss.dead);
+  b2.minionT = 5;
+  gB2.updateBossBehavior(0.02);
+  check('击破旧 Boss 后，剩余 Boss 仍在行动', b2.minionT < 5);
+}
+
+// 25o. 显示缩放：地雷只缩画面、不缩判定；太刀不再画扇形范围框
+{
+  check('地雷模组带显示缩放 vis=0.5（线性一半 ⇒ 面积 1/4）', KUP.WEAPONS.mine.vis === 0.5);
+  const gM = new KUP.Game(canvas);
+  gM.debug.w = 'mine';                                  // ?w=mine：开局带 5 级音之地雷
+  gM.start({ char: 'kaf', area: 'area0', seed: 601 });
+  gM.director = () => {};
+  for (let i = 0; i < 240 && !gM.zones.some(z => z.kind === 'mine'); i++) gM.update(1 / 60);
+  const zm = gM.zones.find(z => z.kind === 'mine');
+  check('实战生成的地雷：判定半径不变（>60）且带显示缩放',
+    !!zm && zm.vis === 0.5 && zm.r > 60, zm ? 'r=' + Math.round(zm.r) + ' vis=' + zm.vis : '未生成');
+  /* 记录型 ctx：太刀旧版会 fill 一次扇面（范围框的「面」）＋ 画两条半径边界线 */
+  let fills = 0, arcs = 0, moves = 0;
+  const grad = { addColorStop() {} }, noop = () => {};
+  const ctxS = {
+    save: noop, restore: noop, rotate: noop, closePath: noop, stroke: noop, fillRect: noop,
+    beginPath: noop, lineTo: noop, quadraticCurveTo: noop, ellipse: noop,
+    createRadialGradient: () => grad, createLinearGradient: () => grad,
+    fill() { fills++; }, arc() { arcs++; }, moveTo() { moves++; },
+    translate: noop, measureText: () => ({ width: 10 }), fillText: noop,
+    set fillStyle(v) {}, set strokeStyle(v) {}, set lineWidth(v) {}, set globalAlpha(v) {},
+    set shadowColor(v) {}, set shadowBlur(v) {}, set font(v) {}, set textAlign(v) {},
+  };
+  const sl = new KUP.Slash(100, 100, 0.4, { len: 140, arc: 1.6, dmg: 10 });
+  sl.age = sl.life * 0.5;
+  sl.draw(ctxS, 1);
+  check('太刀不再绘制扇形范围框（不填充扇面）', fills === 0, 'fill=' + fills);
+  check('太刀只留一道扫过的刀光（1 段弧残影 + 1 条刃线）',
+    arcs === 1 && moves === 1, 'arc=' + arcs + ' moveTo=' + moves);
+  /* Lv4+ 的扇形冲击波同理：只留扫过的弧，不补两条半径边 */
+  const rw = new KUP.Ring(100, 100, { maxR: 160, speed: 400, arc: 1.6, dir: 0.3, edges: false, color: '#fff', dmg: 1 });
+  rw.r = 60;
+  arcs = 0; moves = 0;
+  rw.draw(ctxS, 1);
+  check('太刀冲击波不补半径边（仍只有 1 段弧）', arcs === 1 && moves === 0, 'arc=' + arcs + ' moveTo=' + moves);
+  check('其它扇形波仍保留半径边（bass 的角度可视化不受影响）',
+    new KUP.Ring(0, 0, { maxR: 100, arc: 1.6, dir: 0, color: '#fff', dmg: 1 }).edges === true);
+}
+
 console.log(fail === 0 ? '\nALL PASS' : '\n' + fail + ' FAILED');
 process.exit(fail === 0 ? 0 : 1);
