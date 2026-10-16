@@ -53,6 +53,15 @@ KUP.U = {
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
   },
+  /* 确定性整数散列 → [0,1)。给「需要随机观感、但**不得消费随机流**」的场合用
+   * （典型：渲染路径的故障抖动）——同一个 n 永远得到同一个值，
+   * 因此同 seed、同时间刻度下的画面完全可复现，换刷新率也不会变。 */
+  hash01(n) {
+    let h = Math.imul(n | 0, 0x27D4EB2D);
+    h = Math.imul(h ^ (h >>> 15), 0x85EBCA6B);
+    h = Math.imul(h ^ (h >>> 13), 0xC2B2AE35);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+  },
   angDiff(a, b) { return Math.atan2(Math.sin(a - b), Math.cos(a - b)); },
   /* 角度朝目标以 turn(rad/s) 旋转 */
   aimAngle(cur, target, turn, dt) {

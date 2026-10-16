@@ -358,6 +358,9 @@ window.KUP = window.KUP || {};
        *   stunT  ＝ 僵直／冷冻剩余秒数（完全停止：不移动、不行动、不造成接触伤害）
        *   slowT  ＝ 减速剩余秒数；slowMul ＝ 减速倍率（越小越慢，取「最强」来源） */
       this.stunT = 0; this.slowMul = 1; this.stunMax = 0;
+      /* v0.13.1：freezeAt ＝ 冻住那一刻的视觉时钟（冻僵的敌人连形变与故障抖动
+       * 都定格，一眼可辨，见 draw）。 */
+      this.freezeAt = null;
     }
     update(dt, game) {
       const p = game.player;
@@ -416,18 +419,32 @@ window.KUP = window.KUP || {};
     }
     draw(ctx, t) {
       const c = this.def.color;
+      /* 数字故障抖动（v0.13.1）：
+       *   原版每帧取一次 U.rand 白噪声——观感对，却在渲染路径消费随机流
+       *   （违反 AGENTS §3，帧率会打乱同 seed 复现）；v0.13.0 改为 sin(t*61)
+       *   后观感随刷新率漂移（60Hz 每帧跳 58°、144Hz 却是平滑绕圈），
+       *   不再是「跳变的故障感」。
+       *   现在用**离散故障时钟**：按 GLITCH.HZ 对时间取整数刻度，偏移由整数散列
+       *   给出 ⇒ 定频跳变、跨刷新率一致、不碰随机流；品红/青两层各自错位，
+       *   做出「信号撕裂」而不是整体平移。
+       *   冻僵（stunT>0）时把视觉时钟定格在冻住的那一刻：抖动与形变一起停。 */
+      const G = C.GLITCH;
+      if (this.stunT > 0) { if (this.freezeAt == null) this.freezeAt = t; } else this.freezeAt = null;
+      const vt = this.freezeAt == null ? t : this.freezeAt;
+      const sd = (this.phase * 4096) | 0, gs = Math.floor(vt * G.HZ);
+      const nx = U.hash01(gs * 2 + sd), ny = U.hash01(gs * 2 + 1 + sd);
+      const jx = (nx * 2 - 1) * G.JITTER, jy = (ny * 2 - 1) * G.JITTER;
+      const ds = (U.hash01(gs * 5 + 7 + sd) * 2 - 1) * G.SPLIT * 0.55;   // 色散错位的抖动
       ctx.save();
       ctx.translate(this.x, this.y);
-      const jx = Math.sin(t * 61 + this.phase * 3.1) * 1.2;   // 每帧抖动 → 数字故障感
-      const jy = Math.cos(t * 47 + this.phase * 1.7) * 1.2;   // （确定性：由时间与相位驱动，**不消费随机流**）
       ctx.globalAlpha = 0.38;
-      ctx.fillStyle = '#ff2bd6'; this._shape(ctx, t, -1.6 + jx, jy);
-      ctx.fillStyle = '#2be0ff'; this._shape(ctx, t, 1.6 + jx, jy);
+      ctx.fillStyle = '#ff2bd6'; this._shape(ctx, vt, -G.SPLIT + ds + jx, jy);
+      ctx.fillStyle = '#2be0ff'; this._shape(ctx, vt, G.SPLIT + ds + jx, jy);
       ctx.globalAlpha = 1;
-      ctx.fillStyle = c; this._shape(ctx, t, jx, jy);
+      ctx.fillStyle = c; this._shape(ctx, vt, jx, jy);
       if (this.flash > 0) {
         ctx.globalAlpha = Math.min(1, this.flash * 10);
-        ctx.fillStyle = '#fff'; this._shape(ctx, t, 0, 0);
+        ctx.fillStyle = '#fff'; this._shape(ctx, vt, 0, 0);
         ctx.globalAlpha = 1;
       }
       /* v0.13 状态异常视觉：
@@ -435,7 +452,7 @@ window.KUP = window.KUP || {};
        *   减速（slowT）＝外圈蓝色光环（强度随倍率） */
       if (this.stunT > 0) {
         ctx.globalAlpha = 0.42 + 0.18 * Math.abs(Math.sin(t * 4 + this.phase));
-        ctx.fillStyle = '#bff0ff'; this._shape(ctx, t, 0, 0);
+        ctx.fillStyle = '#bff0ff'; this._shape(ctx, vt, 0, 0);
         ctx.globalAlpha = 0.85;
         ctx.strokeStyle = '#e8fbff'; ctx.lineWidth = 1.6;
         for (let i = 0; i < 3; i++) {
