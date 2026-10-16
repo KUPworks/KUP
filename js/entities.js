@@ -354,24 +354,47 @@ window.KUP = window.KUP || {};
       /* Boss 模式用计时器 / 滞留区减速 / 冲锋 */
       this.t2 = 2; this.t3 = 1.2; this.phaseNo = 1;
       this.slowT = 0; this.dashT = 0; this.dashX = 0; this.dashY = 0; this.angle = 0;
+      /* v0.13 状态异常：
+       *   stunT  ＝ 僵直／冷冻剩余秒数（完全停止：不移动、不行动、不造成接触伤害）
+       *   slowT  ＝ 减速剩余秒数；slowMul ＝ 减速倍率（越小越慢，取「最强」来源） */
+      this.stunT = 0; this.slowMul = 1; this.stunMax = 0;
     }
     update(dt, game) {
       const p = game.player;
+      this.flash -= dt; this.orbitT -= dt;
+      if (this.stunT > 0) { this.stunT -= dt; this.kx = 0; this.ky = 0; return; }  // 冷冻：完全静止
+      if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) { this.slowT = 0; this.slowMul = 1; } }
       const dx = p.x - this.x, dy = p.y - this.y;
       const d = Math.hypot(dx, dy) || 1;
       const ux = dx / d, uy = dy / d;
       const wob = Math.sin(game.time * 2.2 + this.phase) * 0.35;
-      const spd = this.speed * (this.slowT > 0 ? 0.55 : 1); // 滞留区减速
+      const spd = this.speed * (this.slowT > 0 ? this.slowMul : 1); // 减速（滞留区／鈍足の符）
       this.x += (ux * spd - uy * wob * spd * 0.4 + this.kx) * dt;
       this.y += (uy * spd + ux * wob * spd * 0.4 + this.ky) * dt;
       this.kx *= Math.max(0, 1 - 7 * dt); this.ky *= Math.max(0, 1 - 7 * dt);
-      this.flash -= dt; this.orbitT -= dt; this.slowT -= dt;
       if (this.dashT > 0) { // 冲锋系 Boss（壱番街〈緘黙〉）
         this.dashT -= dt;
         this.x += this.dashX * dt; this.y += this.dashY * dt;
         this.x = U.clamp(this.x, this.r, C.ARENA - this.r);
         this.y = U.clamp(this.y, this.r, C.ARENA - this.r);
       }
+    }
+    /* 施加减速（取最强来源：倍率更低者胜出；时间取较长者）。
+     * 返回是否生效（同类更弱的效果不会覆盖更强的）。 */
+    applySlow(seconds, mul) {
+      const cur = this.slowT > 0 ? this.slowMul : 1;
+      const stronger = mul < cur;
+      if (!stronger && this.slowT >= seconds) return false;
+      this.slowMul = stronger ? mul : cur;
+      this.slowT = Math.max(this.slowT, seconds);
+      return true;
+    }
+    /* 施加僵直／冷冻（取较长者） */
+    applyStun(seconds) {
+      if (seconds <= 0) return false;
+      this.stunT = Math.max(this.stunT, seconds);
+      this.stunMax = Math.max(this.stunMax, this.stunT);
+      return true;
     }
     _shape(ctx, t, ox, oy) {
       const def = this.def, ph = this.phase;
@@ -395,7 +418,8 @@ window.KUP = window.KUP || {};
       const c = this.def.color;
       ctx.save();
       ctx.translate(this.x, this.y);
-      const jx = U.rand(-1.2, 1.2), jy = U.rand(-1.2, 1.2); // 每帧抖动 → 数字故障感
+      const jx = Math.sin(t * 61 + this.phase * 3.1) * 1.2;   // 每帧抖动 → 数字故障感
+      const jy = Math.cos(t * 47 + this.phase * 1.7) * 1.2;   // （确定性：由时间与相位驱动，**不消费随机流**）
       ctx.globalAlpha = 0.38;
       ctx.fillStyle = '#ff2bd6'; this._shape(ctx, t, -1.6 + jx, jy);
       ctx.fillStyle = '#2be0ff'; this._shape(ctx, t, 1.6 + jx, jy);
