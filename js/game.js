@@ -7,6 +7,29 @@ window.KUP = window.KUP || {};
   const U = KUP.U, C = KUP.CONFIG;
   const DEG = Math.PI / 180;   // 数据表的「角度」一律以**度**书写，运行时换算为弧度
 
+  /* ---------- 楼体空间索引（v0.13.1）----------
+   * 楼体散布在 3000×3000 竞技场里，碰撞/可站立/绕行前视原本都要**全表扫描**
+   * 上百栋楼；绕行转向每次要试探十几个方向，全表扫描会成为每帧的主要开销。
+   * 这里按「街区格」分桶（桶边长 = CITY.GRID，楼体最长边 < 桶边长，故每桶只装
+   * 少数几栋），查询时只遍历与包围盒相交的桶。纯几何派生、无随机 ⇒ 同 seed 同图。
+   * 注：查询用的包围盒必须**包含判定半径**（含 MIN_GAP），否则会漏掉跨桶的楼。 */
+  const cityIndex = (A, blocks, cellSize) => {
+    const bn = Math.max(1, Math.ceil(A / cellSize));
+    const buckets = new Array(bn * bn);
+    for (let i = 0; i < buckets.length; i++) buckets[i] = [];
+    for (const b of blocks) {
+      const x0 = U.clamp(Math.floor(b.x / cellSize), 0, bn - 1);
+      const x1 = U.clamp(Math.floor((b.x + b.w) / cellSize), 0, bn - 1);
+      const y0 = U.clamp(Math.floor(b.y / cellSize), 0, bn - 1);
+      const y1 = U.clamp(Math.floor((b.y + b.h) / cellSize), 0, bn - 1);
+      for (let by = y0; by <= y1; by++) for (let bx = x0; bx <= x1; bx++) buckets[by * bn + bx].push(b);
+    }
+    return { bn, bcell: cellSize, buckets };
+  };
+  /* 查询暂存数组（避免每帧分配）：NB ＝ 碰撞/可站立查询用；NS ＝ 绕行前视用。
+   * 两者必须分开——绕行前视会在自己的循环里连续查询，共用会被后一次查询冲掉。 */
+  const NB = [], NS = [];
+
   /* ---------- 武器运行时 ---------- */
   class WeaponRuntime {
     constructor(def, lv) {
@@ -246,6 +269,7 @@ window.KUP = window.KUP || {};
       this.view = { w: canvas.width, h: canvas.height };
       this.state = 'menu';
       this.debug = { t: 0, lv: 0, god: false, char: null, autoStart: false };
+      this._navQ = 0;          // 楼体空间索引的去重标记（见 _near）
       /* 当前 run（一局 = 一次『Q』任務）。URL/UI 只改这里，其余派生状态由 applyRun 生成。 */
       this.run = { id: null, char: null, area: C.DEFAULT_AREA, mod: C.DEFAULT_MOD, seed: C.DEFAULT_SEED, companion: null, form: 'none', companionForm: 'none', aim: 'auto' };
       this.applyRun(false);
@@ -386,7 +410,7 @@ window.KUP = window.KUP || {};
       } else if (area.theme === 'restricted') { // 陸番街：残骸
         for (let i = 0; i < 70; i++) deco.debris.push({ x: rng() * A, y: rng() * A, w: 6 + rng() * 22, h: 4 + rng() * 10, rot: (rng() - 0.5) * 0.8 });
       }
-      return { blocks, glyphs, area, deco, grid: CT.GRID };
+      return { blocks, glyphs, area, deco, grid: CT.GRID, ...cityIndex(A, blocks, CT.GRID) };
     }
 
     start(opts) {
@@ -508,11 +532,36 @@ window.KUP = window.KUP || {};
      *   walkable  ：「圆心可站立」——楼体外扩 MIN_GAP 后的矩形（防软夹紧抖动）；
      *               生成/碰撞推开/实体钩子都用它，保证各处语义一致。
      * collideCity：**硬碰撞**——圆与楼体矩形求交，沿最小穿透轴推出（贴墙滑行）。
-     *               Boss 豁免（碾压建筑，游戏明文设定），citySolid=false 时整体关闭。 */
+     *               Boss 豁免（碾压建筑，游戏明文设定），citySolid=false 时整体关闭。
+     * v0.13.1：三者都改走**空间索引**（cityIndex/_near），只遍历邻近桶里的楼体。 */
+    /* 取「可能与 (x,y) 半径 rad 的包围盒相交」的楼体，写入调用方的暂存数组并返回。
+     * 无索引时（极端旧存档/测试桩）退回全表。 */
+    _near(x, y, rad, out) {
+      out.length = 0;
+      const c = this.city;
+      if (!c || !c.buckets) {
+        if (c && c.blocks) for (const b of c.blocks) out.push(b);
+        return out;
+      }
+      const s = c.bcell, bn = c.bn;
+      const x0 = U.clamp(Math.floor((x - rad) / s), 0, bn - 1), x1 = U.clamp(Math.floor((x + rad) / s), 0, bn - 1);
+      const y0 = U.clamp(Math.floor((y - rad) / s), 0, bn - 1), y1 = U.clamp(Math.floor((y + rad) / s), 0, bn - 1);
+      const q = ++this._navQ;                                // 去重标记（楼体可能横跨多桶）
+      for (let by = y0; by <= y1; by++) {
+        const row = by * bn;
+        for (let bx = x0; bx <= x1; bx++) {
+          for (const b of c.buckets[row + bx]) {
+            if (b._q === q) continue;
+            b._q = q; out.push(b);
+          }
+        }
+      }
+      return out;
+    }
     walkable(x, y, r) {
       if (!this.citySolid || !this.city || !this.city.blocks.length) return true;
       const g = C.CITY.MIN_GAP + (r || 0);
-      for (const b of this.city.blocks) {
+      for (const b of this._near(x, y, g, NB)) {
         if (x > b.x - g && x < b.x + b.w + g && y > b.y - g && y < b.y + b.h + g) return false;
       }
       return true;
@@ -521,7 +570,7 @@ window.KUP = window.KUP || {};
       if (!this.citySolid || !this.city || !this.city.blocks.length) return;
       if (ent.boss) return;                                  // Boss 碾压建筑（设定明文）
       const r = ent.r || 0;
-      for (const b of this.city.blocks) {
+      for (const b of this._near(ent.x, ent.y, r, NB)) {
         const cx = U.clamp(ent.x, b.x, b.x + b.w), cy = U.clamp(ent.y, b.y, b.y + b.h);
         const dx = ent.x - cx, dy = ent.y - cy;
         const d2 = dx * dx + dy * dy;
@@ -540,7 +589,7 @@ window.KUP = window.KUP || {};
     }
     collideCircle(x, y, r) {                                 // 供 projectiles/dangers 等点状实体查询
       if (!this.citySolid || !this.city || !this.city.blocks.length) return false;
-      for (const b of this.city.blocks) {
+      for (const b of this._near(x, y, r, NB)) {
         const cx = U.clamp(x, b.x, b.x + b.w), cy = U.clamp(y, b.y, b.y + b.h);
         if (U.dist2(x, y, cx, cy) < r * r) return true;
       }
