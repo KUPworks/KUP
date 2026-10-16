@@ -898,8 +898,10 @@ window.KUP = window.KUP || {};
         KUP.Audio.sfx('boss');
         if (this.endless) {
           /* 治安战：击破 Boss **不是终点**——清场奖励 + 继续下一轮（director 会再排 Boss）。
-           * 也不落記憶の卵／不发復興率：治安战的成绩只进治安战记录。 */
-          this.boss = null;
+           * 也不落記憶の卵／不发復興率：治安战的成绩只进治安战记录。
+           * ⚠️ 只清「被击破的这一体」：可能同时存在多体 Boss（前一体没打完又来了一体），
+           * 无条件 this.boss = null 会把还活着的那一体的行为/暴走/HUD 一起清掉。 */
+          if (this.boss === e) this.boss = null;
           KUP.UI.showBoss(false);
           this.ult.charge = Math.min(100, this.ult.charge + 40);
           this.addText(p.x, p.y - 32, KUP.I18N.t('order.bossDown'), '#ffe08a', 16);

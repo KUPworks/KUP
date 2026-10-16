@@ -139,10 +139,21 @@ window.KUP = window.KUP || {};
       return U.weightedPick(tiers[Math.min(tiers.length - 1, idx)]);
     },
 
-    /* Boss 行为：按 def.pattern 分派——每番街一体（详见 data.js KUP.BOSSES） */
+    /* Boss 行为：按 def.pattern 分派——每番街一体（详见 data.js KUP.BOSSES）。
+     * v0.13：Boss 行为**逐体**处理。
+     * 治安战里前一体未被击破就又到点时，会同时存在多体 Boss：旧版只跑 this.boss，
+     * 后来者会把前一体「顶掉」（前一体从此不再行动、HUD 也只显示一方），击破旧的一体
+     * 还会把新一体的 this.boss 清空（行为/暴走/HUD 一起失效）——这就是「Boss 冲突」。
+     * 各 Boss 的计时器（ringT/minionT/t2/t3）本就在 Enemy 构造器里逐体初始化，故逐体
+     * 处理即可；this.boss 只作「HUD/结算看哪一体」的指针，始终指向最新出现的存活个体。 */
     updateBossBehavior(dt) {
-      const b = this.boss;
-      if (!b || b.dead) return;
+      const live = this._liveBoss || (this._liveBoss = []);
+      live.length = 0;
+      for (const e of this.enemies) if (e.boss && !e.dead) live.push(e);
+      if (!this.boss || this.boss.dead) this.boss = live.length ? live[live.length - 1] : null;
+      for (const b of live) this._bossStep(b, dt);
+    },
+    _bossStep(b, dt) {
       const p = this.player;
       /* 共通：暴走（结局分歧触发点；治安战以「该 Boss 出生时刻」为基准） */
       const enrageAt = this.endless ? ((b.bornAt || 0) + C.ENDLESS.BOSS_ENRAGE) : C.ENRAGE_TIME;
@@ -150,7 +161,9 @@ window.KUP = window.KUP || {};
         b.enraged = true;
         this.bossEnraged = true;
         b.speed *= 1.8;
-        KUP.UI.banner(KUP.I18N.t('banner.enrage'), 2, 'warn');
+        /* {name}：多体 Boss 并存时，暴走横幅要报**这一体**的名字（i18n 词典由
+         * 另一位 Agent 正在改为 '{name}暴走'；词典未落地时回落旧文案，不会报错）。 */
+        KUP.UI.banner(KUP.I18N.t('banner.enrage', { name: KUP.I18N.tv(b.def.name) }), 2, 'warn');
         KUP.Audio.sfx('warning');
       }
       /* v0.13：被冷冻／僵直的 Boss 暂停行动（计时器冻结、解冻后继续）——

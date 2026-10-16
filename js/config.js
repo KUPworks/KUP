@@ -68,11 +68,14 @@ KUP.CONFIG = {
    *       成绩（点数／波次／存活／净化数）记入**独立的**治安战最高记录；
    *       不发復興率、不写番街通关（避免污染主线进度）。
    * 波次：每 WAVE_T 秒推进一波，刷怪率与种类逐步升级；
-   *       ELITE_EVERY 秒一体精英；BOSS_EVERY 秒一体 Boss（7 体轮换，
-   *       每轮血量 ×(1 + n×HP_STEP)），Boss 出生 BOSS_ENRAGE 秒后暴走。 */
+   *       ELITE_EVERY 秒一体精英；BOSS_FIRST 秒出第 1 体 Boss，之后每 BOSS_EVERY
+   *       秒一体（7 体轮换，每轮血量 ×(1 + n×HP_STEP)），Boss 出生 BOSS_ENRAGE
+   *       秒后暴走。⇒ 前期四分钟一体、后期两分钟一体；
+   *       若前一体未被击破就又到点，会**同时存在多体**（各自独立行动，见
+   *       director.updateBossBehavior）。 */
   ENDLESS: {
     WAVE_T: 30, RATE_BASE: 1.4, RATE_STEP: 0.32, RATE_MAX: 7.5,
-    ELITE_EVERY: 45, BOSS_EVERY: 120, BOSS_FIRST: 60, HP_STEP: 0.35, BOSS_ENRAGE: 75,
+    ELITE_EVERY: 45, BOSS_EVERY: 120, BOSS_FIRST: 240, HP_STEP: 0.35, BOSS_ENRAGE: 75,
   },
   DEFAULT_SEED: 20250314,
   DEFAULT_AREA: 'area0',
