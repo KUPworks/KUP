@@ -143,7 +143,103 @@ KUP.charUnlockText = c => (c.unlock && c.unlock.desc) || null;
  *   - slash：「近战·挥刀」——arc＝扇形角度（**度**）、len＝刀长（px）；
  *              Lv4+ 的 wave｛arc（度）/r/speed/dmgMul｝＝扇形冲击波（复用 Ring 的角度参数）。
  *   - bass ：「圆形波」——arc＝扇形角度（**度**，缺省 360＝整圆，既有武器不变）；
- *              传入 <360 即变为**定向扇形冲击波**（dir 取当前瞄准方向）。 */
+ *              传入 <360 即变为**定向扇形冲击波**（dir 取当前瞄准方向）。
+ * ★ v0.13.1「模组化」：几何常数与「哪些参数随哪个 BUFF 放大」全部收进下面的
+ *   KUP.WEAPON_MODULES（模组注册表），分派（js/game.js WeaponRuntime.update）
+ *   不再写死数字。 */
+/* ---------- 武器模组注册表（v0.13.1）----------
+ * **模组（behavior）＝ 玩法实现；具体武器（KUP.WEAPONS）＝ 数据。** 本表是两者的
+ * 唯一对应处：一把武器只声明 `behavior`，实现与调参口径全部从这里取。
+ *   - 一个模组可被多把武器共用（例：`bass` ＝ テラ・ドロップ ＋ 救済の鐘；
+ *     `lance` ＝ 追唱の矢 ＋ 追唱の矢〈亜留〉），换武器不必改实现。
+ *   - `base`  ：**模组级基准值**——等级表没写同名键时用它（原先散落在 game.js 分派里的
+ *              写死常数；现在从这里调，加武器/改手感只动一处）。
+ *   - `params`：该模组的等级表**可用参数键**（调参对照表；verify-run 会校验武器表的键
+ *              不越界，写错键名会当场报错）。
+ *   - `area`  ：**受「范围」(areaMult) 放大的键**——判定与外观一起放大；其余键（如光束
+ *              宽度、音符存活时间）刻意不随范围变化，列在这里就是明确的口径。
+ *   - `entity`：产出的实体类型（便于查「这把武器在场上生成什么」）。
+ * 反向查询：KUP.MODULE(模组id) / KUP.MODULE_OF(武器id) / KUP.WEAPONS_OF(模组id)。 */
+KUP.WEAPON_MODULES = {
+  note: {
+    id: 'note', entity: 'Projectile',
+    name: { zh: '追踪音符', en: 'Homing Note', ja: '追尾ノート' },
+    desc: { zh: '朝最近敌人射出追踪弹体；尺寸随「范围」放大。', en: 'Homing shots at the nearest foe; size scales with Area.', ja: '最寄りへ追尾弾を放つ。大きさは「範囲」で拡大。' },
+    params: ['cd', 'dmg', 'count', 'split'],
+    base: { speed: 400, r: 7, life: 2.2, homing: 5.2, pierce: 0 },
+    area: ['r'],
+  },
+  orbit: {
+    id: 'orbit', entity: 'WeaponRuntime.orbs',
+    name: { zh: '环绕音球', en: 'Resonant Orbs', ja: 'レゾナンス・オーブ' },
+    desc: { zh: '音球绕玩家旋转，扫掠臂即判定；环绕半径与**球体体积**都随「范围」放大。', en: 'Orbs circle you, damaging along the sweep; both orbit radius and orb size scale with Area.', ja: '音球が周回し、掃引腕が判定。周回半径と**球体の大きさ**が「範囲」で拡大。' },
+    params: ['dmg', 'count', 'r', 'spin'],
+    base: { r: 88, spin: 2.6, orbR: 11 },
+    area: ['r', 'orbR'],
+  },
+  bass: {
+    id: 'bass', entity: 'Ring',
+    name: { zh: '圆形波', en: 'Shock Ring', ja: '衝撃リング' },
+    desc: { zh: '以玩家为中心扩散的冲击环（可定向成扇形）；扩散半径随「范围」放大。', en: 'A ring expanding from you (can be a sector); radius scales with Area.', ja: '自機中心に広がる衝撃環（扇形化も可）。半径は「範囲」で拡大。' },
+    params: ['cd', 'dmg', 'r', 'double'],
+    base: { speed: 300, kb: 170, arc: 360, doubleSpeed: 220, doubleKb: 140, doubleDmgMul: 0.7 },
+    area: ['r'],
+  },
+  slash: {
+    id: 'slash', entity: 'Slash',
+    name: { zh: '近战・挥刀', en: 'Melee Slash', ja: '近接・斬撃' },
+    desc: { zh: '朝瞄准方向挥出的扇形斩击；**刀长**随「范围」放大，扇形角度由数据表指定。', en: 'A fan-shaped slash toward your aim; **blade length** scales with Area, angle comes from data.', ja: '照準方向への扇形斬撃。**刀長**は「範囲」で拡大、角度はデータ表で指定。' },
+    params: ['cd', 'dmg', 'len', 'arc', 'kb', 'life', 'wave'],
+    base: { arc: 100, kb: 180, life: 0.18, 'wave.r': 120, 'wave.arc': 120, 'wave.speed': 420, 'wave.dmgMul': 0.75 },
+    area: ['len', 'wave.r'],
+  },
+  laser: {
+    id: 'laser', entity: 'Beam',
+    name: { zh: '贯穿光束', en: 'Piercing Beam', ja: '貫通ビーム' },
+    desc: { zh: '瞬间贯穿的定向光束；**长度**随「范围」放大，宽度不随范围变化。', en: 'An instant piercing beam; **length** scales with Area, width does not.', ja: '瞬時に貫くビーム。**長さ**は「範囲」で拡大、太さは変わらない。' },
+    params: ['cd', 'dmg', 'len', 'w', 'double'],
+    base: { doubleAngle: 0.3, doubleDmgMul: 0.7 },
+    area: ['len'],
+  },
+  lance: {
+    id: 'lance', entity: 'Projectile',
+    name: { zh: '穿透音枪', en: 'Piercing Lance', ja: '貫通ランス' },
+    desc: { zh: '高速穿透弹体；命中半径随「范围」放大（飞行距离不变）。', en: 'A fast piercing shot; hit radius scales with Area (travel distance unchanged).', ja: '高速貫通弾。命中半径は「範囲」で拡大（飛距離は不変）。' },
+    params: ['cd', 'dmg', 'count', 'pierce'],
+    base: { speed: 560, r: 8, life: 1.6, spread: 0.16 },
+    area: ['r'],
+  },
+  toss: {
+    id: 'toss', entity: 'Toss → Zone',
+    name: { zh: '投掷・滞留音场', en: 'Thrown Field', ja: '投擲・残響音場' },
+    desc: { zh: '抛物线投掷到目标点，落点生成滞留音场；**投掷距离与音场半径**随「范围」放大。', en: 'An arcing throw that leaves a lingering field; **throw range and field radius** scale with Area.', ja: '放物線で投擲し着地点に残響音場。**投擲距離と半径**が「範囲」で拡大。' },
+    params: ['cd', 'dmg', 'count', 'r', 'range', 'fly', 'life'],
+    base: { fly: 0.4, tickRate: 0.4, spread: 0.42, slowMul: 0.55, slowSec: 0.4 },
+    area: ['r', 'range'],
+  },
+  bomb: {
+    id: 'bomb', entity: 'Zone（bomb）',
+    name: { zh: '随机空爆', en: 'Random Blast', ja: 'ランダム空爆' },
+    desc: { zh: '在自身周围随机落点、延迟引爆；**散布距离与爆炸半径**随「范围」放大。', en: 'Random delayed blasts around you; **scatter range and blast radius** scale with Area.', ja: '周囲のランダム地点で遅延起爆。**散布距離と爆発半径**が「範囲」で拡大。' },
+    params: ['cd', 'dmg', 'count', 'r', 'range', 'fuse'],
+    base: { fuse: 0.95, minRange: 30 },
+    area: ['r', 'range'],
+  },
+  mine: {
+    id: 'mine', entity: 'Zone（mine）',
+    name: { zh: '放置・音之地雷', en: 'Placed Mine', ja: '設置・音の地雷' },
+    desc: { zh: '在身后放置滞留雷，触碰即引爆；**作用半径**随「范围」放大（显示缩放由武器表 vis 指定）。', en: 'Plants a lingering mine behind you that detonates on touch; **radius** scales with Area (display scale comes from the weapon\'s vis).', ja: '背後に残響地雷を設置、接触で起爆。**半径**は「範囲」で拡大（表示倍率は武器表の vis）。' },
+    params: ['cd', 'dmg', 'count', 'r', 'life', 'max'],
+    base: { dropBack: 22, dropJitter: 26 },
+    area: ['r'],
+  },
+};
+KUP.MODULE = id => KUP.WEAPON_MODULES[id] || null;
+/* 模组 → 具体武器（唯一真值仍是每把武器的 behavior，这里只是反向查询） */
+KUP.WEAPONS_OF = moduleId => Object.keys(KUP.WEAPONS).filter(id => KUP.WEAPONS[id].behavior === moduleId).map(id => KUP.WEAPONS[id]);
+/* 具体武器 → 模组 */
+KUP.MODULE_OF = weaponId => { const w = KUP.WEAPONS[weaponId]; return w ? KUP.MODULE(w.behavior) : null; };
+
 KUP.WEAPONS = {
   note: {
     id: 'note', icon: '♪', color: '#4ee6ff', behavior: 'note', maxLv: 5, owner: 'kaf',

@@ -41,9 +41,24 @@ window.KUP = window.KUP || {};
       this.orbs = [];
     }
     stat() { return this.evolved ? this.def.evolved.stats : this.def.levels[this.lv - 1]; }
+    /* 模组（behavior）注册表项：几何常数、可用参数键、以及**哪些键随「范围」放大**。
+     * 见 js/data.js KUP.WEAPON_MODULES——加武器/调参/改「范围」生效面都只动那里。 */
+    mod() {
+      if (!this._mod) this._mod = KUP.MODULE(this.def.behavior) || { id: this.def.behavior, base: {}, area: [], params: [] };
+      return this._mod;
+    }
+    /* 等级表 → 模组基准值 → 兜底；再把「范围」按模组声明乘上去。
+     * 例：len 在 slash 的 area 列表里 ⇒ 自动 ×player.areaMult（判定与刀光同时变长）。
+     * raw：直接给定的值（嵌套在等级表里的参数，如 wave.r）；给了 raw 就优先用它。 */
+    val(key, p, fallback, raw) {
+      const s = this.stat(), b = this.mod().base;
+      const v = raw !== undefined ? raw : (s[key] !== undefined ? s[key] : (b[key] !== undefined ? b[key] : fallback));
+      return this.mod().area.indexOf(key) >= 0 ? v * p.areaMult : v;
+    }
 
     update(dt, game) {
       const p = game.player, s = this.stat(), m = p.cdMult, col = this.def.color;
+      const V = (k, d) => this.val(k, p, d);
       switch (this.def.behavior) {
         case 'note': { // フラクタル・ノート：追踪音符
           this.t -= dt;
@@ -54,10 +69,11 @@ window.KUP = window.KUP || {};
               const a = target
                 ? Math.atan2(target.y - p.y, target.x - p.x)
                 : Math.atan2(p.aim.y, p.aim.x) + (i - (s.count - 1) / 2) * 0.4;
-              const sp = 400;
+              const sp = V('speed', 400);
               game.projs.push(new KUP.Projectile(p.x, p.y - 6, Math.cos(a) * sp, Math.sin(a) * sp, {
-                dmg: s.dmg * p.dmgMult, r: 7, life: 2.2, pierce: 0, homing: 5.2, target,
-                color: col, kind: 'note', split: s.split ? 1 : 0,
+                /* 命中半径 r 随「范围」放大（模组 area 声明）——体积/判定一起长 */
+                dmg: s.dmg * p.dmgMult, r: V('r', 7), life: V('life', 2.2), pierce: V('pierce', 0),
+                homing: V('homing', 5.2), target, color: col, kind: 'note', split: s.split ? 1 : 0,
               }));
             }
             KUP.Audio.sfx('shoot');
@@ -66,17 +82,18 @@ window.KUP = window.KUP || {};
         }
         case 'orbit': { // レゾナンス・オーブ：环绕音球（**体积与转速可调**）
           /* v0.8：音球**体积与转速可调**——
-           *   半径 ← 「范围」(areaMult)（含被动 電脳領域／皮肤／規則修正）
+           *   环绕半径 r ← 「范围」(areaMult)（含被动 電脳領域／皮肤／規則修正）
+           *   球体半径 orbR ← **同样随「范围」成比例放大**（v0.13.1 修正：旧版只
+           *                     0.72+0.28×areaMult，范围翻倍时体积才 +28%，等于半个废属性）
            *   转速 ← 基础 spin ÷ 冷却乘数（**冷却提升对 orbit 不再是废属性**）
-           *   球体半径 ← 亦随范围成长（体积＝更大的判定与更粗的扫掠臂）
            * v0.9 修正：判定改为**沿「玩家→音球」扫掠臂**（点到线段距离）。
            *   旧版只判定球心附近的圆，敌人贴到玩家身上（停在环内）后永远打不到，
            *   导致这把初始武器几乎无法击杀——这是"碰撞检测考验操作"的根源。 */
-          while (this.orbs.length < s.count) this.orbs.push({ x: p.x, y: p.y, r: 11 });
+          while (this.orbs.length < s.count) this.orbs.push({ x: p.x, y: p.y, r: V('orbR', 11) });
           while (this.orbs.length > s.count) this.orbs.pop();
-          const Rbase = (s.r || 88) * p.areaMult;
-          const spin = (s.spin || 2.6) / Math.max(0.35, p.cdMult);
-          const orbR = 11 * (0.72 + 0.28 * p.areaMult);
+          const Rbase = V('r', 88);
+          const spin = V('spin', 2.6) / Math.max(0.35, p.cdMult);
+          const orbR = V('orbR', 11);
           this.angle += spin * dt;
           this.orbR = orbR;
           /* 半径轻微「呼吸」（0.86〜1.0），让扫掠更有实感（不影响判定逻辑） */
@@ -108,15 +125,17 @@ window.KUP = window.KUP || {};
              * arc < 360 时波只在扇形内判定与绘制；扇形中心取当前瞄准方向（自动/鼠标/移动）。 */
             const ad = game.aimDir(p);
             const bdir = Math.atan2(ad.y, ad.x);
-            const barc = s.arc !== undefined ? s.arc * DEG : undefined;
+            /* 圆形波的「角度参数」：数据表 arc 以**度**书写，缺省 360（＝整圆，既有武器不变）。
+             * arc < 360 时波只在扇形内判定与绘制；扇形中心取当前瞄准方向（自动/鼠标/移动）。 */
+            const barc = V('arc', 360) * DEG;
             game.rings.push(new KUP.Ring(p.x, p.y, {
-              maxR: s.r * p.areaMult, speed: 300, dmg: s.dmg * p.dmgMult, kb: 170, color: col,
+              maxR: V('r', 80), speed: V('speed', 300), dmg: s.dmg * p.dmgMult, kb: V('kb', 170), color: col,
               arc: barc, dir: bdir,
             }));
             if (s.double) {
               game.rings.push(new KUP.Ring(p.x, p.y, {
-                maxR: s.r * p.areaMult, speed: 220, dmg: s.dmg * p.dmgMult * 0.7, kb: 140, color: col,
-                arc: barc, dir: bdir,
+                maxR: V('r', 80), speed: V('doubleSpeed', 220), dmg: s.dmg * p.dmgMult * V('doubleDmgMul', 0.7),
+                kb: V('doubleKb', 140), color: col, arc: barc, dir: bdir,
               }));
             }
             game.shake(3);
@@ -136,14 +155,14 @@ window.KUP = window.KUP || {};
             const ad = game.aimDir(p);
             const dir = Math.atan2(ad.y, ad.x);
             game.slashes.push(new KUP.Slash(p.x, p.y, dir, {
-              len: s.len * p.areaMult, arc: (s.arc || 100) * DEG,
-              dmg: s.dmg * p.dmgMult, kb: s.kb || 180, color: col, life: s.life || 0.18,
+              len: V('len', 100), arc: V('arc', 100) * DEG,
+              dmg: s.dmg * p.dmgMult, kb: V('kb', 180), color: col, life: V('life', 0.18),
             }));
             if (s.wave) {
               game.rings.push(new KUP.Ring(p.x, p.y, {
-                maxR: s.wave.r * p.areaMult, speed: s.wave.speed || 420,
-                dmg: s.dmg * p.dmgMult * (s.wave.dmgMul || 0.75), kb: 120, color: col,
-                arc: (s.wave.arc || 120) * DEG, dir, edges: false,
+                maxR: this.val('wave.r', p, 120, s.wave.r), speed: this.val('wave.speed', p, 420, s.wave.speed),
+                dmg: s.dmg * p.dmgMult * this.val('wave.dmgMul', p, 0.75, s.wave.dmgMul), kb: 120, color: col,
+                arc: this.val('wave.arc', p, 120, s.wave.arc) * DEG, dir, edges: false,
               }));
             }
             game.shake(1.5);
@@ -158,11 +177,11 @@ window.KUP = window.KUP || {};
             const e = game.nearestEnemy(p.x, p.y);
             const dir = e ? Math.atan2(e.y - p.y, e.x - p.x) : Math.atan2(p.aim.y, p.aim.x);
             game.beams.push(new KUP.Beam(p.x, p.y - 4, dir, {
-              len: s.len * p.areaMult, w: s.w, dmg: s.dmg * p.dmgMult, color: col, game,
+              len: V('len', 400), w: V('w', 8), dmg: s.dmg * p.dmgMult, color: col, game,
             }));
             if (s.double) {
-              game.beams.push(new KUP.Beam(p.x, p.y - 4, dir + 0.3, {
-                len: s.len * p.areaMult, w: s.w, dmg: s.dmg * p.dmgMult * 0.7, color: col, game,
+              game.beams.push(new KUP.Beam(p.x, p.y - 4, dir + V('doubleAngle', 0.3), {
+                len: V('len', 400), w: V('w', 8), dmg: s.dmg * p.dmgMult * V('doubleDmgMul', 0.7), color: col, game,
               }));
             }
             KUP.Audio.sfx('laser');
@@ -176,9 +195,11 @@ window.KUP = window.KUP || {};
             const ad = game.aimDir(p);
             const base = Math.atan2(ad.y, ad.x);
             for (let i = 0; i < s.count; i++) {
-              const a = base + (i - (s.count - 1) / 2) * 0.16;
-              game.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * 560, Math.sin(a) * 560, {
-                dmg: s.dmg * p.dmgMult, r: 8, life: 1.6, pierce: s.pierce, color: col, kind: 'lance',
+              const a = base + (i - (s.count - 1) / 2) * V('spread', 0.16);
+              const sp = V('speed', 560);
+              game.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
+                /* r 随「范围」放大（命中面积），飞行距离（speed×life）刻意不变 */
+                dmg: s.dmg * p.dmgMult, r: V('r', 8), life: V('life', 1.6), pierce: s.pierce, color: col, kind: 'lance',
               }));
             }
             KUP.Audio.sfx('shoot');
@@ -190,19 +211,19 @@ window.KUP = window.KUP || {};
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
-            const range = s.range * p.areaMult;
+            const range = V('range', 300);
             for (let i = 0; i < s.count; i++) {
               const target = game.nearestEnemy(p.x, p.y);
-              const spread = (i - (s.count - 1) / 2) * 0.42;
+              const spread = (i - (s.count - 1) / 2) * V('spread', 0.42);
               let a;
               if (target) a = Math.atan2(target.y - p.y, target.x - p.x) + spread;
               else a = Math.atan2(p.aim.y, p.aim.x) + spread;
               const d = target ? Math.min(range, Math.hypot(target.x - p.x, target.y - p.y)) : range * 0.7;
               game.tosses.push(new KUP.Toss(p.x, p.y - 6, p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, {
-                fly: s.fly, color: col,
+                fly: V('fly', 0.4), color: col,
                 zone: {
-                  r: s.r * p.areaMult, dmg: s.dmg * p.dmgMult, life: s.life,
-                  kind: 'field', color: col, slow: true, tickRate: 0.4,
+                  r: V('r', 60), dmg: s.dmg * p.dmgMult, life: V('life', 3),
+                  kind: 'field', color: col, slow: true, tickRate: V('tickRate', 0.4),
                 },
               }));
             }
@@ -214,11 +235,11 @@ window.KUP = window.KUP || {};
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
-            const range = s.range * p.areaMult;
+            const range = V('range', 300);
             for (let i = 0; i < s.count; i++) {
-              const a = U.rng() * U.TAU, d = U.rand(30, range);
+              const a = U.rng() * U.TAU, d = U.rand(V('minRange', 30), range);
               game.zones.push(new KUP.Zone(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, {
-                r: s.r * p.areaMult, dmg: s.dmg * p.dmgMult, arm: s.fuse,
+                r: V('r', 70), dmg: s.dmg * p.dmgMult, arm: V('fuse', 0.95),
                 kind: 'bomb', color: col,
               }));
             }
@@ -235,9 +256,9 @@ window.KUP = window.KUP || {};
             for (let i = 0; i < s.count; i++) {
               if (live + i >= s.max) break;
               game.zones.push(new KUP.Zone(
-                p.x - p.aim.x * 22 + U.rand(-26, 26),
-                p.y - p.aim.y * 22 + U.rand(-26, 26),
-                { r: s.r * p.areaMult, dmg: s.dmg * p.dmgMult, life: s.life, kind: 'mine', color: col, slow: true,
+                p.x - p.aim.x * V('dropBack', 22) + U.rand(-V('dropJitter', 26), V('dropJitter', 26)),
+                p.y - p.aim.y * V('dropBack', 22) + U.rand(-V('dropJitter', 26), V('dropJitter', 26)),
+                { r: V('r', 70), dmg: s.dmg * p.dmgMult, life: V('life', 8), kind: 'mine', color: col, slow: true,
                   vis: this.def.vis || 1 }));
             }
             KUP.Audio.sfx('select');
