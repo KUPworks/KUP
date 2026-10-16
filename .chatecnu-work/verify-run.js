@@ -1048,6 +1048,137 @@ KUP.META.reset();
   check('两种状态符均进入升级池道具桶', stSeen.freeze && stSeen.bind);
 }
 
+// 25k. v0.13：治安战——无尽关卡（没有败北，只有战斗结束；成绩独立记录）
+{
+  const OR = KUP.AREA('order');
+  check('治安战关卡齐备（无尽 · 本作模式）', !!OR && OR.endless === true && OR.name.zh === '治安战' &&
+    OR.src === 'original' && KUP.AREAS.length === 8);
+  /* 解锁：不属于復興率链，恒可出击；阈值恒 0 */
+  KUP.META.reset();
+  check('治安战恒可出击（不占復興率解锁链）',
+    KUP.META.isUnlocked('order') && KUP.META.thresholdOf('order') === 0 && KUP.META.total() === 0);
+  check('番街解锁链不受治安战影响', !KUP.META.isUnlocked('area1') && KUP.META.thresholdOf('area1') === 8);
+  /* 点数公式 */
+  check('治安战点数公式（kills×10 + time×2 + wave×100）',
+    KUP.META.orderScore({ kills: 100, time: 60, wave: 3 }) === 1000 + 120 + 300);
+  /* 结算：只写治安战记录，不写復興率／番街 best */
+  KUP.META.reset();
+  const fukkou0 = KUP.META.total();
+  const r1o = KUP.META.addOrderResult({ runId: 'ord-1', kills: 120, time: 90, wave: 4, score: 1780 });
+  check('治安战结算：写入独立最高记录', !!r1o && r1o.order && r1o.isBest && KUP.META.orderBest().score === 1780 &&
+    KUP.META.orderBest().wave === 4);
+  check('治安战不发復興率、不写番街 best',
+    KUP.META.total() === fukkou0 && KUP.META.best() === null && KUP.META.clearedCount('order') === 0);
+  check('治安战仍结算市民票', r1o.tickets > 0 && KUP.META.tickets() === r1o.tickets);
+  check('治安战结算幂等（同 runId 不重复）',
+    KUP.META.addOrderResult({ runId: 'ord-1', kills: 120, time: 90, wave: 4, score: 1780 }) === null &&
+    KUP.META.tickets() === r1o.tickets);
+  const tBefore = KUP.META.tickets();
+  const r2o = KUP.META.addOrderResult({ runId: 'ord-2', kills: 10, time: 30, wave: 2, score: 300 });
+  check('更低分不刷新记录（但仍结算市民票）',
+    !r2o.isBest && KUP.META.orderBest().score === 1780 && KUP.META.tickets() > tBefore);
+  const r3o = KUP.META.addOrderResult({ runId: 'ord-3', kills: 200, time: 200, wave: 8, score: 3200 });
+  check('更高分刷新治安战记录', r3o.isBest && KUP.META.orderBest().score === 3200 && KUP.META.orderBest().wave === 8);
+  /* 存档结构：orderBest 归一化（脏数据被拒） */
+  KUP.META.data.orderBest = { score: -5, wave: -3 };
+  KUP.META.save();
+  KUP.META.data = null; KUP.META.load();
+  check('治安战记录结构校验（脏数据不落库）', KUP.META.orderBest() === null);
+  KUP.META.reset();
+  /* 无尽导演：波次推进、精英与 Boss 排期、Boss 血量递增 */
+  const gO = new KUP.Game(canvas);
+  gO.start({ char: 'kaf', area: 'order', seed: 501 });
+  check('治安战开局：无尽标记 + WAVE 1', gO.endless === true && gO.orderWave === 1);
+  check('治安战不读番街波次表（程序化生成）', typeof gO.orderDirector === 'function' && typeof gO.orderType === 'function');
+  gO.time = KUP.CONFIG.ENDLESS.WAVE_T + 0.1;
+  gO.director(0.02);
+  check('治安战波次随时间推进（WAVE 2）', gO.orderWave === 2);
+  gO.time = KUP.CONFIG.ENDLESS.WAVE_T * 5;
+  gO.director(0.02);
+  check('治安战波次继续推进（WAVE 6）', gO.orderWave === 6);
+  /* 刷怪率随波次提高（同样时长下第 6 波刷得更多） */
+  const spawnsAt = (wave) => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'kaf', area: 'order', seed: 502 });
+    g.time = (wave - 1) * KUP.CONFIG.ENDLESS.WAVE_T + 1;
+    g.orderWave = wave;
+    g.spawnAcc = 0;
+    let n = 0;
+    const orig = g.spawnEnemy.bind(g);
+    g.spawnEnemy = (...a) => { n++; return orig(...a); };
+    for (let i = 0; i < 10; i++) { g.enemies.length = 0; g.director(0.1); }   // 1 秒
+    return n;
+  };
+  const acc1 = spawnsAt(1), acc6 = spawnsAt(6);
+  check('刷怪率随波次升级（WAVE 6 刷得更多）', acc6 > acc1, 'w1=' + acc1 + ' w6=' + acc6);
+  /* 精英与 Boss 排期（计时器驱动：到点即出） */
+  const gOB = new KUP.Game(canvas);
+  gOB.start({ char: 'kaf', area: 'order', seed: 503 });
+  check('治安战排期取自 CONFIG.ENDLESS',
+    gOB.orderEliteT <= KUP.CONFIG.ENDLESS.ELITE_EVERY && gOB.orderBossT <= KUP.CONFIG.ENDLESS.BOSS_FIRST);
+  gOB.orderEliteT = 0.01;
+  gOB.director(0.02);
+  check('治安战按时排出精英', gOB.enemies.some(e => e.elite));
+  gOB.time = 100;
+  gOB.orderBossT = 0.01;
+  gOB.director(0.02);
+  check('治安战排出第 1 体 Boss（轮回七体）', !!gOB.boss && gOB.boss.def.id === 'boss0' && gOB.orderBossIdx === 1);
+  const hp1 = gOB.boss.maxhp;
+  check('治安战 Boss 记录出生时刻（暴走以此为准）', gOB.boss.bornAt === 100 && KUP.CONFIG.ENDLESS.BOSS_ENRAGE > 0);
+  gOB.time = 250;
+  gOB.orderBossT = 0.01;
+  gOB.director(0.02);
+  check('治安战继续排第 2 体 Boss（血量递增）',
+    gOB.orderBossIdx === 2 && gOB.boss && gOB.boss.def.id === 'boss1' && gOB.boss.maxhp > hp1 && gOB.boss.bornAt === 250,
+    'hp ' + Math.round(hp1) + '→' + Math.round(gOB.boss.maxhp));
+  /* 击破 Boss ≠ 胜利：战斗继续 */
+  const gOK = new KUP.Game(canvas);
+  gOK.start({ char: 'kaf', area: 'order', seed: 504 });
+  gOK.boss = gOK.spawnEnemy('boss0', gOK.player.x + 60, gOK.player.y);
+  gOK.damageEnemy(gOK.boss, 1e9);
+  check('治安战击破 Boss 不结束战斗（state 仍 playing）',
+    gOK.state === 'playing' && gOK.boss === null && gOK.kills >= 1);
+  check('治安战击破 Boss 有清场奖励与音片', gOK.gems.length > 0 && gOK.ult.charge >= 40);
+  /* 治安战不落記憶の卵（不污染復興率） */
+  const gOE = new KUP.Game(canvas);
+  gOE.start({ char: 'kaf', area: 'order', seed: 505 });
+  gOE.player.weapons = [];
+  for (let i = 0; i < 40; i++) {
+    const el = gOE.spawnEnemy('elite', gOE.player.x + 300, gOE.player.y);
+    gOE.killEnemy(el);
+  }
+  check('治安战不落記憶の卵与復興率', gOE.gems.every(g => g.type !== 'egg') && gOE.eggCount === 0 &&
+    KUP.META.total() === 0);
+  /* 战斗结束：没有败北，只有「战斗结束」＋治安战成绩 */
+  KUP.META.reset();
+  const gOD = new KUP.Game(canvas);
+  gOD.start({ char: 'kaf', area: 'order', seed: 506 });
+  gOD.kills = 150; gOD.time = 125; gOD.orderWave = 5;
+  const showedScreens = [];
+  const oldShowEnd = KUP.UI.showEnd;
+  KUP.UI.showEnd = (win, st) => { showedScreens.push({ win, order: st.order, score: st.score, wave: st.wave }); };
+  gOD.gameOver();
+  KUP.UI.showEnd = oldShowEnd;
+  check('治安战 HP 归零 → state=over（不是 victory）', gOD.state === 'over');
+  check('治安战结算结果走 order 分支（不发復興率）',
+    !!gOD.metaResult && gOD.metaResult.order === true && gOD.metaResult.score === KUP.META.orderScore({ kills: 150, time: 125, wave: 5 }) &&
+    KUP.META.total() === 0 && KUP.META.best() === null);
+  check('治安战成绩已记入最高记录', KUP.META.orderBest().score === gOD.metaResult.score && KUP.META.orderBest().wave === 5);
+  check('结算界面按治安战布局（点数/波次/order 标记）',
+    showedScreens.length === 1 && showedScreens[0].order === true && showedScreens[0].wave === 5 && showedScreens[0].score > 0);
+  check('stats 暴露治安战字段', gOD.stats().order === true && gOD.stats().wave === 5 && gOD.stats().score > 0 &&
+    gOD.stats().orderBest === KUP.META.orderBest().score);
+  /* 番街仍走原路径：勝敗照旧（回归） */
+  const gNorm = new KUP.Game(canvas);
+  gNorm.start({ char: 'kaf', area: 'area0', seed: 507 });
+  check('番街不是无尽模式', gNorm.endless === false && gNorm.stats().order === false);
+  const gNormB = new KUP.Game(canvas);
+  gNormB.start({ char: 'kaf', area: 'area0', seed: 508 });
+  gNormB.boss = gNormB.spawnEnemy('boss0', gNormB.player.x + 60, gNormB.player.y);
+  gNormB.damageEnemy(gNormB.boss, 1e9);
+  check('番街击破 Boss 仍是胜利（回归不变）', gNormB.state === 'victory');
+}
+
 // 25e. v0.10：升级池体验（分桶保底 / 重掷 / 封禁）
 const gLu = new KUP.Game(canvas);
 gLu.start({ char: 'kaf', area: 'area0', seed: 111 });

@@ -11,6 +11,7 @@ window.KUP = window.KUP || {};
   const DirectorMixin = {
     /* ---------- 生成导演 ---------- */
     director(dt) {
+      if (this.endless) return this.orderDirector(dt);   // v0.13 治安战：程序化无尽波次
       const t = this.time, area = this.area || {};
       /* 街区独立波次表（area.waves），缺省回落到全局表 */
       const table = area.waves || KUP.WAVES;
@@ -67,13 +68,85 @@ window.KUP = window.KUP || {};
       KUP.Audio.sfx('warning');
     },
 
+    /* ---------- v0.13 治安战：无尽波次调度 ----------
+     * 与番街的区别：不读 area.waves，而是按 CONFIG.ENDLESS 程序化生成——
+     *   波次：每 WAVE_T 秒推进（横幅 + 增援余波），刷怪率与怪种逐波升级；
+     *   精英：每 ELITE_EVERY 秒一体；
+     *   Boss：每 BOSS_EVERY 秒一体（7 体轮换，第 n 体血量 ×(1 + n×HP_STEP)），
+     *         击破**不会结束战斗**（game.killEnemy 走 endless 分支），Boss 出生
+     *         BOSS_ENRAGE 秒后暴走（见 updateBossBehavior 的 endless 分支）。
+     * 全部走同一随机流 → 同 seed 的治安战仍可复现。 */
+    orderDirector(dt) {
+      const EN = C.ENDLESS;
+      /* 波次推进 */
+      const wave = Math.floor(this.time / EN.WAVE_T) + 1;
+      if (wave !== this.orderWave) {
+        this.orderWave = wave;
+        KUP.UI.banner(KUP.I18N.t('banner.order.wave', { n: wave }), 1.8);
+        this.surgeT = Math.max(this.surgeT, 2.2);
+        this.surgePerSec = 3 + wave * 0.7;
+        KUP.Audio.sfx('warning');
+      }
+      /* 刷怪：率随波次增长，怪种分档 */
+      const rate = Math.min(EN.RATE_MAX, EN.RATE_BASE + (wave - 1) * EN.RATE_STEP);
+      const capScale = this.enemies.length > C.MAX_ENEMIES * 0.7 ? 0.35 : 1;
+      this.spawnAcc += rate * this.mods.spawnRate * capScale * dt;
+      if (this.surgeT > 0) {
+        this.surgeT -= dt;
+        this.spawnAcc += this.surgePerSec * dt;
+      }
+      while (this.spawnAcc >= 1) {
+        this.spawnAcc -= 1;
+        if (this.enemies.length < C.MAX_ENEMIES) this.spawnEnemy(this.orderType(wave));
+      }
+      /* 精英 */
+      this.orderEliteT -= dt;
+      if (this.orderEliteT <= 0) {
+        this.orderEliteT = EN.ELITE_EVERY;
+        this.spawnEnemy('elite');
+        KUP.UI.banner(KUP.I18N.t('banner.elite'), 1.6, 'warn');
+        KUP.Audio.sfx('warning');
+      }
+      /* Boss（轮换 + 血量递增） */
+      this.orderBossT -= dt;
+      if (this.orderBossT <= 0) {
+        this.orderBossT = EN.BOSS_EVERY;
+        this.orderBossIdx++;
+        const b = this.spawnEnemy('boss' + ((this.orderBossIdx - 1) % 7));
+        if (b) {
+          const k = 1 + (this.orderBossIdx - 1) * EN.HP_STEP;
+          b.maxhp = Math.round(b.def.hp * KUP.HP_SCALE(this.time) * this.mods.enemyHp * k);
+          b.hp = b.maxhp;
+          b.bornAt = this.time;              // 暴走计时以「出生」为基准（无尽模式）
+          this.boss = b;
+          KUP.UI.banner(KUP.I18N.t('banner.order.boss', { name: KUP.I18N.tv(b.def.name), n: this.orderBossIdx }), 2.4, 'warn');
+          KUP.UI.showBoss(true, b.def);
+          KUP.Audio.sfx('boss');
+        }
+      }
+    },
+    /* 治安战的怪种分档（越往后越凶；tank 逐渐加入） */
+    orderType(wave) {
+      const tiers = [
+        { noise: 1 },
+        { noise: 4, glitch: 1 },
+        { noise: 3, glitch: 1.6, tank: 0.25 },
+        { noise: 2.4, glitch: 2, tank: 0.5 },
+        { noise: 2, glitch: 2.2, tank: 0.8 },
+        { noise: 1.6, glitch: 2.4, tank: 1.1 },
+      ];
+      const idx = Math.max(0, Math.floor((wave - 1) / 3));
+      return U.weightedPick(tiers[Math.min(tiers.length - 1, idx)]);
+    },
+
     /* Boss 行为：按 def.pattern 分派——每番街一体（详见 data.js KUP.BOSSES） */
     updateBossBehavior(dt) {
       const b = this.boss;
       if (!b || b.dead) return;
       const p = this.player;
-      /* 共通：5:00 暴走（结局分歧触发点） */
-      if (this.time > C.ENRAGE_TIME && !b.enraged) {
+      /* 共通：暴走（结局分歧触发点；治安战以「该 Boss 出生时刻」为基准） */
+      const enrageAt = this.endless ? ((b.bornAt || 0) + C.ENDLESS.BOSS_ENRAGE) : C.ENRAGE_TIME;
+      if (this.time > enrageAt && !b.enraged) {
         b.enraged = true;
         this.bossEnraged = true;
         b.speed *= 1.8;

@@ -32,7 +32,8 @@ window.KUP = window.KUP || {};
         'companion-strip', 'companion-detail', 'companion-form-wrap', 'companion-form-strip',
         'companion-form-detail', 'form-strip', 'form-detail', 'form-title', 'hud-companion', 'companion-form-title',
         'shop-list', 'shop-tickets', 'fukkou-menu-tickets',
-        'menu-slot-line', 'slot-list', 'slot-warn', 'slot-io-text', 'slot-io-msg'];
+        'menu-slot-line', 'slot-list', 'slot-warn', 'slot-io-text', 'slot-io-msg',
+        'order-best-line', 'hud-wave'];
       for (const id of ids) this.els[id] = $(id);
       /* 形态/皮肤/同伴 + 上次出击配置：读回本槽存档（kup.save.<id>） */
       if (KUP.META) {
@@ -247,7 +248,7 @@ window.KUP = window.KUP || {};
           card.dataset.id = a.id;
           card.style.setProperty('--c', a.accent || '#8fd0ff');
           card.innerHTML =
-            '<div class="area-glyph">' + a.id.replace('area', '') + '</div>' +
+            '<div class="area-glyph">' + (a.glyph || a.id.replace('area', '')) + '</div>' +
             '<div class="area-name">' + KUP.I18N.tv(a.name) + '</div>' +
             '<div class="area-role"></div>' +
             '<div class="area-chapter"></div>' +
@@ -267,10 +268,15 @@ window.KUP = window.KUP || {};
         const ok = KUP.META.isUnlocked(a.id);
         card.classList.toggle('selected', card.dataset.id === id);
         card.classList.toggle('locked', !ok);
+        card.classList.toggle('endless', !!a.endless);
         card.querySelector('.area-chapter').textContent = KUP.I18N.tv(a.chapter);
-        card.querySelector('.area-role').textContent = KUP.I18N.tv(a.role);
+        /* 治安战：角色行标注「∞ 无尽 · 没有败北」 */
+        card.querySelector('.area-role').textContent = a.endless
+          ? KUP.I18N.t('area.endless')
+          : KUP.I18N.tv(a.role);
         card.querySelector('.area-lock').textContent = ok
-          ? (KUP.META.clearedCount(a.id) ? KUP.I18N.t('area.cleared', { n: KUP.META.clearedCount(a.id) }) : '')
+          ? (KUP.META.clearedCount(a.id) ? KUP.I18N.t('area.cleared', { n: KUP.META.clearedCount(a.id) })
+             : (KUP.META.orderBest() && a.endless ? KUP.I18N.t('end.stat.score') + ' ' + KUP.META.orderBest().score : ''))
           : KUP.I18N.t('area.locked', { n: KUP.META.thresholdOf(a.id) });
       }
       $('btn-area-next').disabled = !unlocked;
@@ -283,10 +289,17 @@ window.KUP = window.KUP || {};
         html += '<br><span class="area-faction">' + KUP.I18N.t('area.resident', { name: resident.name, cv: resident.cv }) + '</span>';
       }
       html += '<br><span class="area-faction">' + KUP.I18N.t('area.faction', { f: KUP.I18N.tv(a.faction) }) + '</span>';
-      html += '<br><span class="area-req">' + (KUP.META.isUnlocked(a.id)
-        ? KUP.I18N.t('area.unlocked', { n: KUP.META.thresholdOf(a.id) })
-        : KUP.I18N.t('area.need', { n: KUP.META.thresholdOf(a.id) })) + '</span>';
-      html += '<br><span class="area-src">' + KUP.I18N.t(a.src === 'regenerate' ? 'area.src.regen' : 'area.src.narrative') + '</span>';
+      if (a.endless) {
+        /* 治安战：明确「没有败北」与成绩归属（玩家可见的规则说明） */
+        html += '<br><span class="area-endless">' + KUP.I18N.t('area.endlessNote') + '</span>';
+      } else {
+        html += '<br><span class="area-req">' + (KUP.META.isUnlocked(a.id)
+          ? KUP.I18N.t('area.unlocked', { n: KUP.META.thresholdOf(a.id) })
+          : KUP.I18N.t('area.need', { n: KUP.META.thresholdOf(a.id) })) + '</span>';
+      }
+      /* 出处标注：官方定位 / NARRATIVE 侧分区 / 本作模式（治安战） */
+      const srcKey = a.src === 'regenerate' ? 'area.src.regen' : (a.src === 'original' ? 'area.src.original' : 'area.src.narrative');
+      html += '<br><span class="area-src">' + KUP.I18N.t(srcKey) + '</span>';
       this.els['area-detail'].innerHTML = html;
     },
 
@@ -1017,13 +1030,32 @@ window.KUP = window.KUP || {};
           : '';
         this.els['hud-companion'].style.opacity = comp ? 1 : 0;
       }
+      /* v0.13 治安战：HUD 常驻波次（WAVE N） */
+      if (this.els['hud-wave']) {
+        const on = !!g.endless;
+        this.els['hud-wave'].classList.toggle('hidden', !on);
+        if (on) {
+          const n = g.orderWave || 1;
+          if (n !== this._waveSig) { this._waveSig = n; this.els['hud-wave'].textContent = KUP.I18N.t('hud.wave', { n }); }
+        }
+      }
     },
 
-    /* ---------- 结算（含復興率 ★★ 与结局分歧） ---------- */
+    /* ---------- 结算（含復興率 ★★ 与结局分歧；v0.13 治安战：只写「战斗结束」） ---------- */
     showEnd(win, st) {
       this.showBoss(false);
       this.showScreen(win ? 'screen-victory' : 'screen-over');
       this.showHUD(true);
+      const order = !!(this.game.area && this.game.area.endless) || !!st.order;
+      /* 治安战：失败屏不写「败北」，改写「战斗结束」+ 成绩（需求：不写失败） */
+      if (order && !win) {
+        const t = document.querySelector('#screen-over .end-title');
+        const s = document.querySelector('#screen-over .end-sub');
+        if (t) { t.textContent = KUP.I18N.t('end.order.title'); t.classList.add('order'); }
+        if (s) s.textContent = KUP.I18N.t('end.order.sub');
+        const rb = $('btn-retry');
+        if (rb) rb.textContent = KUP.I18N.t('end.order.retry');
+      }
       // 胜利副标题：暴走后击破 → 惨胜分歧（REGENERATE「戦闘結果也会改变故事」）
       if (this.els['win-sub'] && win) {
         this.els['win-sub'].textContent = st.bossEnraged
@@ -1037,6 +1069,14 @@ window.KUP = window.KUP || {};
         '<div class="stat"><b>' + st.level + '</b><span>' + KUP.I18N.t('end.stat.level') + '</span></div>' +
         '<div class="stat"><b>' + st.witch + '</b><span>' + KUP.I18N.t('end.stat.witch') + '</span></div>' +
         '<div class="stat"><b>🥚 ' + (st.eggs || 0) + '</b><span>' + KUP.I18N.t('end.stat.eggs') + '</span></div>';
+      /* 治安战：以「波次 + 点数」为主成绩（🧮 换掉卵的权重） */
+      if (order) {
+        html = '<div class="stat"><b>' + U.formatTime(st.time) + '</b><span>' + KUP.I18N.t('end.stat.time') + '</span></div>' +
+          '<div class="stat"><b>WAVE ' + (st.wave || 1) + '</b><span>' + KUP.I18N.t('end.stat.wave') + '</span></div>' +
+          '<div class="stat"><b>' + st.kills + '</b><span>' + KUP.I18N.t('end.stat.kills') + '</span></div>' +
+          '<div class="stat"><b>' + (st.score || 0) + '</b><span>' + KUP.I18N.t('end.stat.score') + '</span></div>' +
+          '<div class="stat"><b>' + st.witch + '</b><span>' + KUP.I18N.t('end.stat.witch') + '</span></div>';
+      }
       /* 形態/皮肤与同伴（结算时确认本局配置） */
       if (st.formLabel && st.form !== 'none') {
         html += '<div class="stat"><b>' + st.formLabel + '</b><span>' + KUP.I18N.t('end.stat.form') + '</span></div>';
@@ -1047,7 +1087,21 @@ window.KUP = window.KUP || {};
       }
       const holder = win ? this.els['win-stats'] : this.els['over-stats'];
       holder.innerHTML = html;
-      // 復興率结算行（協奏中 ★★）
+      // 復興率结算行（協奏中 ★★）／治安战成绩行（v0.13：**只记治安战成绩**）
+      if (meta && meta.order) {
+        const ob = KUP.META.orderBest() || { score: meta.score, wave: st.wave, time: st.time };
+        let line = '<div class="fukkou-gain">' + KUP.I18N.t('end.order.best',
+          { score: ob.score, wave: ob.wave, time: U.formatTime(ob.time || 0) }) + '</div>';
+        if (meta.isBest) line += '<div class="new-record">' + KUP.I18N.t('end.order.newBest') + '</div>';
+        if (meta.tickets) {
+          line += '<div class="ticket-gain">🎫 ' + KUP.I18N.t('end.tickets', { n: meta.tickets, t: meta.ticketsTotal }) + '</div>';
+        }
+        holder.innerHTML += line;
+        this.updateMetaUI();
+        this.showBest();
+        this.updateSaveHealth();
+        return;                       // 治安战不写番街 best、不显示記憶の卵解锁
+      }
       if (meta) {
         let line = '<div class="fukkou-gain">▲ ' + KUP.I18N.t('end.fukkou', { n: meta.gain, t: meta.total }) + '</div>';
         if (meta.newlyUnlocked && meta.newlyUnlocked.length) {
@@ -1087,6 +1141,15 @@ window.KUP = window.KUP || {};
             kills: rec.kills || 0,
             witch: rec.witch ? ' · ' + rec.witch : '' })
         : KUP.I18N.t('menu.best.none');
+      /* v0.13 治安战最高记录：与番街 best 分开显示（最高成绩只记治安战自己的） */
+      if (this.els['order-best-line']) {
+        const ob = KUP.META.orderBest();
+        this.els['order-best-line'].textContent = ob
+          ? KUP.I18N.t('menu.orderBest', {
+              score: ob.score, wave: ob.wave, time: U.formatTime(ob.time || 0), kills: ob.kills || 0 })
+          : KUP.I18N.t('menu.orderBest.none');
+        this.els['order-best-line'].classList.toggle('has-record', !!ob);
+      }
       this.updateMetaUI();
     },
   };

@@ -109,6 +109,20 @@ window.KUP = window.KUP || {};
       };
     }
     const statsIn = (d.stats && typeof d.stats === 'object') ? d.stats : {};
+    /* v0.13 治安战最高记录（**独立**于番街 best：最高成绩只记治安战自己的） */
+    let orderBest = null;
+    if (d.orderBest && typeof d.orderBest === 'object') {
+      const sc = int(d.orderBest.score, 0);
+      if (sc > 0) {
+        orderBest = {
+          score: sc,
+          kills: Math.max(0, int(d.orderBest.kills, 0)),
+          time: Math.max(0, num(d.orderBest.time, 0)),
+          wave: Math.max(1, int(d.orderBest.wave, 1)),
+          at: int(d.orderBest.at, 0),
+        };
+      }
+    }
     return {
       fukkou: Math.max(0, num(d.fukkou, 0)),
       tickets: Math.max(0, int(d.tickets, 0)),
@@ -125,6 +139,8 @@ window.KUP = window.KUP || {};
       best: best,
       lastRun: lastRun,
       lastRunId: typeof d.lastRunId === 'string' ? d.lastRunId : null,
+      orderBest: orderBest,
+      lastOrderRunId: typeof d.lastOrderRunId === 'string' ? d.lastOrderRunId : null,
       stats: {
         runs: Math.max(0, int(statsIn.runs, 0)),
         wins: Math.max(0, int(statsIn.wins, 0)),
@@ -223,8 +239,17 @@ window.KUP = window.KUP || {};
     /* ---------- 復興率 ---------- */
     total() { return Math.max(0, Math.min(100, Math.round(this.ensure().fukkou))); },
     areaIndex(id) { const i = KUP.AREAS.findIndex(a => a.id === id); return i < 0 ? 0 : i; },
-    isUnlocked(id) { return this.total() >= this.THRESHOLDS[this.areaIndex(id)]; },
-    thresholdOf(id) { return this.THRESHOLDS[this.areaIndex(id)]; },
+    /* v0.13 治安战（endless）不属于復興率解锁链：恒可出击、阈值恒 0 */
+    isUnlocked(id) {
+      const a = KUP.AREAS.find(x => x.id === id);
+      if (a && a.endless) return true;
+      return this.total() >= this.THRESHOLDS[this.areaIndex(id)];
+    },
+    thresholdOf(id) {
+      const a = KUP.AREAS.find(x => x.id === id);
+      if (a && a.endless) return 0;
+      return this.THRESHOLDS[this.areaIndex(id)];
+    },
     clearedCount(id) { return this.ensure().cleared[id] || 0; },
 
     /* ---------- 局外货币：市民票（REGENERATE 术语） ---------- */
@@ -399,6 +424,46 @@ window.KUP = window.KUP || {};
       const got = this.checkRecruits();
       const newlyRecruitable = got.chars.concat(got.companions).map(c => c.name);
       return { gain, total: after, tickets, ticketsTotal: d.tickets, newlyUnlocked, newlyRecruitable };
+    },
+
+    /* ---------- v0.13 治安战（无尽关卡）的独立成绩 ----------
+     * 规则：**没有败北**——只有「战斗结束」；成绩记入 `orderBest`（与番街 best 完全分离），
+     *       不发復興率、不写通关次数、不落記憶の卵；市民票按净化数照常结算。 */
+    orderScore(r) {
+      r = r || {};
+      return Math.max(0, Math.round((r.kills || 0) * 10 + (r.time || 0) * 2 + (r.wave || 1) * 100));
+    },
+    orderBest() { return this.ensure().orderBest; },
+    /* 结算一场治安战：run = { runId, kills, time, wave, score }
+     * 幂等（runId）；返回 { order, score, best, isBest, wave, tickets, ticketsTotal, total } 或 null */
+    addOrderResult(run) {
+      run = run || {};
+      const d = this.ensure();
+      if (run.runId) {
+        if (d.lastOrderRunId === run.runId) {
+          console.info('[KUP] 本场治安战（' + run.runId + '）已结算，忽略重复结算。');
+          return null;
+        }
+        d.lastOrderRunId = run.runId;
+      }
+      const score = Number.isFinite(run.score) ? Math.max(0, Math.round(run.score)) : this.orderScore(run);
+      const wave = Math.max(1, int(run.wave, 1));
+      const time = Math.max(0, num(run.time, 0));
+      const kills = Math.max(0, int(run.kills, 0));
+      const prev = d.orderBest;
+      const isBest = !prev || score > prev.score || (score === prev.score && time > prev.time);
+      if (isBest) d.orderBest = { score, kills, time, wave, at: Date.now() };
+      /* 市民票：治安战不设通关，按净化数 + 基础参战（用 win=false 的档位） */
+      const tickets = this.ticketIncome({ kills, eggs: 0, areaIdx: 0, win: false, firstClear: false });
+      d.tickets += tickets;
+      d.stats.runs += 1;
+      if (time > 0) d.stats.playtime += time;
+      this.save();
+      STORE.slots.touch(this.slotId(), { run: true, win: false, playtime: Math.round(time) });
+      return {
+        order: true, score, best: d.orderBest.score, isBest, wave,
+        tickets, ticketsTotal: d.tickets, total: this.total(),
+      };
     },
 
     /* ---------- 最佳记录（原 kup_best，现随槽位走） ---------- */

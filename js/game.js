@@ -285,6 +285,13 @@ window.KUP = window.KUP || {};
       this.dangerNear = false;   // 是否有预警中的敌袭贴近玩家（HUD 提示用）
       this.time = this.debug.t || 0;
       this.kills = 0; this.gemCount = 0;
+      /* v0.13 治安战（无尽关卡）：模式标记 + 程序化波次状态 */
+      this.endless = !!(this.area && this.area.endless);
+      this.orderWave = 1;
+      this.orderEliteT = C.ENDLESS.ELITE_EVERY;
+      this.orderBossT = C.ENDLESS.BOSS_FIRST;
+      this.orderBossIdx = 0;
+      this.orderScore = 0;
       this.xp = 0; this.level = 1; this.pendingLevels = 0; this.choices = null;
       /* 升级池体验（v0.10）：本局重掷次数与封禁名单 */
       this.rerolls = this.debug.reroll != null ? this.debug.reroll : 3;
@@ -722,6 +729,18 @@ window.KUP = window.KUP || {};
       if (e.boss) {
         this.shake(14);
         KUP.Audio.sfx('boss');
+        if (this.endless) {
+          /* 治安战：击破 Boss **不是终点**——清场奖励 + 继续下一轮（director 会再排 Boss）。
+           * 也不落記憶の卵／不发復興率：治安战的成绩只进治安战记录。 */
+          this.boss = null;
+          KUP.UI.showBoss(false);
+          this.ult.charge = Math.min(100, this.ult.charge + 40);
+          this.addText(p.x, p.y - 32, KUP.I18N.t('order.bossDown'), '#ffe08a', 16);
+          KUP.UI.banner(KUP.I18N.t('banner.order.next'), 2);
+          this.rings.push(new KUP.Ring(e.x, e.y, { maxR: 620, speed: 720, dmg: 90 * p.dmgMult, kb: 280, color: '#9ff3ff' }));
+          this.dropGem(e.x, e.y, 60);
+          return;
+        }
         this.victory();
         return;
       }
@@ -730,8 +749,8 @@ window.KUP = window.KUP || {};
       if (e.elite) {
         this.shake(5);
         this.gems.push(new KUP.Gem(e.x + 16, e.y, 0, 'heal'));
-        /* 記憶の卵：精英 20% 掉落（对局中拾取） */
-        if (U.rng() < 0.2) this.gems.push(new KUP.Gem(e.x - 16, e.y, 0, 'egg'));
+        /* 記憶の卵：精英 20% 掉落（对局中拾取）；治安战不落卵（不污染復興率） */
+        if (!this.endless && U.rng() < 0.2) this.gems.push(new KUP.Gem(e.x - 16, e.y, 0, 'egg'));
       }
     }
 
@@ -1133,8 +1152,15 @@ window.KUP = window.KUP || {};
     gameOver() {
       if (this.state === 'over' || this.state === 'victory') return;
       this.state = 'over';
-      /* 復興率结算（败北也计上 1% 观测数据）＋市民票收入 */
-      this.metaResult = KUP.META.addRunResult(this.run.area, false, this.runStats());
+      if (this.endless) {
+        /* 治安战：**没有败北**——HP 归零只是「战斗结束」。
+         * 成绩记入**独立的**治安战最高记录（不发復興率、不写番街 best/通关）。 */
+        this.orderScore = KUP.META.orderScore({ kills: this.kills, time: this.time, wave: this.orderWave });
+        this.metaResult = KUP.META.addOrderResult(this.orderStats());
+      } else {
+        /* 復興率结算（败北也计上 1% 观测数据）＋市民票收入 */
+        this.metaResult = KUP.META.addRunResult(this.run.area, false, this.runStats());
+      }
       KUP.Audio.stopBGM();
       KUP.Audio.sfx('boss');
       KUP.UI.showEnd(false, this.stats());
@@ -1164,6 +1190,12 @@ window.KUP = window.KUP || {};
         time: this.time,
       };
     }
+    /* 治安战的成绩单（交给 META.addOrderResult；runId 同样是幂等键） */
+    orderStats() {
+      const wave = Math.max(1, this.orderWave || 1);
+      const score = KUP.META.orderScore({ kills: this.kills, time: this.time, wave });
+      return { runId: this.run.id || null, kills: this.kills, time: this.time, wave, score };
+    }
     stats() {
       return {
         time: this.time, kills: this.kills, level: this.level, witch: this.player.def.name,
@@ -1180,6 +1212,11 @@ window.KUP = window.KUP || {};
         companion: this.recruit ? this.recruit.name : null,
         companionForm: this.player.recruitForm.id,
         companionFormLabel: KUP.I18N.tv(this.player.recruitForm.name),
+        /* v0.13 治安战：模式标记、波次、点数、治安战最高记录 */
+        order: !!this.endless,
+        wave: this.orderWave || 1,
+        score: KUP.META ? KUP.META.orderScore({ kills: this.kills, time: this.time, wave: this.orderWave || 1 }) : 0,
+        orderBest: (KUP.META && KUP.META.orderBest()) ? KUP.META.orderBest().score : 0,
       };
     }
   }

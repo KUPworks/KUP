@@ -79,6 +79,9 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .select-actions { margin-top: 26px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 
 .best-line { margin-top: 18px; font-size: 13px; color: #9a90d6; letter-spacing: .08em; }
+/* v0.13 治安战最高记录：金色区分（与番街 best 并行展示） */
+#order-best-line { margin-top: 4px; color: #d8b86a; }
+#order-best-line.has-record { color: #ffd25a; text-shadow: 0 0 10px rgba(255,210,90,.45); }
 /* 语言切换 */
 #lang-switch { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
 .lang-btn {
@@ -154,6 +157,12 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 
 #hud-topcenter { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); text-align: center; }
 #timer { font-size: 30px; font-weight: 800; letter-spacing: .1em; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 16px rgba(130,110,255,.75); }
+/* v0.13 治安战：HUD 常驻波次（仅无尽模式显示） */
+#hud-wave {
+  margin-top: 2px; font-size: 13px; font-weight: 800; letter-spacing: .22em;
+  color: #ffd25a; text-shadow: 0 0 12px rgba(255,210,90,.7);
+}
+#hud-wave.hidden { display: none; }
 #boss-wrap { margin-top: 6px; width: min(460px, 60vw); }
 #boss-name { font-size: 12px; letter-spacing: .2em; color: #ff7ad9; text-shadow: 0 0 8px rgba(255,80,180,.8); margin-bottom: 3px; }
 #boss-bar-wrap { height: 12px; background: rgba(10,6,24,.8); border: 1px solid rgba(255,110,200,.6); border-radius: 3px; overflow: hidden; }
@@ -208,6 +217,7 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .end-title { font-size: clamp(38px, 7vw, 60px); font-weight: 800; letter-spacing: .12em; }
 .end-title.lose { color: #ff5a7a; text-shadow: 0 0 30px rgba(255,60,100,.55); }
 .end-title.win { color: #7dffe0; text-shadow: 0 0 30px rgba(80,255,200,.5); }
+.end-title.order { color: #ffd25a; text-shadow: 0 0 30px rgba(255,210,90,.5); }
 .end-sub { font-size: 14px; color: #b9b1e4; margin: 12px 0 24px; letter-spacing: .1em; }
 .end-stats { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; margin-bottom: 6px; }
 .end-stats .stat { text-align: center; }
@@ -328,6 +338,9 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 /* 番街详情：定位／居住魔女之子／势力／出处 */
 #area-detail .area-faction { color: #ffd98a; font-size: 12px; }
 #area-detail .area-src { color: #776fae; font-size: 11px; }
+#area-detail .area-endless { color: #ffd25a; font-size: 12px; }
+.area-card.endless { border-style: dashed; }
+.area-card.endless .area-glyph { color: #ffd25a; }
 .area-card .area-role { font-size: 10px; color: #c9c2ee; margin-top: 4px; }
 
 /* HUD 同伴标识 */

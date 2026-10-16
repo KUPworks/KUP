@@ -28,6 +28,17 @@ KUP.CONFIG = {
    * MIN_GAP ：软间隙——可走判定把圆心挡在楼体外扩这么多像素（≥任何敌人半径，
    *           避免「软夹紧」与硬碰撞互相拉扯造成抖动；道路 80 宽仍容精英单列通行）。 */
   CITY: { SOLID: true, GRID: 200, ROAD: 80, MARGIN: 12, MIN_GAP: 22 },
+  /* ---------- 治安战（v0.13）：无尽关卡 ----------
+   * 规则：怪异无限涌来，**没有败北**——HP 归零只表示「战斗结束」；
+   *       成绩（点数／波次／存活／净化数）记入**独立的**治安战最高记录；
+   *       不发復興率、不写番街通关（避免污染主线进度）。
+   * 波次：每 WAVE_T 秒推进一波，刷怪率与种类逐步升级；
+   *       ELITE_EVERY 秒一体精英；BOSS_EVERY 秒一体 Boss（7 体轮换，
+   *       每轮血量 ×(1 + n×HP_STEP)），Boss 出生 BOSS_ENRAGE 秒后暴走。 */
+  ENDLESS: {
+    WAVE_T: 30, RATE_BASE: 1.4, RATE_STEP: 0.32, RATE_MAX: 7.5,
+    ELITE_EVERY: 45, BOSS_EVERY: 120, BOSS_FIRST: 60, HP_STEP: 0.35, BOSS_ENRAGE: 75,
+  },
   DEFAULT_SEED: 20250314,
   DEFAULT_AREA: 'area0',
   DEFAULT_MOD: 'none',
@@ -229,6 +240,25 @@ KUP.AREAS = [
     events: [
       { t: 100, name: { zh: '再生 -Regenerate- 前夜 —— 夺回一切', en: 'Eve of Regenerate — take it all back', ja: '再生の前夜——すべてを取り戻せ' }, surge: 24 },
     ],
+  },
+  /* ===== v0.13「治安战」：无尽关卡（本作模式，非官方番街）=====
+   * 与番街的区别（全部由 `endless: true` 驱动）：
+   *   - **没有败北**：HP 归零只表示「战斗结束」（结局文案/结算界面另走 order 分支）
+   *   - **成绩独立**：最高记录写进 `META.orderBest`（点数/波次/存活/净化数），
+   *     与番街 `best` 互不影响；不发復興率、不写通关次数、不落記憶の卵
+   *   - **无常驻波次表**：波次/精英/Boss 由 `CONFIG.ENDLESS` 程序化生成 */
+  {
+    id: 'order', boss: 'boss0', endless: true, glyph: '∞',
+    name: { zh: '治安战', en: 'Order War', ja: '治安戦' },
+    role: { zh: '无尽战斗（本作模式）', en: 'Endless battle (original mode)', ja: '無限戦闘（本作モード）' },
+    resident: null,
+    faction: { zh: '復興課・治安維持（本作设定）', en: 'Reconstruction Div. — keeping order (original to this work)', ja: '復興課・治安維持（本作設定）' },
+    src: 'original',
+    desc: { zh: '復興課的治安维持作战——怪异没有尽头地涌来。这里<b>没有败北</b>，只有「战斗结束」；成绩记入治安战最高记录。', en: 'The Reconstruction Division\'s order-keeping operation — aberrations pour in without end. There is <b>no defeat</b> here, only "battle over"; your score is kept as the Order War record.', ja: '復興課の治安維持作戦——異形は際限なく押し寄せる。ここに<b>敗北はない</b>。「戦闘終了」と、治安戦の最高記録だけがある。' },
+    chapter: { zh: '治安戦 -Order War-', en: 'Order War', ja: '治安戦 -Order War-' },
+    hue: [40, 95], blocks: 110, win: 0.55, tone: 'rgba(24,16,34,0.92)', fog: 0.08,
+    accent: '#ffd25a',
+    waves: KUP.WAVES,   // 占位（endless 模式由 director 程序化生成，不读此表）
   },
 ];
 KUP.AREA = id => KUP.AREAS.find(a => a.id === id) || KUP.AREAS[0];
