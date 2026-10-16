@@ -2,7 +2,7 @@
 
 > 非官方同人致敬作品 —— 基于 KAMITSUBAKI STUDIO「神椿市」世界观的**吸血鬼幸存者 like** 游戏。
 > 灵感来自《神椿市建設中。》动画与《神椿市協奏中。》音游。**与官方无任何关联。**
-> 当前版本 **v0.11.0-solid** · 零依赖 · 零构建 · 纯 HTML5 Canvas。
+> 当前版本 **v0.12.0-blade** · 零依赖 · 零构建 · 纯 HTML5 Canvas。
 
 ![类型](https://img.shields.io/badge/genre-生存 roguelite-7a4dd8) ![引擎](https://img.shields.io/badge/engine-纯 HTML5 Canvas-4ee6ff) ![依赖](https://img.shields.io/badge/dependencies-零-5ad0a0)
 
@@ -74,6 +74,7 @@ python -m http.server 8080
   - 血线 **<45%** 时道具占 2 格且优先；
   - 「系谱之心」升级时最大生命 +25% 并**回满**；「魔女的休息」回复 40%；回复音片 ♥ 回复 30%。
 - **覚醒**：初期武装满级后再次选中 → **觉醒演出**，武器化为乐曲名进化形态（如「わたしの声 -unison-」）。
+- **武器（v0.12：11 把 / 9 种行为）**：可招募角色的专属武器需先招募才会入池（v0.11）；近战挥刀「**斩音太刀**」以**扇形角度**与**刀长**为参数，圆形波（テラ・ドロップ等）亦可配**角度**变成定向扇形冲击波——两者都在 `js/data.js` 的等级表里用 `arc`（度）／`len`（px）调节。
 - **記憶の卵**：精英掉落 / Boss 必得 → 主菜单「记忆图鉴」解锁观测者的记忆片段，**復興率 +1%**。
 
 ### 2.4 局内道具（五种「符」，可重复选，不占被动槽）
@@ -284,7 +285,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 | `?solid=0` | 关闭建筑实体（楼体退回纯装饰，用于对比/回退；默认开启） |
 | `?gem=heal` | 周期生成回复/经验音片 |
 | `?ult=1` | 开局即充满浄化の歌 |
-| `?w=toss,bomb,mine` | 追加初始武器（最多带 5 把） |
+| `?w=toss,bomb,mine,slash` | 追加初始武器（最多带 5 把；`slash`＝近战挥刀） |
 | `?recruit=1` `?tickets=300` | 临时解锁全部招募／临时发放市民票（**仅内存，不落盘**） |
 | `?form=` | 皮肤：`ouranchou`/`himerenjaku`（魔女之子）；`kuro`/`shiro`（魔女候補） |
 | `?companion=ciel` `?cform=` | 同伴／同伴皮肤（`jk_summer`/`jk_winter`） |
@@ -306,6 +307,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 | **数值平衡**（角色/武器/被动/敌人/Boss 血量） | `js/data.js` | 纯数据表，全部三语 `{zh,en,ja}`。改完跑 `node .chatecnu-work/inventory.js` 看计数 |
 | **难度曲线、波次表、番街配置、规则修正** | `js/config.js` | `KUP.CONFIG` / `KUP.AREAS`（七区的定位·势力·Boss·waves·events·theme）/ `KUP.MODIFIERS` |
 | **加角色 / 加武器 / 加被动** | `js/data.js` → `js/entities.js` → `js/game.js` | 数据表加条目，实体加行为，主循环加接线。加武器要向 `game.js` 的武器分派注册 |
+| **武器形状参数（扇形角度 / 刀长 / 圆形波角度）** | `js/data.js` | 等级表里 `arc`＝扇形角度（**度**）、`len`＝刀长（px）——见 `slash`（近战挥刀）与 `bass`（圆形波，`arc`<360 即定向扇形冲击波） |
 | **界面文案（三语）** | `js/i18n.js` | 必须**三语齐全**，缺词静默回落中文 |
 | **界面结构 / 新增屏幕** | `index.html` + `js/ui.js` | 静态文本用 `data-i18n` 标注，**不要内联硬编码中文** |
 | **视觉（配色 / 霓虹 / 字体栈）** | `css/style.css` | 只改样式别动结构 |
