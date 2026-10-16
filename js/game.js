@@ -597,46 +597,101 @@ window.KUP = window.KUP || {};
     }
 
     /* ---------- 绕楼寻路（v0.13.1）----------
-     * 局部避障转向：沿「期望方向」前视，被挡就按角度阶梯向两侧试探，选偏转最小
-     * 且通路畅通的方向；并粘住同一侧 HOLD 秒，避免在楼角左右横跳。
-     * 命中的方向写回 ent.navX/navY，返回 true；直冲畅通或彻底被夹住返回 false
-     * （后者交给 collideCity 的硬碰撞兜底）。无分配、无状态表、不消费随机流。 */
+     * **把「指向玩家」投影到可走路径上**（不再朝墙里使劲）：
+     *   ① 沿期望方向前视，畅通就直冲（快路径）；
+     *   ② 被挡则取挡路墙面的法线，把方向里的**进墙分量扣掉** ⇒ 只剩沿墙切向
+     *      （楼体轴对齐 ⇒ 切向就是 ±x/±y）——「滑墙」而不是「磨墙」；
+     *   ③ 正对墙面时投影退化为零 ⇒ 用 navSide 滞回决定往哪一侧滑；
+     *   ④ 投影仍被挡（凹角、夹缝）才退回角度阶梯 STEP 兜底。
+     * 方向连续输出（无档位跳变），叠上 entities 侧的角速度上限（数据表 turn）
+     * 即成为弧线绕行。写回 ent.navX/navY 并返回 true；直冲畅通返回 false。
+     * 无分配（_hit 暂存复用）、无状态表、不消费随机流。 */
     steerCity(ent, dx, dy, dt) {
       if (!this.citySolid || !this.city || !this.city.blocks.length) return false;
       const r = (ent.r || 0) * 0.95, N = C.NAV, look = (ent.r || 0) + N.LOOK;
-      if (!this._blocked(ent, dx, dy, look, r)) { ent.navHold = 0; return false; }   // 快路径：直冲
-      const hold = (ent.navHold || 0) - (dt || 0);
-      /* 首次被挡：比较两侧「切向通透度」，决定往哪边绕（相同则取 +1，确定性） */
-      let side = ent.navSide || 1;
-      if (hold <= 0) {
-        const a = N.STEP[2], c0 = Math.cos(a), s0 = Math.sin(a);
-        const dp = this._clearance(ent, dx * c0 - dy * s0, dx * s0 + dy * c0, look, r);
-        const dm = this._clearance(ent, dx * c0 + dy * s0, -dx * s0 + dy * c0, look, r);
-        side = dp >= dm ? 1 : -1;
+      const hit = this._blockHit(ent, dx, dy, look, r);
+      if (!hit) { ent.navHold = 0; return false; }                 // 直冲畅通
+      const hold = Math.max(0, (ent.navHold || 0) - (dt || 0));
+      /* 墙面法线取自**敌人自身**在楼体上的最近点（不是前视采样点）：采样点会停在
+       * 楼角上，法线随它在两面之间逐帧翻转 ⇒ 切向反复换向、朝向永远追不上而原地
+       * 摆动（实测卡死 20 秒）。用自身位置则法线随位置连续变化，楼角自然成为
+       * 圆角过渡（切向随之旋转），敌人绕角是弧线而不是折线。 */
+      const b = hit.b;
+      let nx = ent.x - U.clamp(ent.x, b.x, b.x + b.w), ny = ent.y - U.clamp(ent.y, b.y, b.y + b.h);
+      const nl = Math.hypot(nx, ny);
+      if (nl > 0.001) { nx /= nl; ny /= nl; } else { nx = -dx; ny = -dy; }   // 圆心落在楼内
+      /* 该墙面的切向基准（楼体轴对齐 ⇒ ±x/±y）与玩家方向在它上面的带符号分量 */
+      const wallTx = -ny, wallTy = nx;
+      const along = dx * wallTx + dy * wallTy;
+      /* 选绕向（滞回）：沿用上一帧的侧，除非沿墙分量**明确**指向另一边；首次被挡时
+       * 按玩家意图选（分量太小＝正对墙面 ⇒ 比两侧通透度）。滞回是防止「绕远路」：
+       * 只看玩家方向的话，分量在 0 附近抖一下就会改绕另一侧。 */
+      let s = hold > 0 ? (ent.navSide || 0) : 0;
+      if (s && along * s < -N.SIDE_K) s = along > 0 ? 1 : -1;
+      else if (!s) {
+        if (Math.abs(along) >= N.MIN_T) s = along > 0 ? 1 : -1;
+        else {
+          const c1 = this._clearance(ent, wallTx, wallTy, look, r);
+          const c2 = this._clearance(ent, -wallTx, -wallTy, look, r);
+          s = c1 >= c2 ? 1 : -1;
+        }
       }
+      /* 目标方向＝「指向玩家」扣掉进墙分量（**连续**：法线随位置旋转时目标方向也
+       * 跟着旋转，楼角因此是弧线）。注意不能写成「朝墙里就取切向、否则取玩家方向」
+       * 的分支——那在法线旋转时会每帧跳 90°，朝向永远追不上而原地打转。
+       * 只有投影短到退化（正对墙面）才取选定的那一侧切向，且在边界上与投影一致。 */
+      const into = dx * nx + dy * ny;
+      let tx = dx - Math.min(0, into) * nx, ty = dy - Math.min(0, into) * ny;
+      const tl = Math.hypot(tx, ty);
+      if (tl < N.MIN_T) { tx = wallTx * s; ty = wallTy * s; }
+      else { tx /= tl; ty /= tl; }
+      if (!this._blocked(ent, tx, ty, look, r)) {                  // 选定方向畅通 → 采用
+        ent.navX = tx; ent.navY = ty; ent.navSide = s; ent.navHold = N.HOLD;
+        return true;
+      }
+      /* 兜底：选定方向也被挡（凹角、夹缝、两墙夹击）→ 角度阶梯两侧试探 */
       for (let pass = 0; pass < 2; pass++) {
-        const s = pass === 0 ? side : -side;
+        const ss = pass === 0 ? s : -s;
         for (const a of N.STEP) {
-          const ca = Math.cos(a * s), sa = Math.sin(a * s);
-          const nx = dx * ca - dy * sa, ny = dx * sa + dy * ca;
-          if (this._blocked(ent, nx, ny, look, r)) continue;
-          ent.navX = nx; ent.navY = ny; ent.navSide = s; ent.navHold = N.HOLD;
+          const ca = Math.cos(a * ss), sa = Math.sin(a * ss);
+          const ax = dx * ca - dy * sa, ay = dx * sa + dy * ca;
+          if (this._blocked(ent, ax, ay, look, r)) continue;
+          ent.navX = ax; ent.navY = ay; ent.navSide = ss; ent.navHold = N.HOLD;
           return true;
         }
       }
-      return false;                                          // 全被挡：保持原方向，硬碰撞推出
+      return false;                                                // 全被挡：保持原方向，硬碰撞兜底
     }
-    /* 沿 (nx,ny) 前视 look 距离：分 3 段采样，任一段与楼体相交即视为被挡 */
-    _blocked(ent, nx, ny, look, r) {
+    /* 逃逸方向（防打转看门狗专用）：8 个方位里选**最开阔**的那个（通透度最大，并列取
+     * 先者 ⇒ 确定性）。结果写 ent.escX/escY；八向全被挡则返回 false（交给硬碰撞）。 */
+    escapeDir(ent) {
+      if (!this.citySolid || !this.city || !this.city.blocks.length) return false;
+      const r = (ent.r || 0) * 0.95, N = C.NAV, look = (ent.r || 0) + N.LOOK;
+      let best = -1, bx = 0, by = 0;
+      for (let i = 0; i < 8; i++) {
+        const a = i * (U.TAU / 8), nx = Math.cos(a), ny = Math.sin(a);
+        if (this._blocked(ent, nx, ny, look, r)) continue;
+        const c = this._clearance(ent, nx, ny, look, r);
+        if (c > best) { best = c; bx = nx; by = ny; }
+      }
+      if (best < 0) return false;
+      ent.escX = bx; ent.escY = by;
+      return true;
+    }
+    /* 沿 (nx,ny) 前视 look 距离：分 3 段采样，返回**第一个**被挡的采样点与挡路楼体
+     * （无则 null）。结果写在 this._hit 暂存对象上（零分配，调用方须立即取值）。 */
+    _blockHit(ent, nx, ny, look, r) {
+      const out = this._hit || (this._hit = { x: 0, y: 0, b: null });
       for (let i = 1; i <= 3; i++) {
         const k = look * (i / 3), px = ent.x + nx * k, py = ent.y + ny * k;
         for (const b of this._near(px, py, r, NS)) {
           const cx = U.clamp(px, b.x, b.x + b.w), cy = U.clamp(py, b.y, b.y + b.h);
-          if (U.dist2(px, py, cx, cy) < r * r) return true;
+          if (U.dist2(px, py, cx, cy) < r * r) { out.x = px; out.y = py; out.b = b; return out; }
         }
       }
-      return false;
+      return null;
     }
+    _blocked(ent, nx, ny, look, r) { return this._blockHit(ent, nx, ny, look, r) !== null; }
     /* 通透度：沿方向 5 段采样中「畅通」的段数（0〜5，越大越开阔）——仅用于选绕过哪一侧 */
     _clearance(ent, nx, ny, look, r) {
       let free = 0;

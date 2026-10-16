@@ -698,32 +698,36 @@ KUP.ITEMS = {
 };
 KUP.ITEM = id => KUP.ITEMS[id] || null;
 
-/* ---------- 敌人（テセラクター：人之恶意所生的怪异） ---------- */
+/* ---------- 敌人（テセラクター：人之恶意所生的怪异） ----------
+ * turn ＝ **角速度上限（度/秒）**：敌人朝向以它为上限转向「可走方向」（见
+ * js/game.js steerCity 与 js/entities.js Enemy.update）。单位按本仓库数据表
+ * 约定用「度」，运行时以 DEG 换算；大体型转得慢 ⇒ tank/elite/Boss 绕圈时更笨重。
+ * 未写 turn 的条目回落到 CONFIG.NAV.TURN。 */
 KUP.ENEMIES = {
   noise: {
     id: 'noise',
     name: { zh: 'テセラクター（基本型）', en: 'Tesseracter (Basic)', ja: 'テセラクター（基本型）' },
-    hp: 10, speed: 62, dmg: 8, xp: 1, r: 12, color: '#8d94b8', sides: 7,
+    hp: 10, speed: 62, dmg: 8, xp: 1, r: 12, color: '#8d94b8', sides: 7, turn: 600,
   },
   glitch: {
     id: 'glitch',
     name: { zh: 'テセラクター（高速型）', en: 'Tesseracter (Swift)', ja: 'テセラクター（高速型）' },
-    hp: 7, speed: 108, dmg: 6, xp: 2, r: 9, color: '#55e0ff', sides: 5,
+    hp: 7, speed: 108, dmg: 6, xp: 2, r: 9, color: '#55e0ff', sides: 5, turn: 900,
   },
   tank: {
     id: 'tank',
     name: { zh: 'テセラクター（巨躯型）', en: 'Tesseracter (Bulwark)', ja: 'テセラクター（巨躯型）' },
-    hp: 60, speed: 34, dmg: 18, xp: 6, r: 20, color: '#c2507e', sides: 8,
+    hp: 60, speed: 34, dmg: 18, xp: 6, r: 20, color: '#c2507e', sides: 8, turn: 300,
   },
   elite: {
     id: 'elite',
     name: { zh: '異能テセラクター', en: 'Aberrant Tesseracter', ja: '異能テセラクター' },
-    hp: 260, speed: 74, dmg: 16, xp: 30, r: 26, color: '#ffab5e', sides: 6, elite: true,
+    hp: 260, speed: 74, dmg: 16, xp: 30, r: 26, color: '#ffab5e', sides: 6, elite: true, turn: 450,
   },
   boss: {
     id: 'boss',
     name: { zh: '大テセラクター〈消音〉', en: 'Grand Tesseracter 〈Mute〉', ja: '大テセラクター〈消音〉' },
-    hp: 2000, speed: 46, dmg: 24, xp: 0, r: 52, color: '#ff5aa8', sides: 9, boss: true,
+    hp: 2000, speed: 46, dmg: 24, xp: 0, r: 52, color: '#ff5aa8', sides: 9, boss: true, turn: 380,
   },
 };
 
@@ -975,6 +979,9 @@ KUP.BOSSES = {
   },
 };
 KUP.BOSS = id => KUP.BOSSES[id] || KUP.BOSSES.boss0;
+/* 7 体 Boss 一律笨重（380°/s，与 ENEMIES.boss 同值）：它们是「大テセラクター」，
+ * 转身不该比小怪灵活——逐个手写 7 份没有意义，故在此统一赋值（见顶部 turn 说明）。 */
+for (const k in KUP.BOSSES) if (KUP.BOSSES[k].turn == null) KUP.BOSSES[k].turn = 380;
 /* 把各番街 Boss 并入敌人表（spawnEnemy 统一按 id 生成；boss0 与 KUP.ENEMIES.boss 同源） */
 for (const k in KUP.BOSSES) KUP.ENEMIES[k] = KUP.BOSSES[k];
 KUP.ENEMIES.boss = KUP.BOSSES.boss0;

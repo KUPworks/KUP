@@ -3,6 +3,7 @@ window.KUP = window.KUP || {};
 /* ================= 实体层 ================= */
 (function () {
   const U = KUP.U, C = KUP.CONFIG;
+  const DEG = Math.PI / 180;   // 数据表的角速度以**度/秒**书写（与武器 arc 同约定）
 
   /* ---------- 玩家（主角＝魔女之子；带特殊歌唱用形態与同行同伴） ---------- */
   class Player {
@@ -358,10 +359,18 @@ window.KUP = window.KUP || {};
        *   stunT  ＝ 僵直／冷冻剩余秒数（完全停止：不移动、不行动、不造成接触伤害）
        *   slowT  ＝ 减速剩余秒数；slowMul ＝ 减速倍率（越小越慢，取「最强」来源） */
       this.stunT = 0; this.slowMul = 1; this.stunMax = 0;
-      /* v0.13.1 绕楼寻路：navX/navY ＝ 避障转向后的方向；navSide/navHold ＝
+      /* v0.13.1 绕楼寻路：navX/navY ＝ 避障后的可走方向；navSide/navHold ＝
        * 「粘住哪一侧」的滞回（见 game.steerCity）；freezeAt ＝ 冻住那一刻的
        * 视觉时钟（冻僵的敌人连形变与故障抖动都定格，一眼可辨）。 */
       this.navX = 0; this.navY = 0; this.navSide = 0; this.navHold = 0;
+      /* dirA ＝ 当前朝向角（懒初始化：第一次 update 时对准玩家）。朝向以
+       * **角速度上限** `def.turn`（度/秒，数据表）转向可走方向——贴墙绕行与
+       * 进入/脱离贴墙都成为弧线，不再是逐档跳变的折线。
+       * spinAcc/chkX/chkY ＝ 防打转看门狗（转过多少 & 从哪开始量的位移）；
+       * escX/escY/escT ＝ 逃逸方向与剩余时间（极窄楼缝里的脱困手段）。 */
+      this.dirA = null;
+      this.spinAcc = 0; this.chkX = null; this.chkY = null;
+      this.escX = 0; this.escY = 0; this.escT = 0;
       this.freezeAt = null;
     }
     update(dt, game) {
@@ -371,16 +380,38 @@ window.KUP = window.KUP || {};
       if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) { this.slowT = 0; this.slowMul = 1; } }
       const dx = p.x - this.x, dy = p.y - this.y;
       const d = Math.hypot(dx, dy) || 1;
-      let ux = dx / d, uy = dy / d;
-      /* 绕楼寻路（v0.13.1）：期望方向被楼体挡住时改为沿墙绕行 */
-      let wobK = 1;
-      if (game.steerCity && game.steerCity(this, ux, uy, dt)) {
-        ux = this.navX; uy = this.navY; wobK = C.NAV.WOBBLE;      // 绕行时收敛蛇行
+      /* 目标方向：默认指向玩家；被楼体挡住时由 steerCity 投影到可走路径上。
+       * 逃逸期（看门狗触发后）改走「最开阔方向」，决定性离开窄缝。 */
+      let tx = dx / d, ty = dy / d, wobK = 1;
+      if (this.escT > 0) {
+        this.escT -= dt;
+        tx = this.escX; ty = this.escY; wobK = C.NAV.WOBBLE;
+      } else if (game.steerCity && game.steerCity(this, tx, ty, dt)) {
+        tx = this.navX; ty = this.navY; wobK = C.NAV.WOBBLE;      // 绕行时收敛蛇行
       }
+      /* 朝向以角速度上限转向目标方向（数据表 turn，度/秒；缺省 CONFIG.NAV.TURN） */
+      const want = Math.atan2(ty, tx);
+      if (this.dirA === null) { this.dirA = want; this.chkX = this.x; this.chkY = this.y; }
+      const turn = (this.def.turn || C.NAV.TURN) * DEG;
+      const prevA = this.dirA;
+      this.dirA = U.aimAngle(prevA, want, turn, dt);
+      const ux = Math.cos(this.dirA), uy = Math.sin(this.dirA);
       const wob = Math.sin(game.time * 2.2 + this.phase) * 0.35 * wobK;
       const spd = this.speed * (this.slowT > 0 ? this.slowMul : 1); // 减速（滞留区／鈍足の符）
       this.x += (ux * spd - uy * wob * spd * 0.4 + this.kx) * dt;
       this.y += (uy * spd + ux * wob * spd * 0.4 + this.ky) * dt;
+      /* 防打转看门狗：极少数「斜对角楼缝」会把敌人夹在 ~34px 的口袋里，投影方向随之
+       * 逐帧翻转、朝向按上限空转却寸步难行。累计转向超过 SPIN 弧度而净位移不足一个
+       * 半径 ⇒ 判定卡住，改走最开阔方向逃逸 ESC_T 秒（此后自动恢复常规绕行）。 */
+      this.spinAcc += Math.abs(U.angDiff(this.dirA, prevA));
+      if (this.spinAcc > C.NAV.SPIN) {
+        if (Math.hypot(this.x - this.chkX, this.y - this.chkY) < this.r &&
+            game.escapeDir && game.escapeDir(this)) {
+          this.escT = C.NAV.ESC_T;
+          this.dirA = Math.atan2(this.escY, this.escX);   // 逃逸要果断：朝向直接对准，别再转半圈
+        }
+        this.spinAcc = 0; this.chkX = this.x; this.chkY = this.y;
+      }
       this.kx *= Math.max(0, 1 - 7 * dt); this.ky *= Math.max(0, 1 - 7 * dt);
       if (this.dashT > 0) { // 冲锋系 Boss（壱番街〈緘黙〉）
         this.dashT -= dt;
