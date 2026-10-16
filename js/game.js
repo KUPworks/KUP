@@ -595,6 +595,63 @@ window.KUP = window.KUP || {};
       }
       return false;
     }
+
+    /* ---------- 绕楼寻路（v0.13.1）----------
+     * 局部避障转向：沿「期望方向」前视，被挡就按角度阶梯向两侧试探，选偏转最小
+     * 且通路畅通的方向；并粘住同一侧 HOLD 秒，避免在楼角左右横跳。
+     * 命中的方向写回 ent.navX/navY，返回 true；直冲畅通或彻底被夹住返回 false
+     * （后者交给 collideCity 的硬碰撞兜底）。无分配、无状态表、不消费随机流。 */
+    steerCity(ent, dx, dy, dt) {
+      if (!this.citySolid || !this.city || !this.city.blocks.length) return false;
+      const r = (ent.r || 0) * 0.95, N = C.NAV, look = (ent.r || 0) + N.LOOK;
+      if (!this._blocked(ent, dx, dy, look, r)) { ent.navHold = 0; return false; }   // 快路径：直冲
+      const hold = (ent.navHold || 0) - (dt || 0);
+      /* 首次被挡：比较两侧「切向通透度」，决定往哪边绕（相同则取 +1，确定性） */
+      let side = ent.navSide || 1;
+      if (hold <= 0) {
+        const a = N.STEP[2], c0 = Math.cos(a), s0 = Math.sin(a);
+        const dp = this._clearance(ent, dx * c0 - dy * s0, dx * s0 + dy * c0, look, r);
+        const dm = this._clearance(ent, dx * c0 + dy * s0, -dx * s0 + dy * c0, look, r);
+        side = dp >= dm ? 1 : -1;
+      }
+      for (let pass = 0; pass < 2; pass++) {
+        const s = pass === 0 ? side : -side;
+        for (const a of N.STEP) {
+          const ca = Math.cos(a * s), sa = Math.sin(a * s);
+          const nx = dx * ca - dy * sa, ny = dx * sa + dy * ca;
+          if (this._blocked(ent, nx, ny, look, r)) continue;
+          ent.navX = nx; ent.navY = ny; ent.navSide = s; ent.navHold = N.HOLD;
+          return true;
+        }
+      }
+      return false;                                          // 全被挡：保持原方向，硬碰撞推出
+    }
+    /* 沿 (nx,ny) 前视 look 距离：分 3 段采样，任一段与楼体相交即视为被挡 */
+    _blocked(ent, nx, ny, look, r) {
+      for (let i = 1; i <= 3; i++) {
+        const k = look * (i / 3), px = ent.x + nx * k, py = ent.y + ny * k;
+        for (const b of this._near(px, py, r, NS)) {
+          const cx = U.clamp(px, b.x, b.x + b.w), cy = U.clamp(py, b.y, b.y + b.h);
+          if (U.dist2(px, py, cx, cy) < r * r) return true;
+        }
+      }
+      return false;
+    }
+    /* 通透度：沿方向 5 段采样中「畅通」的段数（0〜5，越大越开阔）——仅用于选绕过哪一侧 */
+    _clearance(ent, nx, ny, look, r) {
+      let free = 0;
+      for (let i = 1; i <= 5; i++) {
+        const k = look * (i / 5) * 1.5, px = ent.x + nx * k, py = ent.y + ny * k;
+        let hit = false;
+        for (const b of this._near(px, py, r, NS)) {
+          const cx = U.clamp(px, b.x, b.x + b.w), cy = U.clamp(py, b.y, b.y + b.h);
+          if (U.dist2(px, py, cx, cy) < r * r) { hit = true; break; }
+        }
+        if (hit) break;
+        free++;
+      }
+      return free;
+    }
     /* 「圆心可站立」的物理版：只要不与楼体嵌入即可（移动挡墙用；
      * walkable 另加 MIN_GAP 间隙，是**生成/传送落点**专用语义）。 */
     freeAt(x, y, r) { return !this.collideCircle(x, y, r); }

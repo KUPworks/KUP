@@ -358,8 +358,10 @@ window.KUP = window.KUP || {};
        *   stunT  ＝ 僵直／冷冻剩余秒数（完全停止：不移动、不行动、不造成接触伤害）
        *   slowT  ＝ 减速剩余秒数；slowMul ＝ 减速倍率（越小越慢，取「最强」来源） */
       this.stunT = 0; this.slowMul = 1; this.stunMax = 0;
-      /* v0.13.1：freezeAt ＝ 冻住那一刻的视觉时钟（冻僵的敌人连形变与故障抖动
-       * 都定格，一眼可辨，见 draw）。 */
+      /* v0.13.1 绕楼寻路：navX/navY ＝ 避障转向后的方向；navSide/navHold ＝
+       * 「粘住哪一侧」的滞回（见 game.steerCity）；freezeAt ＝ 冻住那一刻的
+       * 视觉时钟（冻僵的敌人连形变与故障抖动都定格，一眼可辨）。 */
+      this.navX = 0; this.navY = 0; this.navSide = 0; this.navHold = 0;
       this.freezeAt = null;
     }
     update(dt, game) {
@@ -369,8 +371,13 @@ window.KUP = window.KUP || {};
       if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) { this.slowT = 0; this.slowMul = 1; } }
       const dx = p.x - this.x, dy = p.y - this.y;
       const d = Math.hypot(dx, dy) || 1;
-      const ux = dx / d, uy = dy / d;
-      const wob = Math.sin(game.time * 2.2 + this.phase) * 0.35;
+      let ux = dx / d, uy = dy / d;
+      /* 绕楼寻路（v0.13.1）：期望方向被楼体挡住时改为沿墙绕行 */
+      let wobK = 1;
+      if (game.steerCity && game.steerCity(this, ux, uy, dt)) {
+        ux = this.navX; uy = this.navY; wobK = C.NAV.WOBBLE;      // 绕行时收敛蛇行
+      }
+      const wob = Math.sin(game.time * 2.2 + this.phase) * 0.35 * wobK;
       const spd = this.speed * (this.slowT > 0 ? this.slowMul : 1); // 减速（滞留区／鈍足の符）
       this.x += (ux * spd - uy * wob * spd * 0.4 + this.kx) * dt;
       this.y += (uy * spd + ux * wob * spd * 0.4 + this.ky) * dt;
