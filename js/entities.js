@@ -548,6 +548,91 @@ window.KUP = window.KUP || {};
     }
   }
 
+  /* ---------- 挥砍（近战扇形）· v0.12 新武器模组 ----------
+   * 「斬音の太刀」的攻击实体：以玩家为圆心、朝 aim 方向挥出的**扇形**。
+   * 两个关键参数（全部由数据表 KUP.WEAPONS[*].levels 提供）：
+   *   len ＝ 刀长（半径，px）
+   *   arc ＝ 扇形角度（弧度；数据表里写「度」，由武器分派换算）
+   * 判定：整个挥砍窗口（life）内逐帧检测，每个敌人每次挥砍**只吃一次**伤害
+   *      （hit 集合）；角度容差按敌人半径放宽（atan2(e.r, d)），贴边也能扫到。 */
+  class Slash {
+    constructor(x, y, dir, opt) {
+      opt = opt || {};
+      this.x = x; this.y = y;
+      this.dir = dir || 0;                          // 扇形中心方向
+      this.len = opt.len || 110;                    // 刀长（px）
+      this.arc = opt.arc || Math.PI * 0.6;          // 扇形角度（rad）
+      this.dmg = opt.dmg || 0; this.kb = opt.kb || 0;
+      this.color = opt.color || '#ffd9a0';
+      this.life = opt.life || 0.18;                 // 判定窗口＝挥砍动画时长
+      this.age = 0;
+      this.follow = opt.follow !== false;            // 挥砍期间贴身跟随玩家
+      this.hit = new Set();
+      this.dead = false;
+    }
+    /* 扇形判定（含敌人半径的角度容差与刀长容差） */
+    contains(x, y, r) {
+      const dx = x - this.x, dy = y - this.y;
+      const d = Math.hypot(dx, dy);
+      if (d - (r || 0) > this.len) return false;
+      if (this.arc >= U.TAU - 1e-6) return true;
+      const da = Math.abs(U.angDiff(Math.atan2(dy, dx), this.dir));
+      return da <= this.arc / 2 + Math.atan2(r || 0, Math.max(10, d));
+    }
+    update(dt, game) {
+      this.age += dt;
+      const p = game.player;
+      if (this.follow && p) { this.x = p.x; this.y = p.y; }
+      for (const e of game.enemies) {
+        if (e.dead || this.hit.has(e)) continue;
+        if (!this.contains(e.x, e.y, e.r)) continue;
+        this.hit.add(e);
+        const a = Math.atan2(e.y - this.y, e.x - this.x);
+        game.damageEnemy(e, this.dmg, Math.cos(a) * this.kb, Math.sin(a) * this.kb);
+      }
+      if (this.age >= this.life) this.dead = true;
+    }
+    draw(ctx, t) {
+      const k = Math.min(1, this.age / this.life);
+      const half = this.arc / 2;
+      const a0 = this.dir - half, a1 = this.dir + half;
+      const fade = 1 - k;
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      /* 扇形本体（半透明面） */
+      ctx.globalAlpha = 0.14 + 0.16 * fade;
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, this.len, a0, a1);
+      ctx.closePath();
+      ctx.fill();
+      /* 外缘＝刀锋轨迹 */
+      ctx.globalAlpha = 0.5 + 0.45 * fade;
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 4;
+      ctx.shadowColor = this.color; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.arc(0, 0, this.len, a0, a1); ctx.stroke();
+      /* 刃线：从圆心扫向当前角度 */
+      const sweep = a0 + (a1 - a0) * k;
+      ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(sweep) * this.len * 0.16, Math.sin(sweep) * this.len * 0.16);
+      ctx.lineTo(Math.cos(sweep) * this.len, Math.sin(sweep) * this.len);
+      ctx.stroke();
+      /* 两侧边界线：让「扇形角度」这一参数一眼可读 */
+      ctx.globalAlpha = 0.16 + 0.3 * fade;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a0) * this.len, Math.sin(a0) * this.len);
+      ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a1) * this.len, Math.sin(a1) * this.len);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   /* ---------- 冲击环（**玩家武器专用**：只伤害破维魔） ----------
    * ⚠️ 敌方的音波环/光束/区域一律走 kUP.Danger（见下），不再复用本类——
    *    避免"Boss 借用玩家武器逻辑"导致对破维魔造成伤害、视觉也混淆。 */
@@ -557,8 +642,19 @@ window.KUP = window.KUP || {};
       this.maxR = opt.maxR; this.speed = opt.speed || 300;
       this.dmg = opt.dmg; this.kb = opt.kb || 0;
       this.color = opt.color || '#8fd0ff';
+      /* v0.12 圆形波的**角度参数**：
+       *   arc ＝ 扇形角度（rad），缺省 TAU＝整圆（既有武器行为不变）
+       *   dir ＝ 扇形中心方向（rad）
+       * 传入 arc < TAU 时，波只在扇形内判定与绘制（定向冲击波）。 */
+      this.arc = opt.arc !== undefined ? opt.arc : U.TAU;
+      this.dir = opt.dir || 0;
       this.hit = new Set();
       this.dead = false;
+    }
+    /* 扇形判定：整圆时恒真 */
+    inArc(x, y) {
+      if (this.arc >= U.TAU - 1e-6) return true;
+      return Math.abs(U.angDiff(Math.atan2(y - this.y, x - this.x), this.dir)) <= this.arc / 2;
     }
     update(dt, game) {
       this.r += this.speed * dt;
@@ -566,7 +662,7 @@ window.KUP = window.KUP || {};
       for (const e of game.enemies) {
         if (e.dead || this.hit.has(e)) continue;
         const d = Math.hypot(e.x - this.x, e.y - this.y);
-        if (Math.abs(d - this.r) < e.r + 9) {
+        if (Math.abs(d - this.r) < e.r + 9 && this.inArc(e.x, e.y)) {
           this.hit.add(e);
           const a = Math.atan2(e.y - this.y, e.x - this.x);
           game.damageEnemy(e, this.dmg, Math.cos(a) * this.kb, Math.sin(a) * this.kb);
@@ -575,12 +671,25 @@ window.KUP = window.KUP || {};
     }
     draw(ctx, t) {
       const a = 1 - this.r / this.maxR;
+      const full = this.arc >= U.TAU - 1e-6;
+      const a0 = full ? 0 : this.dir - this.arc / 2;
+      const a1 = full ? U.TAU : this.dir + this.arc / 2;
       ctx.save();
       ctx.strokeStyle = this.color;
       ctx.globalAlpha = 0.25 + a * 0.6;
       ctx.lineWidth = 5 + a * 5;
       ctx.shadowColor = this.color; ctx.shadowBlur = 14;
-      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, U.TAU); ctx.stroke();
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.r, a0, a1); ctx.stroke();
+      if (!full) {
+        /* 扇形波：补两条半径边，明确「角度参数」的边界 */
+        ctx.globalAlpha = 0.18 + a * 0.45;
+        ctx.lineWidth = 3 + a * 3;
+        ctx.beginPath();
+        ctx.moveTo(this.x + Math.cos(a0) * this.r, this.y + Math.sin(a0) * this.r);
+        ctx.lineTo(this.x, this.y);
+        ctx.lineTo(this.x + Math.cos(a1) * this.r, this.y + Math.sin(a1) * this.r);
+        ctx.stroke();
+      }
       ctx.restore();
     }
   }
@@ -986,6 +1095,7 @@ window.KUP = window.KUP || {};
   KUP.Projectile = Projectile;
   KUP.Gem = Gem;
   KUP.Ring = Ring;
+  KUP.Slash = Slash;
   KUP.Beam = Beam;
   KUP.Danger = Danger;
   KUP.Zone = Zone;

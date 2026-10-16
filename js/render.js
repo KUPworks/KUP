@@ -38,6 +38,7 @@ window.KUP = window.KUP || {};
       for (const z of this.zones) z.draw(ctx, t);
       for (const ts of this.tosses) ts.draw(ctx, t);
       for (const r of this.rings) r.draw(ctx, t);
+      for (const sl of this.slashes) sl.draw(ctx, t);
       for (const b of this.beams) b.draw(ctx, t);
       for (const e of this.enemies) e.draw(ctx, t);
       /* 敌方攻击画在敌人**之上**：预警与判定必须一眼可见（高对比斜纹／虚线／倒计时「!」） */

@@ -5,6 +5,7 @@ window.KUP = window.KUP || {};
  * 新系统（v0.4.0-loop）：覚醒/进化、浄化の歌大招、記憶の卵、復興率结算、结局分歧、每局随机种子。 */
 (function () {
   const U = KUP.U, C = KUP.CONFIG;
+  const DEG = Math.PI / 180;   // 数据表的「角度」一律以**度**书写，运行时换算为弧度
 
   /* ---------- 武器运行时 ---------- */
   class WeaponRuntime {
@@ -76,20 +77,52 @@ window.KUP = window.KUP || {};
           }
           break;
         }
-        case 'bass': { // テラ・ドロップ：低音冲击环
+        case 'bass': { // テラ・ドロップ：低音冲击环（v0.12：可带**角度参数**做扇形冲击波）
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
+            /* 圆形波的「角度参数」：数据表 arc 以**度**书写，缺省 360（＝整圆，既有武器不变）。
+             * arc < 360 时波只在扇形内判定与绘制；扇形中心取当前瞄准方向（自动/鼠标/移动）。 */
+            const ad = game.aimDir(p);
+            const bdir = Math.atan2(ad.y, ad.x);
+            const barc = s.arc !== undefined ? s.arc * DEG : undefined;
             game.rings.push(new KUP.Ring(p.x, p.y, {
               maxR: s.r * p.areaMult, speed: 300, dmg: s.dmg * p.dmgMult, kb: 170, color: col,
+              arc: barc, dir: bdir,
             }));
             if (s.double) {
               game.rings.push(new KUP.Ring(p.x, p.y, {
                 maxR: s.r * p.areaMult, speed: 220, dmg: s.dmg * p.dmgMult * 0.7, kb: 140, color: col,
+                arc: barc, dir: bdir,
               }));
             }
             game.shake(3);
             KUP.Audio.sfx('boom');
+          }
+          break;
+        }
+        /* ===== v0.12 新武器模组：近战・挥刀（扇形） =====
+         * 参数（数据表）：arc＝扇形角度（度）、len＝刀长（px）；
+         * Lv4+ 的 wave 会额外放出**扇形冲击波**（复用 Ring 的角度参数）。 */
+        case 'slash': {
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const ad = game.aimDir(p);
+            const dir = Math.atan2(ad.y, ad.x);
+            game.slashes.push(new KUP.Slash(p.x, p.y, dir, {
+              len: s.len * p.areaMult, arc: (s.arc || 100) * DEG,
+              dmg: s.dmg * p.dmgMult, kb: s.kb || 180, color: col, life: s.life || 0.18,
+            }));
+            if (s.wave) {
+              game.rings.push(new KUP.Ring(p.x, p.y, {
+                maxR: s.wave.r * p.areaMult, speed: s.wave.speed || 420,
+                dmg: s.dmg * p.dmgMult * (s.wave.dmgMul || 0.75), kb: 120, color: col,
+                arc: (s.wave.arc || 120) * DEG, dir,
+              }));
+            }
+            game.shake(1.5);
+            KUP.Audio.sfx('shoot');
           }
           break;
         }
@@ -242,6 +275,8 @@ window.KUP = window.KUP || {};
     reset() {
       this.player = null;
       this.enemies = []; this.projs = []; this.gems = []; this.rings = []; this.beams = [];
+      /* v0.12 近战挥砍（扇形）实体 */
+      this.slashes = [];
       this.parts = []; this.texts = [];
       /* 滞留区域 / 投掷物（新武器组与 Boss 共用） */
       this.zones = []; this.tosses = [];
@@ -562,6 +597,7 @@ window.KUP = window.KUP || {};
       for (const pr of this.projs) pr.update(dt, this);
       this.collide();
       for (const r of this.rings) r.update(dt, this);
+      for (const sl of this.slashes) sl.update(dt, this);
       for (const b of this.beams) b.update(dt);
       /* 随时间持续回血（被动「余韵之癒」＋瓦利斯「薬膳スープ」＋道具「余韵の符」） */
       const pl = this.player;
@@ -582,6 +618,7 @@ window.KUP = window.KUP || {};
       this.projs = this.projs.filter(pr => !pr.dead);
       this.gems = this.gems.filter(g => !g.dead);
       this.rings = this.rings.filter(r => !r.dead);
+      this.slashes = this.slashes.filter(s => !s.dead);
       this.beams = this.beams.filter(b => !b.dead);
       this.zones = this.zones.filter(z => !z.dead);
       this.tosses = this.tosses.filter(t => !t.dead);

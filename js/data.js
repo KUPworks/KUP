@@ -118,7 +118,7 @@ KUP.CHARS = [
     name: '地邑 阿栖', short: '阿栖', reading: 'チムラ アス', romaji: 'CHIMURA ASU',
     cv: '明透', cvEn: 'asu',
     area: 'area3',
-    color: '#7de0c8', color2: '#1f6b5a',
+    color: '#c47f00', color2: '#005110',
     weapon: 'follow',
     desc: {
       zh: '教团教徒、<b>亜留的妹分</b>，同为魔女候補。<br>追随的歌声化作「追唱の矢」——贯穿敌列的连射。拾取 ×1.3、攻击 ×1.1。<br><span class="cv-note">声 — 明透</span>',
@@ -138,7 +138,12 @@ KUP.charUnlockText = c => (c.unlock && c.unlock.desc) || null;
  * ★ v0.11「武装解锁」：owner ＝ 该武器的持有角色 id（KUP.CHARS）。
  *   - **未招募该角色前，这把武器不会进入升级卡池**（rollChoices 过滤，见 game.js）；
  *   - 招募后该角色的专属武器才会作为「新武器」出现在三选一里；
- *   - owner 为 null/undefined 的武器（通用组：滞留・投掷系等）任何角色都能抽到。 */
+ *   - owner 为 null/undefined 的武器（通用组：滞留・投掷系等）任何角色都能抽到。
+ * ★ v0.12「角度参数化」：等级表可带**角度／长度**参数，由行为分派消费：
+ *   - slash：「近战·挥刀」——arc＝扇形角度（**度**）、len＝刀长（px）；
+ *              Lv4+ 的 wave｛arc（度）/r/speed/dmgMul｝＝扇形冲击波（复用 Ring 的角度参数）。
+ *   - bass ：「圆形波」——arc＝扇形角度（**度**，缺省 360＝整圆，既有武器不变）；
+ *              传入 <360 即变为**定向扇形冲击波**（dir 取当前瞄准方向）。 */
 KUP.WEAPONS = {
   note: {
     id: 'note', icon: '♪', color: '#4ee6ff', behavior: 'note', maxLv: 5, owner: 'kaf',
@@ -468,6 +473,46 @@ KUP.WEAPONS = {
         ja: '覚醒——四枚設置、街の各所に終曲を埋める。',
       },
       stats: { cd: 0.75, dmg: 66, count: 4, r: 108, life: 18, max: 12 },
+    },
+  },
+
+  /* ===== 近战・挥刀系（v0.12 新武器模组；本作同人命名）=====
+   * ★ 两个关键参数（每一级都可调）：
+   *   arc ＝ **扇形角度（单位：度）** —— 挥砍覆盖的角度范围（90°→170°，覚醒 200°）
+   *   len ＝ **刀长（单位：px）**     —— 扇形的半径（110→162，覚醒 188）
+   * 判定实体＝KUP.Slash（扇形内逐帧判定、每敌人每次挥砍只吃一次伤害）。
+   * Lv4 起额外释放**扇形冲击波**：复用「圆形波」Ring 的 arc/dir 参数
+   * （wave.arc＝冲击波扇形角度（度）、wave.r＝半径、wave.dmgMul＝伤害系数）。 */
+  slash: {
+    id: 'slash', icon: '斬', color: '#ff8a5a', behavior: 'slash', maxLv: 5,
+    name: { zh: '斩音太刀', en: 'Sonic Blade', ja: '斬音の太刀' },
+    desc: {
+      zh: '挥出的歌声化作一振太刀——朝瞄准方向挥出<b>扇形斩击</b>，命中即击退。近战武器（本作同人命名）。<br><span class="cv-note">扇形角度与刀长均可在数据表中调整</span>',
+      en: 'Your song sharpens into a single blade — a <b>fan-shaped slash</b> is swung toward your aim, knocking enemies back. A melee weapon (fan-made).<br><span class="cv-note">Fan angle and blade length are data parameters</span>',
+      ja: '歌が一振りの太刀となる——照準方向へ<b>扇形の斬撃</b>を放ち、命中した敵をノックバック。近接武器（本作同人命名）。<br><span class="cv-note">扇形角度と刀長はデータ表で調整可能</span>',
+    },
+    lvDesc: [
+      { zh: '扇形 90°・刀长 110 —— 基础的一闪。', en: '90° fan, 110 blade — a basic flash.', ja: '扇形 90°・刀長 110 —— 基本の一閃。' },
+      { zh: '扇形 110°・刀长 122，伤害提升。', en: '110° fan, 122 blade, more damage.', ja: '扇形 110°・刀長 122、ダメージアップ。' },
+      { zh: '扇形 130°・刀长 134，击退增强。', en: '130° fan, 134 blade, stronger knockback.', ja: '扇形 130°・刀長 134、ノックバック強化。' },
+      { zh: '扇形 150°・刀长 148 —— <b>前进方向放出扇形冲击波</b>。', en: '150° fan, 148 blade — a <b>fan shockwave</b> bursts forward.', ja: '扇形 150°・刀長 148 —— <b>前方へ扇形の衝撃波</b>。' },
+      { zh: '扇形 170°・刀长 162 —— 冲击波更宽更远。', en: '170° fan, 162 blade — a wider, longer wave.', ja: '扇形 170°・刀長 162 —— 衝撃波はより広く遠く。' },
+    ],
+    levels: [
+      { cd: 0.90, dmg: 16, len: 110, arc: 90, kb: 180, life: 0.16 },
+      { cd: 0.82, dmg: 20, len: 122, arc: 110, kb: 190, life: 0.16 },
+      { cd: 0.76, dmg: 24, len: 134, arc: 130, kb: 200, life: 0.17 },
+      { cd: 0.68, dmg: 28, len: 148, arc: 150, kb: 210, life: 0.17, wave: { arc: 120, r: 210, speed: 420, dmgMul: 0.75 } },
+      { cd: 0.62, dmg: 32, len: 162, arc: 170, kb: 220, life: 0.18, wave: { arc: 150, r: 250, speed: 450, dmgMul: 0.85 } },
+    ],
+    evolved: {
+      name: { zh: '斬音の太刀 -円舞-', en: 'Sonic Blade -Waltz-', ja: '斬音の太刀 -円舞-' },
+      desc: {
+        zh: '覚醒——刀身化为两百度的斩音圆舞，扇形冲击波随之而起。',
+        en: 'Awakened — the blade becomes a 200° waltz of cutting sound, a fan shockwave rising with it.',
+        ja: '覚醒——刀身は二百度の斬音円舞となり、扇形の衝撃波が呼応する。',
+      },
+      stats: { cd: 0.46, dmg: 44, len: 188, arc: 200, kb: 240, life: 0.20, wave: { arc: 190, r: 300, speed: 480, dmgMul: 1.0 } },
     },
   },
 };

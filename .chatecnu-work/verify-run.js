@@ -165,7 +165,7 @@ const poolB = gA.rollChoices();
 check('觉醒后不再出现觉醒/升级项', !poolB.some(c => c.kind === 'awaken') && !poolB.some(c => c.kind === 'weapon-up' && c.id === 'note'));
 const statAfter = wNote.stat();
 check('觉醒后 stat 切换到进化形态', wNote.evolved && statAfter === wNote.def.evolved.stats && statAfter.dmg > wNote.def.levels[4].dmg);
-check('全部武器均配进化形态数据', Object.keys(KUP.WEAPONS).length === 10 &&
+check('全部武器均配进化形态数据', Object.keys(KUP.WEAPONS).length === 11 &&
   Object.values(KUP.WEAPONS).every(w => w.evolved && w.evolved.stats && w.evolved.name));
 
 // 11b. 主角＝魔女之子（角色 ≠ 声优）；招募角色与同伴
@@ -798,6 +798,113 @@ KUP.META.reset();
     gS2.walkableNearest(stuck);
     check('兜底：楼内敌人被挪到可走点', !stuck.dead && gS2.walkable(stuck.x, stuck.y, stuck.r));
   }
+}
+
+// 25i. v0.12：新武器模组「斩音太刀」（近战挥刀：扇形角度 arc ＋ 刀长 len）
+{
+  const SW = KUP.WEAPONS.slash;
+  check('新武器模组：斩音太刀（behavior=slash，通用组无 owner）',
+    SW && SW.behavior === 'slash' && !SW.owner && SW.maxLv === 5 && !!SW.evolved);
+  check('挥刀参数齐备：每级都有 arc（扇形角度·度）与 len（刀长·px）',
+    SW.levels.every(l => typeof l.arc === 'number' && typeof l.len === 'number') &&
+    typeof SW.evolved.stats.arc === 'number' && typeof SW.evolved.stats.len === 'number');
+  check('挥刀参数随等级成长（扇形更宽、刀更长）',
+    SW.levels.every((l, i, a) => i === 0 || (l.arc > a[i - 1].arc && l.len > a[i - 1].len)) &&
+    SW.evolved.stats.arc > SW.levels[4].arc && SW.evolved.stats.len > SW.levels[4].len,
+    'arc=' + SW.levels.map(l => l.arc).join('/') + ' len=' + SW.levels.map(l => l.len).join('/'));
+  check('武器总数 11 · 行为 9 种', Object.keys(KUP.WEAPONS).length === 11 &&
+    new Set(Object.values(KUP.WEAPONS).map(w => w.behavior)).size === 9);
+  /* 扇形判定：正前方中、正侧方不中（窄扇形）、刀长外不中 */
+  const mkSlashGame = seed => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'kaf', area: 'area0', seed });
+    g.player.weapons = [];                       // 隔离：只测手动放置的挥砍
+    return g;
+  };
+  const gSla = mkSlashGame(151);
+  const pSla = gSla.player;
+  const near1 = gSla.spawnEnemy('noise', 1500, 1500); near1.x = pSla.x + 60; near1.y = pSla.y;
+  const side1 = gSla.spawnEnemy('noise', 1500, 1500); side1.x = pSla.x; side1.y = pSla.y + 60;
+  const far1 = gSla.spawnEnemy('noise', 1500, 1500); far1.x = pSla.x + 200; far1.y = pSla.y;
+  const hpN = near1.hp, hpS = side1.hp, hpF = far1.hp;
+  gSla.slashes.push(new KUP.Slash(pSla.x, pSla.y, 0, { len: 110, arc: 90 * Math.PI / 180, dmg: 4, kb: 0 }));
+  gSla.update(0.02);
+  check('挥刀：正前方扇形内命中', near1.hp < hpN, 'hp ' + hpN + '→' + near1.hp);
+  check('挥刀：扇形角度之外（正侧方 90°）不中', side1.hp === hpS);
+  check('挥刀：刀长之外（200px > len 110）不中', far1.hp === hpF);
+  /* 参数生效：扇形角度 200° → 侧方目标被扫到 */
+  const gSlb = mkSlashGame(152);
+  const pSlb = gSlb.player;
+  const side2 = gSlb.spawnEnemy('noise', 1500, 1500); side2.x = pSlb.x; side2.y = pSlb.y + 60;
+  const hpS2 = side2.hp;
+  gSlb.slashes.push(new KUP.Slash(pSlb.x, pSlb.y, 0, { len: 110, arc: 200 * Math.PI / 180, dmg: 4, kb: 0 }));
+  gSlb.update(0.02);
+  check('扇形角度参数生效（200° 时侧方 90° 目标被命中）', side2.hp < hpS2, 'hp ' + hpS2 + '→' + side2.hp);
+  /* 参数生效：刀长 240 → 200px 外目标被击中 */
+  const gSlc = mkSlashGame(153);
+  const pSlc = gSlc.player;
+  const far2 = gSlc.spawnEnemy('noise', 1500, 1500); far2.x = pSlc.x + 200; far2.y = pSlc.y;
+  const hpF2 = far2.hp;
+  gSlc.slashes.push(new KUP.Slash(pSlc.x, pSlc.y, 0, { len: 240, arc: 90 * Math.PI / 180, dmg: 4, kb: 0 }));
+  gSlc.update(0.02);
+  check('刀长参数生效（len 240 时 200px 目标被命中）', far2.hp < hpF2, 'hp ' + hpF2 + '→' + far2.hp);
+  /* 每次挥砍每敌人只吃一次伤害（窗口内连跑多帧） */
+  const gSld = mkSlashGame(154);
+  const pSld = gSld.player;
+  const once = gSld.spawnEnemy('noise', 1500, 1500); once.x = pSld.x + 50; once.y = pSld.y;
+  const hpOnce = once.hp;
+  gSld.slashes.push(new KUP.Slash(pSld.x, pSld.y, 0, { len: 120, arc: 120 * Math.PI / 180, dmg: 4, kb: 0, life: 0.2 }));
+  for (let i = 0; i < 12; i++) gSld.update(0.02);
+  check('每次挥砍每敌人只结算一次伤害', Math.abs(once.hp - (hpOnce - 4)) < 1e-6, 'hp=' + once.hp);
+  /* 武器分派：behavior 'slash' 生成挥砍实体；Lv4+ 附带扇形冲击波（Ring 带角度） */
+  const gSle = new KUP.Game(canvas);
+  gSle.start({ char: 'kaf', area: 'area0', seed: 155 });
+  gSle.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.slash, 5)];
+  gSle.player.weapons[0].t = 0;
+  gSle.update(0.02);
+  check('近战武器分派：挥砍实体生成（参数换算为弧度）',
+    gSle.slashes.length === 1 &&
+    Math.abs(gSle.slashes[0].arc - 170 * Math.PI / 180) < 1e-9 &&
+    Math.abs(gSle.slashes[0].len - 162) < 1e-9,
+    'arc=' + (gSle.slashes[0] ? (gSle.slashes[0].arc * 180 / Math.PI).toFixed(0) : '-') +
+    ' len=' + (gSle.slashes[0] ? gSle.slashes[0].len.toFixed(0) : '-'));
+  const wave = gSle.rings.find(r => r.arc < KUP.U.TAU - 1e-6);
+  check('Lv5 挥砍附带扇形冲击波（圆形波的角度参数 arc=150°）',
+    !!wave && Math.abs(wave.arc - 150 * Math.PI / 180) < 1e-9);
+  /* ---- 圆形波的角度参数（Ring） ---- */
+  check('圆形波默认整圆（既有武器行为不变）', new KUP.Ring(0, 0, { maxR: 100 }).arc >= KUP.U.TAU - 1e-6);
+  const gRg = mkSlashGame(156);
+  const pRg = gRg.player;
+  const front2 = gRg.spawnEnemy('noise', 1500, 1500); front2.x = pRg.x + 120; front2.y = pRg.y;
+  const back2 = gRg.spawnEnemy('noise', 1500, 1500); back2.x = pRg.x - 120; back2.y = pRg.y;
+  const hpB2 = back2.hp, hpFr2 = front2.hp;
+  gRg.rings.push(new KUP.Ring(pRg.x, pRg.y, { maxR: 220, speed: 300, dmg: 5, kb: 0, arc: 90 * Math.PI / 180, dir: 0 }));
+  for (let i = 0; i < 20; i++) gRg.update(0.02);
+  check('圆形波角度参数：扇形内受伤', front2.hp < hpFr2, 'hp ' + hpFr2 + '→' + front2.hp);
+  check('圆形波角度参数：扇形外（正后方 180°）不受伤害', back2.hp === hpB2);
+  /* bass 数据表 arc（度）→ Ring.arc（弧度）接线；既有 360° 武器不受影响 */
+  KUP.WEAPONS._arcTest = {
+    id: '_arcTest', icon: '試', color: '#ffffff', behavior: 'bass', maxLv: 1,
+    name: { zh: 't', en: 't', ja: 't' }, desc: { zh: '', en: '', ja: '' }, lvDesc: [],
+    levels: [{ cd: 1, dmg: 5, r: 120, arc: 120 }],
+    evolved: { name: { zh: 't', en: 't', ja: 't' }, desc: { zh: '', en: '', ja: '' }, stats: { cd: 1, dmg: 5, r: 120, arc: 120 } },
+  };
+  const gArc = new KUP.Game(canvas);
+  gArc.start({ char: 'kaf', area: 'area0', seed: 157 });
+  gArc.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS._arcTest, 1)];
+  gArc.player.weapons[0].t = 0;
+  gArc.update(0.02);
+  const arcRing = gArc.rings[gArc.rings.length - 1];
+  check('圆形波：数据表 arc（度）接线到 Ring（弧度）', !!arcRing && Math.abs(arcRing.arc - 120 * Math.PI / 180) < 1e-9);
+  delete KUP.WEAPONS._arcTest;
+  check('既有圆形波武器（テラ/救済の鐘）仍为整圆',
+    KUP.WEAPONS.bass.levels.every(l => l.arc === undefined) && KUP.WEAPONS.prayer.levels.every(l => l.arc === undefined));
+  /* 新武器进入升级卡池（通用组，任何角色可抽） */
+  const gPool3 = new KUP.Game(canvas);
+  gPool3.start({ char: 'kaf', area: 'area0', seed: 158 });
+  let slashSeen = false;
+  for (let i = 0; i < 300; i++) if (gPool3.rollChoices().some(c => c.kind === 'weapon-new' && c.id === 'slash')) slashSeen = true;
+  check('斩音太刀进入升级卡池（通用组，无需招募）', slashSeen);
 }
 
 // 25e. v0.10：升级池体验（分桶保底 / 重掷 / 封禁）
