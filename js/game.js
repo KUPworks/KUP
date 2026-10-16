@@ -232,6 +232,8 @@ window.KUP = window.KUP || {};
       this.area = KUP.AREA(this.run.area);
       this.mod = KUP.MOD(this.run.mod);
       this.mods = KUP.modsFor(this.mod.id);
+      /* 建筑实体开关（v0.11）：?solid=0/1 调试覆盖，默认取 CONFIG.CITY.SOLID */
+      this.citySolid = (this.debug && this.debug.solid !== undefined) ? !!this.debug.solid : C.CITY.SOLID;
       this.rng = U.mulberry32(this.run.seed);
       U.rng = this.rng;
       if (rebuildCity !== false) this.city = this.buildCity();
@@ -268,17 +270,46 @@ window.KUP = window.KUP || {};
       this.weaponSig = '';
     }
 
-    /* 确定性生成街区布景：由 run.seed 与街区共同决定（含每区主题装饰） */
+    /* 确定性生成街区布景：由 run.seed 与街区共同决定（含每区主题装饰）
+     * v0.11 建筑实体化：楼体改为**道路网格**布局——
+     *   竞技场 = GRID×GRID 街区格（15×15），每格至多一栋楼，楼体只占格内
+     *   「靠道路一侧留出 ROAD 宽」之后的街区带 ⇒ 任意两楼之间必有 ≥ROAD 通道，
+     *   玩家与敌人都不会被困死；哪些格子有楼由 seed 洗牌决定（同 seed 同区同图）。 */
     buildCity() {
       const area = this.area || KUP.AREA(C.DEFAULT_AREA);
       const areaIdx = Math.max(0, KUP.AREAS.indexOf(area));
       /* 布景子流与主随机流分离：同 seed 同区 → 同一张城；换区 → 必换城 */
       const rng = U.mulberry32(((this.run.seed >>> 0) ^ (areaIdx * 0x85EBCA6B)) >>> 0), A = C.ARENA;
+      const CT = C.CITY;
+      const gn = Math.floor(A / CT.GRID);                   // 每轴格子数（3000/200 = 15）
       const blocks = [];
-      for (let i = 0; i < area.blocks; i++) {
-        const w = 60 + rng() * 160, h = 60 + rng() * 160;
+      const cap = Math.min(area.blocks, gn * gn);           // 楼数上限 = 格子数
+      /* 楼数落在「area.blocks 的 80%～100%」：实际可用格远多于 cap（225 格），
+       * 稀疏区（陸番街 26 栋）也足够，密度感与旧版基本一致。 */
+      const want = Math.round(cap * (0.8 + rng() * 0.2));
+      /* 候选格 = 全部格子；洗牌后取前 want 个（确定性 → 同 seed 同图） */
+      const cells = [];
+      for (let cy = 0; cy < gn; cy++) for (let cx = 0; cx < gn; cx++) cells.push({ cx, cy });
+      for (let i = cells.length - 1; i > 0; i--) {
+        const j = (rng() * (i + 1)) | 0;
+        const t = cells[i]; cells[i] = cells[j]; cells[j] = t;
+      }
+      for (let i = 0; i < want; i++) {
+        const cell = cells[i];
+        const gx = cell.cx * CT.GRID, gy = cell.cy * CT.GRID;
+        /* 每格内部：楼体贴边留 MARGIN 走廊，外墙侧靠道路留 ROAD；
+         * 楼体不超过格内剩余空间的 70%（窄边更小），保证楼间视觉空隙。 */
+        const side = rng() < 0.5 ? 'h' : 'v';               // 道路方向（水平/垂直）
+        const inner = CT.GRID - CT.ROAD - CT.MARGIN * 2;
+        let w, h;
+        if (side === 'h') { w = inner * (0.5 + rng() * 0.2); h = inner * (0.45 + rng() * 0.25); }
+        else { w = inner * (0.45 + rng() * 0.25); h = inner * (0.5 + rng() * 0.2); }
+        w = Math.max(48, Math.min(inner * 0.7, w));
+        h = Math.max(48, Math.min(inner * 0.7, h));
+        const px = gx + (side === 'h' ? CT.ROAD + CT.MARGIN : CT.MARGIN) + rng() * (CT.GRID - CT.ROAD - CT.MARGIN * 2 - w);
+        const py = gy + (side === 'h' ? CT.MARGIN : CT.ROAD + CT.MARGIN) + rng() * (CT.GRID - CT.ROAD - CT.MARGIN * 2 - h);
         blocks.push({
-          x: rng() * (A - w), y: rng() * (A - h), w, h,
+          x: px, y: py, w, h,
           hue: area.hue[0] + rng() * (area.hue[1] - area.hue[0]),
           win: rng() < area.win, tone: area.tone,
         });
@@ -313,7 +344,7 @@ window.KUP = window.KUP || {};
       } else if (area.theme === 'restricted') { // 陸番街：残骸
         for (let i = 0; i < 70; i++) deco.debris.push({ x: rng() * A, y: rng() * A, w: 6 + rng() * 22, h: 4 + rng() * 10, rot: (rng() - 0.5) * 0.8 });
       }
-      return { blocks, glyphs, area, deco };
+      return { blocks, glyphs, area, deco, grid: CT.GRID };
     }
 
     start(opts) {
@@ -378,6 +409,13 @@ window.KUP = window.KUP || {};
         perk: recruit ? recruit.perk : null,
         shopMods: shopMods,
       });
+      /* v0.11 建筑实体：出生点（竞技场中心）若被楼体堵住，把玩家挪到**最近的
+       * 可站立点**（在最终布局下验证，必然有效）。楼体本身保持确定性布局不动。 */
+      if (this.citySolid && !this.walkable(C.ARENA / 2, C.ARENA / 2, C.PLAYER_R + 30)) {
+        const spot = { x: C.ARENA / 2, y: C.ARENA / 2, r: C.PLAYER_R + 30, boss: false, dead: false };
+        this.walkableNearest(spot);
+        if (!spot.dead) { this.player.x = spot.x; this.player.y = spot.y; }
+      }
       /* 同伴 perk：周期回复（regen）在 update 中结算；gather 已在 Player.recompute 内生效 */
       if (recruit && recruit.perk.type === 'regen') {
         this.regenEvery = recruit.perk.every || 20;
@@ -423,6 +461,68 @@ window.KUP = window.KUP || {};
       return U.clamp(v, 0, A - viewSize);
     }
 
+    /* ---------- 建筑实体（v0.11）----------
+     * 楼体 = 角色与敌人不可通过的实体。两种判定：
+     *   walkable  ：「圆心可站立」——楼体外扩 MIN_GAP 后的矩形（防软夹紧抖动）；
+     *               生成/碰撞推开/实体钩子都用它，保证各处语义一致。
+     * collideCity：**硬碰撞**——圆与楼体矩形求交，沿最小穿透轴推出（贴墙滑行）。
+     *               Boss 豁免（碾压建筑，游戏明文设定），citySolid=false 时整体关闭。 */
+    walkable(x, y, r) {
+      if (!this.citySolid || !this.city || !this.city.blocks.length) return true;
+      const g = C.CITY.MIN_GAP + (r || 0);
+      for (const b of this.city.blocks) {
+        if (x > b.x - g && x < b.x + b.w + g && y > b.y - g && y < b.y + b.h + g) return false;
+      }
+      return true;
+    }
+    collideCity(ent) {
+      if (!this.citySolid || !this.city || !this.city.blocks.length) return;
+      if (ent.boss) return;                                  // Boss 碾压建筑（设定明文）
+      const r = ent.r || 0;
+      for (const b of this.city.blocks) {
+        const cx = U.clamp(ent.x, b.x, b.x + b.w), cy = U.clamp(ent.y, b.y, b.y + b.h);
+        const dx = ent.x - cx, dy = ent.y - cy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 >= r * r) continue;
+        const d = Math.sqrt(d2);
+        if (d > 0.0001) {                                    // 圆心在楼外：沿法线推出
+          const push = r - d;
+          ent.x += dx / d * push; ent.y += dy / d * push;
+        } else {                                             // 圆心在楼内（生成重叠等）：沿最浅轴弹出
+          const l = ent.x - b.x, ri = b.x + b.w - ent.x, t = ent.y - b.y, bo = b.y + b.h - ent.y;
+          const m = Math.min(l, ri, t, bo);
+          if (m === l) ent.x = b.x - r; else if (m === ri) ent.x = b.x + b.w + r;
+          else if (m === t) ent.y = b.y - r; else ent.y = b.y + b.h + r;
+        }
+      }
+    }
+    collideCircle(x, y, r) {                                 // 供 projectiles/dangers 等点状实体查询
+      if (!this.citySolid || !this.city || !this.city.blocks.length) return false;
+      for (const b of this.city.blocks) {
+        const cx = U.clamp(x, b.x, b.x + b.w), cy = U.clamp(y, b.y, b.y + b.h);
+        if (U.dist2(x, y, cx, cy) < r * r) return true;
+      }
+      return false;
+    }
+    /* 「圆心可站立」的物理版：只要不与楼体嵌入即可（移动挡墙用；
+     * walkable 另加 MIN_GAP 间隙，是**生成/传送落点**专用语义）。 */
+    freeAt(x, y, r) { return !this.collideCircle(x, y, r); }
+    /* 把实体挪到最近的「圆心可站立」点（更新循环末尾兜底；找不到才消除）。
+     * 敌人/音片生成处已走 walkable 落点，正常不会触发；这是极端 seed 的保险。 */
+    walkableNearest(e) {
+      const A = C.ARENA;
+      for (let rad = C.CITY.GRID; rad <= A; rad += C.CITY.GRID) {
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * U.TAU + (this.rng ? this.rng() * 0.3 : 0);
+          const x = U.clamp(e.x + Math.cos(a) * rad, e.r, A - e.r);
+          const y = U.clamp(e.y + Math.sin(a) * rad, e.r, A - e.r);
+          if (this.walkable(x, y, e.r)) { e.x = x; e.y = y; return true; }
+        }
+      }
+      e.dead = true;                                         // 理论不可达：整城都是楼（不可能）
+      return false;
+    }
+
     update(dt) {
       this.time += dt;
       const p = this.player;
@@ -456,7 +556,9 @@ window.KUP = window.KUP || {};
 
       this.updateBossBehavior(dt); // js/director.js
 
-      for (const e of this.enemies) e.update(dt, this);
+      for (const e of this.enemies) { e.update(dt, this); this.collideCity(e); }
+      /* 弹幕**掠过楼顶**（不阻挡）：「歌＝魔法」——音波不因楼体中断；
+       * 建筑实体只影响**移动**（角色与敌人），输出经济不受墙影响。 */
       for (const pr of this.projs) pr.update(dt, this);
       this.collide();
       for (const r of this.rings) r.update(dt, this);
@@ -471,7 +573,7 @@ window.KUP = window.KUP || {};
       for (const z of this.zones) z.update(dt, this);
       for (const ts of this.tosses) ts.update(dt, this);
       for (const dg of this.dangers) dg.update(dt, this);
-      for (const g of this.gems) g.update(dt, this);
+      for (const g of this.gems) { g.update(dt, this); if (!g.dead) this.collideCity(g); }
       for (const pt of this.parts) pt.update(dt);
       for (const tx of this.texts) tx.update(dt);
 
@@ -491,6 +593,11 @@ window.KUP = window.KUP || {};
       /* 滞留区域上限（防布局爆量） */
       if (this.zones.length > 140) this.zones.splice(0, this.zones.length - 140);
       if (this.dangers.length > 90) this.dangers.splice(0, this.dangers.length - 90);
+      /* 被楼体挤入的敌人（穿透楼体时）挪到最近合法点——生成处已走 walkable 落点，
+       * 这里只处理极端情况（兜底）；用物理嵌入判定，与 collideCity 的推出距离一致。 */
+      for (const e of this.enemies) {
+        if (!e.boss && !e.dead && this.collideCircle(e.x, e.y, e.r * 0.9)) this.walkableNearest(e);
+      }
 
       // 相机
       const tx = this.clampCam(p.x - this.view.w / 2, this.view.w);

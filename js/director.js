@@ -245,6 +245,14 @@ window.KUP = window.KUP || {};
         x = U.clamp(p.x + Math.cos(a) * R, 30, C.ARENA - 30);
         y = U.clamp(p.y + Math.sin(a) * R, 30, C.ARENA - 30);
       }
+      /* v0.11 建筑实体：敌人不可生成在楼体里——挤到最近的「圆心可站立」点。
+       * Boss 豁免（碾压建筑，与碰撞规则一致）。 */
+      if (this.citySolid && !def.boss && !this.walkable(x, y, def.r)) {
+        const probe = { x, y, r: def.r, boss: false, dead: false };
+        this.walkableNearest(probe);
+        if (probe.dead) return null;                          // 极端 seed 找不到落点
+        x = probe.x; y = probe.y;
+      }
       const e = new KUP.Enemy(def, x, y,
         KUP.HP_SCALE(this.time) * this.mods.enemyHp,
         KUP.DMG_SCALE(this.time) * this.mods.enemyDmg);

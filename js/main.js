@@ -44,6 +44,9 @@ window.KUP = window.KUP || {};
     /* 升级池体验（v0.10）：?reroll=N 指定本局重掷次数（默认 3） */
     const rr = parseInt(q.get('reroll'), 10);
     if (!isNaN(rr)) game.debug.reroll = Math.max(0, rr);
+    /* 建筑实体（v0.11）：?solid=0 关闭楼体碰撞（对比「有无实体」的效果）；=1 强制开启 */
+    if (q.get('solid') === '0') game.debug.solid = false;
+    else if (q.get('solid') === '1') game.debug.solid = true;
     /* 瞄准模式：?aim=auto|mouse|move（默认 auto＝自动瞄准最近的怪异） */
     const aimQ = q.get('aim');
     if (aimQ === 'auto' || aimQ === 'mouse' || aimQ === 'move') game.run.aim = aimQ;

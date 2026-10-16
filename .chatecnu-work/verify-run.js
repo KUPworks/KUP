@@ -56,12 +56,43 @@ check('同 seed 同区 → 同一张城', sig(a1) === sig(a2));
 // 2. 同 seed + 异区 → 布景不同
 const b1 = mkGame('area3', 12345);
 check('同 seed 异区 → 换城', sig(a1) !== sig(b1));
-check('异区建筑数按区域配置', a1.city.blocks.length === 120 && b1.city.blocks.length === 58,
+check('异区建筑数按区域配置（网格化：密度随区域，≤ 格数上限）',
+  a1.city.blocks.length > b1.city.blocks.length &&
+  a1.city.blocks.length <= 225 && b1.city.blocks.length >= 40,
   'area5=' + a1.city.blocks.length + ' area3=' + b1.city.blocks.length);
 
 // 3. 异 seed + 同区 → 布景不同
 const c1 = mkGame('area5', 999);
 check('异 seed 同区 → 换城', sig(a1) !== sig(c1));
+
+// 2b. v0.11 建筑实体：网格化布局（同 seed 同图、楼不重叠、全在竞技场内）
+{
+  const gC = new KUP.Game(canvas);
+  gC.run = { char: 'kaf', area: 'area5', mod: 'none', seed: 12345 };
+  gC.applyRun(true);
+  check('建筑实体默认开启', gC.citySolid === true && KUP.CONFIG.CITY.SOLID === true);
+  let overlap = false, out = false;
+  const bs = gC.city.blocks;
+  for (let i = 0; i < bs.length; i++) {
+    if (bs[i].x < 0 || bs[i].y < 0 || bs[i].x + bs[i].w > KUP.CONFIG.ARENA || bs[i].y + bs[i].h > KUP.CONFIG.ARENA) out = true;
+    for (let j = i + 1; j < bs.length; j++) {
+      const a = bs[i], b = bs[j];
+      if (a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y) overlap = true;
+    }
+  }
+  check('楼体互不重叠（网格化布局）', !overlap, 'blocks=' + bs.length);
+  check('楼体全部在竞技场内', !out);
+  const gC2 = new KUP.Game(canvas);
+  gC2.run = { char: 'kaf', area: 'area5', mod: 'none', seed: 12345 };
+  gC2.applyRun(true);
+  check('网格化布局仍确定性（同 seed 同图）', sig(gC) === sig(gC2));
+  /* ?solid=0：开关关闭且布景不受开关影响 */
+  const gOff = new KUP.Game(canvas);
+  gOff.debug.solid = false;
+  gOff.run = { char: 'kaf', area: 'area5', mod: 'none', seed: 12345 };
+  gOff.applyRun(true);
+  check('?solid=0 → 关闭楼体碰撞（布景不变）', gOff.citySolid === false && sig(gOff) === sig(gC));
+}
 
 // 4. 未知 id 回落（不应抛异常）
 const d1 = mkGame('no-such-area', 1, 'no-such-mod');
@@ -717,6 +748,57 @@ let aruSeen = false;
 for (let i = 0; i < 400; i++) if (gWl.rollChoices().some(c => c.kind === 'weapon-new' && c.id === 'prayer')) aruSeen = true;
 check('招募后：救済之鐘进入卡池', aruSeen);
 KUP.META.reset();
+
+// 25h. v0.11：建筑实体——玩家/敌人/弹幕/Boss 的碰撞行为
+{
+  const gS2 = new KUP.Game(canvas);
+  gS2.start({ char: 'kaf', area: 'area0', seed: 141 });
+  check('出生点可站立（不被楼体压住）', gS2.walkable(gS2.player.x, gS2.player.y, gS2.player.r));
+  const blk = gS2.city.blocks[0];
+  /* 玩家：向楼体移动会被挡住（不嵌入），贴墙滑行不报错 */
+  gS2.player.x = blk.x - gS2.player.r - 2;
+  gS2.player.y = blk.y + blk.h / 2;
+  gS2.player.hitT = 0;
+  KUP.Input.keys = { d: true };
+  gS2.player.update(0.016, gS2);
+  KUP.Input.keys = {};
+  check('玩家不可穿入楼体（向墙移动被挡）', gS2.player.x + gS2.player.r <= blk.x + 0.01,
+    'px=' + gS2.player.x.toFixed(1) + ' wall=' + blk.x.toFixed(1));
+  check('贴墙位置仍「物理可站立」', gS2.freeAt(gS2.player.x, gS2.player.y, gS2.player.r));
+  /* 敌人：连续生成 120 只，任何一只都不在楼体里 */
+  let inBlock = 0, spawned = 0;
+  for (let i = 0; i < 120; i++) {
+    const e = gS2.spawnEnemy('noise', 1500, 1500);
+    if (e) { spawned++; if (!gS2.walkable(e.x, e.y, e.r)) inBlock++; }
+  }
+  check('敌人不会生成在楼体里（' + spawned + ' 只全部可走）', spawned >= 100 && inBlock === 0, 'bad=' + inBlock);
+  /* 弹幕**掠过楼顶**（不阻挡）：建筑实体只影响移动（角色与敌人），
+   * 「歌＝魔法」——音波不因楼体中断，输出经济不受墙影响。 */
+  gS2.projs.push(new KUP.Projectile(blk.x + blk.w / 2, blk.y + blk.h / 2, 0, 0, { dmg: 1, r: 5 }));
+  gS2.update(0.02);
+  check('弹幕掠过楼顶（不被墙吞没）', gS2.projs.some(pr => !pr.dead));
+  /* 敌人移动：朝楼体走会被推出（不嵌入楼体） */
+  const ePush = gS2.spawnEnemy('noise', blk.x - 40, blk.y + blk.h / 2);
+  if (ePush) {
+    ePush.x = blk.x - ePush.r - 1; ePush.y = blk.y + blk.h / 2;
+    ePush.kx = 0; ePush.ky = 0;
+    for (let i = 0; i < 60; i++) { ePush.update(0.016, gS2); gS2.collideCity(ePush); }
+    check('敌人被楼体挡住（不嵌入）', !gS2.collideCircle(ePush.x, ePush.y, ePush.r * 0.8));
+  } else check('敌人被楼体挡住（不嵌入）', false, 'spawn failed');
+  /* Boss 豁免：把 Boss 塞进楼体中心，碰撞后仍在原地（碾压建筑） */
+  gS2.boss = gS2.spawnEnemy('boss', 1500, 1500);
+  gS2.boss.x = blk.x + blk.w / 2; gS2.boss.y = blk.y + blk.h / 2;
+  gS2.collideCity(gS2.boss);
+  check('Boss 碾压建筑（不受碰撞）',
+    Math.abs(gS2.boss.x - (blk.x + blk.w / 2)) < 0.01 && Math.abs(gS2.boss.y - (blk.y + blk.h / 2)) < 0.01);
+  /* 敌人被卡在楼里（构造极端点）→ 兜底逻辑把它挪到可走点或消除 */
+  const stuck = gS2.spawnEnemy('noise', 1500, 1500);
+  if (stuck) {
+    stuck.x = blk.x + blk.w / 2; stuck.y = blk.y + blk.h / 2;
+    gS2.walkableNearest(stuck);
+    check('兜底：楼内敌人被挪到可走点', !stuck.dead && gS2.walkable(stuck.x, stuck.y, stuck.r));
+  }
+}
 
 // 25e. v0.10：升级池体验（分桶保底 / 重掷 / 封禁）
 const gLu = new KUP.Game(canvas);

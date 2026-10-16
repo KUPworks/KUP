@@ -133,12 +133,22 @@ window.KUP = window.KUP || {};
         this.y += this.dashY * C.DASH.DIST * dt / C.DASH.DUR;
         if (U.rng() < dt * 40) this.ghosts.push({ x: this.x, y: this.y, age: 0 });
         void k;
+      } else if (this.moving) {
+        /* v0.11 建筑实体：分轴移动——某轴被楼体挡住就只走另一轴（贴墙滑行，
+         * 不会「顶住墙一动不动」）。判定用「物理嵌入」检查（freeAt），
+         * 而非落点间隙（walkable），否则贴墙平行移动会被误挡。 */
+        const ox = this.x, oy = this.y;
+        this.x += mx * this.speed * dt;
+        if (game.citySolid && !game.freeAt(this.x, oy, this.r)) this.x = ox;
+        this.y += my * this.speed * dt;
+        if (game.citySolid && !game.freeAt(this.x, this.y, this.r)) this.y = oy;
       } else {
         this.x += mx * this.speed * dt;
         this.y += my * this.speed * dt;
       }
       this.x = U.clamp(this.x, this.r, A - this.r);
       this.y = U.clamp(this.y, this.r, A - this.r);
+      if (game.collideCity) game.collideCity(this);   // 兜底：冲刺穿墙/推挤角弹出
       this.hitT -= dt; this.flash -= dt;
       /* 冲刺充能回复 */
       if (this.dashCharge < this.dashMax) {
