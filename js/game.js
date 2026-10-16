@@ -662,19 +662,25 @@ window.KUP = window.KUP || {};
       }
       return false;                                                // 全被挡：保持原方向，硬碰撞兜底
     }
-    /* 逃逸方向（防打转看门狗专用）：8 个方位里选**最开阔**的那个（通透度最大，并列取
-     * 先者 ⇒ 确定性）。结果写 ent.escX/escY；八向全被挡则返回 false（交给硬碰撞）。 */
+    /* 逃逸方向（防打转看门狗专用）：在 8 个方位里挑**「走得开 ＋ 朝着玩家」**的那个
+     * ——开阔度打底、离玩家方向越近越好（并列取先者 ⇒ 确定性）。只按「最开阔」挑会
+     * 让敌人逃出去又立刻绕回同一个口袋（实测在楼群凹角里来回摆 25px 不前进）。
+     * 结果写 ent.escX/escY；八向全被挡则返回 false（交给硬碰撞）。 */
     escapeDir(ent) {
       if (!this.citySolid || !this.city || !this.city.blocks.length) return false;
       const r = (ent.r || 0) * 0.95, N = C.NAV, look = (ent.r || 0) + N.LOOK;
-      let best = -1, bx = 0, by = 0;
+      const p = this.player;
+      const want = p ? Math.atan2(p.y - ent.y, p.x - ent.x) : 0;
+      let bx = 0, by = 0, bestScore = -Infinity, any = false;
       for (let i = 0; i < 8; i++) {
         const a = i * (U.TAU / 8), nx = Math.cos(a), ny = Math.sin(a);
         if (this._blocked(ent, nx, ny, look, r)) continue;
+        any = true;
         const c = this._clearance(ent, nx, ny, look, r);
-        if (c > best) { best = c; bx = nx; by = ny; }
+        const score = c * 0.8 - 1.5 * Math.abs(U.angDiff(a, want));
+        if (score > bestScore) { bestScore = score; bx = nx; by = ny; }
       }
-      if (best < 0) return false;
+      if (!any) return false;
       ent.escX = bx; ent.escY = by;
       return true;
     }
