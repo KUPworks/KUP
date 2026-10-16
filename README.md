@@ -2,7 +2,7 @@
 
 > 非官方同人致敬作品 —— 基于 KAMITSUBAKI STUDIO「神椿市」世界观的**吸血鬼幸存者 like** 游戏。
 > 灵感来自《神椿市建設中。》动画与《神椿市協奏中。》音游。**与官方无任何关联。**
-> 当前版本 **v0.13.0-order** · 零依赖 · 零构建 · 纯 HTML5 Canvas。
+> 当前版本 **v0.13.1-nav** · 零依赖 · 零构建 · 纯 HTML5 Canvas。
 
 ![类型](https://img.shields.io/badge/genre-生存 roguelite-7a4dd8) ![引擎](https://img.shields.io/badge/engine-纯 HTML5 Canvas-4ee6ff) ![依赖](https://img.shields.io/badge/dependencies-零-5ad0a0)
 
@@ -247,6 +247,8 @@ python -m http.server 8080
 - **建筑实体（v0.11）**：楼体按**道路网格**布局（每格至多一栋、格间必有 ≥80px 通路），
   是**角色与敌人不可通过的实体**——走位要贴墙绕行，敌人也会被楼体挡住；
   **弹幕不受影响**（歌＝魔法，掠过楼顶）；Boss 碾压建筑。`?solid=0` 可关闭对比。
+- **敌人会绕楼（v0.13.1）**：敌人不再傻撞墙——被楼体挡住时会沿墙**绕行**（`js/config.js` 的
+  `C.NAV`：前视距离／试探角度阶梯／绕行侧滞回／蛇行衰减），所以躲在楼后不再能无限放风筝。
 - Boss 血量随番街递增（2000 → 3600）；陸番街 Boss 3:30 提前出现。
 
 ### 5.2 治安战（无尽关卡 · v0.13）
@@ -335,6 +337,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 | **视觉（配色 / 霓虹 / 字体栈）** | `css/style.css` | 只改样式别动结构 |
 | **画法 / 背景 / 特效** | `js/render.js` | ⚠️ **渲染路径禁止调用随机数**（否则同 seed 不可复现） |
 | **敌人 AI / 敌袭模式** | `js/director.js` | 按 `pattern` 分派；生成逻辑须走同一随机流 |
+| **敌人绕楼寻路 / 楼体碰撞与空间索引** | `js/game.js` + `js/config.js` | `steerCity`（局部避障转向）＋ `cityIndex`／`_near`（分桶查询）；可调参数在 `C.NAV`。⚠️ 改完建议跑 `.chatecnu-work/tmp/path-cmp.cjs` 对比绕楼质量 |
 | **手感（移动 / 冲刺 / 碰撞 / 大招）** | `js/entities.js` + `js/game.js` | 改完务必实机验证 |
 | **存档结构** | `js/store.js` + `js/meta.js` | ⚠️ **改它必须跑 `node tests/save.test.cjs`**，并考虑 schema 迁移 |
 | **加 URL 调试参数** | `js/main.js` | 记得同步更新本文件第八节 |
