@@ -1256,5 +1256,170 @@ check('结算返回市民票收入与合计', gT.metaResult.tickets > 0 && gT.me
 check('结算提示可培养对象', gT.metaResult.newlyRecruitable.length >= 1, JSON.stringify(gT.metaResult.newlyRecruitable));
 check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && gT.stats().eggs >= 1);
 
+/* ========== v0.13.1：绕楼寻路（空间索引 ＋ 局部避障转向） ========== */
+
+// 25l. 楼体空间索引：与全表扫描等价（碰撞/可站立/绕行都建立在它之上）
+{
+  const gI = new KUP.Game(canvas);
+  gI.start({ char: 'kaf', area: 'area5', seed: 31337 });
+  const bn = gI.city.bn, bcell = gI.city.bcell;
+  check('空间索引：桶边长=街区块、桶数=ceil(ARENA/GRID)²',
+    bcell === KUP.CONFIG.CITY.GRID && bn === Math.ceil(KUP.CONFIG.ARENA / bcell) &&
+    Array.isArray(gI.city.buckets) && gI.city.buckets.length === bn * bn);
+  let inBucket = 0;
+  for (const b of gI.city.blocks) for (const bk of gI.city.buckets) if (bk.indexOf(b) >= 0) { inBucket++; break; }
+  check('空间索引：每栋楼至少入一个桶', inBucket === gI.city.blocks.length, inBucket + '/' + gI.city.blocks.length);
+  /* 索引查询 vs 全表扫描：600 个采样点必须完全一致 */
+  const rnd = KUP.U.mulberry32(99), buckets = gI.city.buckets;
+  let mism = 0;
+  for (let i = 0; i < 600; i++) {
+    const x = rnd() * KUP.CONFIG.ARENA, y = rnd() * KUP.CONFIG.ARENA, r = 6 + rnd() * 46;
+    const aHit = gI.collideCircle(x, y, r), aWalk = gI.walkable(x, y, r);
+    gI.city.buckets = null;                                  // 退回全表扫描
+    const bHit = gI.collideCircle(x, y, r), bWalk = gI.walkable(x, y, r);
+    gI.city.buckets = buckets;
+    if (aHit !== bHit || aWalk !== bWalk) mism++;
+  }
+  check('空间索引与全表扫描结果一致（600 采样点）', mism === 0, 'mism=' + mism);
+}
+
+// 25l-2. 绕楼寻路：逐楼「正后方」放置（直线被整栋楼挡住）能否绕到玩家身边
+{
+  const segHits = (x0, y0, x1, y1, b) => {                     // 线段×楼体矩形（slab 法）
+    const dx = x1 - x0, dy = y1 - y0;
+    let t0 = 0, t1 = 1;
+    for (const [p, q] of [[-dx, x0 - b.x], [dx, b.x + b.w - x0], [-dy, y0 - b.y], [dy, b.y + b.h - y0]]) {
+      if (Math.abs(p) < 1e-9) { if (q < 0) return false; continue; }
+      const r = q / p;
+      if (p < 0) { if (r > t1) return false; if (r > t0) t0 = r; }
+      else { if (r < t0) return false; if (r < t1) t1 = r; }
+    }
+    return t1 > t0 + 1e-6;
+  };
+  /* 站桩玩家 + 无刷怪 + 无伤害：只考察「能不能绕过来」 */
+  const mkArena = seed => {
+    const g2 = new KUP.Game(canvas);
+    g2.start({ char: 'kaf', area: 'area0', seed });
+    g2.director = () => {}; g2.collide = () => {}; g2.updateBossBehavior = () => {};
+    g2.player.update = () => {};
+    const C0 = KUP.CONFIG;
+    const sp = { x: C0.ARENA / 2, y: C0.ARENA / 2, r: C0.PLAYER_R, dead: false };
+    if (!g2.walkable(sp.x, sp.y, sp.r)) g2.walkableNearest(sp);
+    g2.player.x = sp.x; g2.player.y = sp.y;
+    return g2;
+  };
+  const place = (g2, maxD) => {
+    const C0 = KUP.CONFIG, sp = g2.player, out = [];
+    for (const b of g2.city.blocks) {
+      let dx = b.x + b.w / 2 - sp.x, dy = b.y + b.h / 2 - sp.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 60 || d > maxD) continue;
+      dx /= d; dy /= d;
+      const tx = (dx > 0 ? b.x + b.w - sp.x : b.x - sp.x) / (dx || 1e-9);
+      const ty = (dy > 0 ? b.y + b.h - sp.y : b.y - sp.y) / (dy || 1e-9);
+      const base = Math.min(tx, ty);
+      let ok = null;
+      for (const gap of [45, 60, 80, 100]) {                   // 出口外找第一个空位
+        const x = KUP.U.clamp(sp.x + dx * (base + gap), 30, C0.ARENA - 30);
+        const y = KUP.U.clamp(sp.y + dy * (base + gap), 30, C0.ARENA - 30);
+        if (g2.freeAt(x, y, 14)) { ok = { x, y }; break; }
+      }
+      if (!ok || !segHits(sp.x, sp.y, ok.x, ok.y, b)) continue;
+      const e = new KUP.Enemy(KUP.ENEMIES.noise, ok.x, ok.y, 1, 0);
+      e.speed = KUP.ENEMIES.noise.speed;
+      g2.enemies.push(e); out.push(e);
+    }
+    return out;
+  };
+  /* 窗口固定 26 秒（样本都在 900px 内 ⇒ 直线腿程 ≤ 14.5 秒，余量充足） */
+  const drive = (g2, list) => {
+    const dt = 1 / 60, steps = Math.round(26 / dt), reach = KUP.CONFIG.PLAYER_R + 34;
+    const arrived = new Set();
+    for (let i = 0; i < steps; i++) {
+      g2.update(dt);
+      for (const e of list) {
+        if (arrived.has(e)) continue;
+        if (Math.hypot(e.x - g2.player.x, e.y - g2.player.y) < reach) arrived.add(e);
+      }
+    }
+    return arrived;
+  };
+  const SEEDS = [20250314, 777];
+  let nAll = 0, okAll = 0, baseFail = 0, sample0 = 0;
+  for (const seed of SEEDS) {
+    /* A：新行为（绕行转向开启） */
+    const gA = mkArena(seed), listA = place(gA, 900);
+    const arrA = drive(gA, listA);
+    /* B：旧行为（只有直冲＋硬碰撞推出） */
+    const gB = mkArena(seed), listB = place(gB, 900);
+    gB.steerCity = () => false;
+    const arrB = drive(gB, listB);
+    nAll += listA.length; okAll += arrA.size; baseFail += (listB.length - arrB.size);
+    sample0 = Math.max(sample0, listA.length);
+  }
+  check('绕楼测试有足够样本（逐楼正后方）', sample0 >= 20, '最多一局 ' + sample0 + ' 个样本');
+  check('绕楼：正后方的敌人全部绕到玩家身边（旧版会顶墙卡死）', okAll === nAll, okAll + '/' + nAll);
+  check('对照：关掉绕行转向后确实有敌人卡死（说明机制有效）', baseFail >= 3, '旧行为卡死 ' + baseFail + ' 体');
+  /* ?solid=0 回退：楼体退回装饰，绕行转向必须同步关闭（不留「对着空气绕路」） */
+  const gOff = mkArena(20250314);
+  const anyE = place(gOff, 900)[0];
+  gOff.debug.solid = false; gOff.applyRun(true);
+  check('?solid=0：楼体退回装饰且绕行转向同步关闭',
+    gOff.citySolid === false && gOff.steerCity(anyE, 1, 0, 1 / 60) === false);
+}
+
+// 25m. 敌人「数字故障」抖动：离散故障时钟（确定性、跨刷新率一致、不消费随机流）
+{
+  const recCtx = () => {
+    const calls = [], grad = { addColorStop() {} };
+    const noop = () => {};
+    return {
+      calls,
+      save: noop, restore: noop, rotate: noop, beginPath: noop, closePath: noop, fill: noop, stroke: noop,
+      moveTo: noop, lineTo: noop, quadraticCurveTo: noop, arc: noop, ellipse: noop, fillRect: noop, strokeRect: noop, fillText: noop,
+      createRadialGradient: () => grad, createLinearGradient: () => grad, measureText: () => ({ width: 10 }),
+      translate(x, y) { calls.push([x, y]); },
+      set fillStyle(v) {}, set strokeStyle(v) {}, set lineWidth(v) {}, set globalAlpha(v) {},
+      set shadowColor(v) {}, set shadowBlur(v) {}, set font(v) {}, set textAlign(v) {},
+    };
+  };
+  let hashOk = true, hashSum = 0;
+  for (let i = -1000; i < 4000; i++) {
+    const v = KUP.U.hash01(i);
+    if (!(v >= 0 && v < 1) || v !== KUP.U.hash01(i)) hashOk = false;
+    hashSum += v;
+  }
+  check('U.hash01：确定、值域 [0,1)', hashOk);
+  check('U.hash01 分布均匀（均值≈0.5）', Math.abs(hashSum / 5000 - 0.5) < 0.02, (hashSum / 5000).toFixed(4));
+
+  const G = KUP.CONFIG.GLITCH;
+  const ctxR = recCtx();
+  const eJ = new KUP.Enemy(KUP.ENEMIES.glitch, 100, 100, 1, 1);
+  /* 直接截获「交给 _shape 的偏移与视觉时钟」——抖动的全部来源都在这里，
+   * 不必去比对多边形顶点（顶点随 t 连续形变，无法区分「跳变」与「形变」）。 */
+  let seen = [];
+  eJ._shape = (c, tt, ox, oy) => { seen.push([ox, oy, tt]); };
+  const offs = t => { seen = []; eJ.draw(ctxR, t); return JSON.stringify(seen.map(s => [s[0], s[1]])); };
+  const clock = t => { seen = []; eJ.draw(ctxR, t); return seen.map(s => s[2]); };
+  const realRng = KUP.U.rng;
+  let rngUsed = 0;
+  KUP.U.rng = () => { rngUsed++; return 0.5; };
+  const a1 = offs(5.0), a2 = offs(5.0);
+  const inStep = offs(5.0 + 1 / G.HZ * 0.4);                   // 同一刻度内
+  const nextStep = offs(5.0 + 1 / G.HZ * 4);                   // 隔 4 个刻度
+  check('敌人绘制不消费随机流（渲染路径铁律）', rngUsed === 0, 'U.rng 被调用 ' + rngUsed + ' 次');
+  check('同一 t → 同一张画面（确定性）', a1 === a2);
+  check('抖动按 GLITCH.HZ 分刻度：同刻度内不变', inStep === a1);
+  check('跨刻度 → 偏移跳变（故障感来自跳变，不是平滑摆动）', nextStep !== a1);
+  check('抖动幅度受 GLITCH.JITTER 约束', JSON.parse(a1).every(([x, y]) => Math.abs(x) <= G.JITTER + G.SPLIT * 0.6 && Math.abs(y) <= G.JITTER));
+  /* 冻僵：视觉时钟定格（抖动与形变一起停），解冻后恢复 */
+  eJ.applyStun(3);
+  const frozen1 = JSON.stringify([offs(9.0), clock(9.0)]), frozen2 = JSON.stringify([offs(12.5), clock(12.5)]);
+  check('冻僵时视觉时钟定格（抖动与形变停住）', frozen1 === frozen2);
+  eJ.stunT = 0;
+  check('解冻后视觉时钟恢复', clock(12.5).every(v => v === 12.5));
+  KUP.U.rng = realRng;
+}
+
 console.log(fail === 0 ? '\nALL PASS' : '\n' + fail + ' FAILED');
 process.exit(fail === 0 ? 0 : 1);
