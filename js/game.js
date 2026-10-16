@@ -126,7 +126,9 @@ window.KUP = window.KUP || {};
         }
         /* ===== v0.12 新武器模组：近战・挥刀（扇形） =====
          * 参数（数据表）：arc＝扇形角度（度）、len＝刀长（px）；
-         * Lv4+ 的 wave 会额外放出**扇形冲击波**（复用 Ring 的角度参数）。 */
+         * Lv4+ 的 wave 会额外放出**扇形冲击波**（复用 Ring 的角度参数）。
+         * v0.13.1：太刀的刀光与冲击波都**不画范围框**（Slash 不填扇面、Ring 不补半径边）
+         * ——判定照旧，只是不在屏幕上把范围摊开给玩家看（人类 2026-10-16 反馈）。 */
         case 'slash': {
           this.t -= dt;
           if (this.t <= 0) {
@@ -141,7 +143,7 @@ window.KUP = window.KUP || {};
               game.rings.push(new KUP.Ring(p.x, p.y, {
                 maxR: s.wave.r * p.areaMult, speed: s.wave.speed || 420,
                 dmg: s.dmg * p.dmgMult * (s.wave.dmgMul || 0.75), kb: 120, color: col,
-                arc: (s.wave.arc || 120) * DEG, dir,
+                arc: (s.wave.arc || 120) * DEG, dir, edges: false,
               }));
             }
             game.shake(1.5);
@@ -235,7 +237,8 @@ window.KUP = window.KUP || {};
               game.zones.push(new KUP.Zone(
                 p.x - p.aim.x * 22 + U.rand(-26, 26),
                 p.y - p.aim.y * 22 + U.rand(-26, 26),
-                { r: s.r * p.areaMult, dmg: s.dmg * p.dmgMult, life: s.life, kind: 'mine', color: col, slow: true }));
+                { r: s.r * p.areaMult, dmg: s.dmg * p.dmgMult, life: s.life, kind: 'mine', color: col, slow: true,
+                  vis: this.def.vis || 1 }));
             }
             KUP.Audio.sfx('select');
           }

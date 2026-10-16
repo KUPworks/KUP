@@ -701,35 +701,24 @@ window.KUP = window.KUP || {};
       const fade = 1 - k;
       ctx.save();
       ctx.translate(this.x, this.y);
-      /* 扇形本体（半透明面） */
-      ctx.globalAlpha = 0.14 + 0.16 * fade;
-      ctx.fillStyle = this.color;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, this.len, a0, a1);
-      ctx.closePath();
-      ctx.fill();
-      /* 外缘＝刀锋轨迹 */
+      /* 挥砍观感＝**一道扫过去的刀光**，不画扇形范围框：
+       * 旧版画了整片扇形底面 ＋ 整段外弧 ＋ 两条半径边界线，等于把「判定范围」
+       * 直接摊在屏幕上（人类 2026-10-16 反馈「不要显示范围框」）。
+       * 现在只保留：① 刃线（当前扫到哪）② 紧跟其后的弧形残影（长度 = 已扫过的角度）。 */
+      const sweep = a0 + (a1 - a0) * k;
+      const trail = Math.min(sweep - a0, Math.min(this.arc, 1.25));   // 残影最多 1.25rad，短刀也跟手
       ctx.globalAlpha = 0.5 + 0.45 * fade;
       ctx.strokeStyle = this.color;
       ctx.lineWidth = 4;
       ctx.shadowColor = this.color; ctx.shadowBlur = 12;
-      ctx.beginPath(); ctx.arc(0, 0, this.len, a0, a1); ctx.stroke();
-      /* 刃线：从圆心扫向当前角度 */
-      const sweep = a0 + (a1 - a0) * k;
+      ctx.beginPath(); ctx.arc(0, 0, this.len, sweep - trail, sweep); ctx.stroke();
+      /* 刃线：从刀身内侧扫向刀尖 */
       ctx.globalAlpha = 0.9;
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
       ctx.moveTo(Math.cos(sweep) * this.len * 0.16, Math.sin(sweep) * this.len * 0.16);
       ctx.lineTo(Math.cos(sweep) * this.len, Math.sin(sweep) * this.len);
-      ctx.stroke();
-      /* 两侧边界线：让「扇形角度」这一参数一眼可读 */
-      ctx.globalAlpha = 0.16 + 0.3 * fade;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a0) * this.len, Math.sin(a0) * this.len);
-      ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a1) * this.len, Math.sin(a1) * this.len);
       ctx.stroke();
       ctx.restore();
     }
@@ -750,6 +739,10 @@ window.KUP = window.KUP || {};
        * 传入 arc < TAU 时，波只在扇形内判定与绘制（定向冲击波）。 */
       this.arc = opt.arc !== undefined ? opt.arc : U.TAU;
       this.dir = opt.dir || 0;
+      /* edges ＝ 是否补画两条半径边（「扇形角度」的可视化）。缺省 true；
+       * 近战挥刀（斩音太刀）的冲击波传 false —— 那一刀只想看到"扫过去的光"，
+       * 不想在屏幕上摊出判定范围的框（人类 2026-10-16 反馈）。 */
+      this.edges = opt.edges !== false;
       this.hit = new Set();
       this.dead = false;
     }
@@ -782,8 +775,8 @@ window.KUP = window.KUP || {};
       ctx.lineWidth = 5 + a * 5;
       ctx.shadowColor = this.color; ctx.shadowBlur = 14;
       ctx.beginPath(); ctx.arc(this.x, this.y, this.r, a0, a1); ctx.stroke();
-      if (!full) {
-        /* 扇形波：补两条半径边，明确「角度参数」的边界 */
+      if (!full && this.edges) {
+        /* 扇形波：补两条半径边，明确「角度参数」的边界（近战挥刀不画，见 edges） */
         ctx.globalAlpha = 0.18 + a * 0.45;
         ctx.lineWidth = 3 + a * 3;
         ctx.beginPath();
@@ -1028,6 +1021,7 @@ window.KUP = window.KUP || {};
       this.tickRate = opt.tickRate || 0.45;
       this.tick = 0;
       this.slow = !!opt.slow;                // 是否给敌人减速（滞留效果）
+      this.vis = opt.vis || 1;               // **显示**缩放（判定/作用范围仍用 this.r）
       this.dead = false;
       this.hit = new Set();
     }
@@ -1084,6 +1078,8 @@ window.KUP = window.KUP || {};
     }
     draw(ctx, t) {
       const left = this.life ? Math.max(0, 1 - this.age / this.life) : 1;
+      /* 显示半径：地雷等模组可只缩小**画面**（vis < 1），判定半径 r 不变 */
+      const vr = this.r * this.vis;
       ctx.save();
       ctx.translate(this.x, this.y);
       if (!this.armed) {                       // 起爆前摇：警示圈收缩
@@ -1091,22 +1087,22 @@ window.KUP = window.KUP || {};
         ctx.strokeStyle = '#ff8a5a';
         ctx.globalAlpha = 0.35 + 0.5 * Math.abs(Math.sin(t * 12));
         ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.stroke();
-        ctx.beginPath(); ctx.arc(0, 0, this.r * (1 - k * 0.8), 0, U.TAU); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, vr, 0, U.TAU); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, vr * (1 - k * 0.8), 0, U.TAU); ctx.stroke();
         ctx.restore();
         return;
       }
       const a = this.oneShot ? 0.75 : 0.16 + 0.2 * left;
       ctx.globalAlpha = a;
       ctx.fillStyle = this.color;
-      ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(0, 0, vr, 0, U.TAU); ctx.fill();
       ctx.globalAlpha = Math.min(1, a + 0.28);
       ctx.strokeStyle = this.color; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(0, 0, this.r * (this.kind === 'field' ? (0.9 + 0.08 * Math.sin(t * 4)) : 1), 0, U.TAU); ctx.stroke();
-      if (this.kind === 'mine') {              // 地雷本体
+      ctx.beginPath(); ctx.arc(0, 0, vr * (this.kind === 'field' ? (0.9 + 0.08 * Math.sin(t * 4)) : 1), 0, U.TAU); ctx.stroke();
+      if (this.kind === 'mine') {              // 地雷本体（随显示缩放）
         ctx.globalAlpha = 1;
         ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(0, 0, 4, 0, U.TAU); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 0, 4 * this.vis, 0, U.TAU); ctx.fill();
       }
       ctx.restore();
     }
