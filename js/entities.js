@@ -430,6 +430,29 @@ window.KUP = window.KUP || {};
         ctx.fillStyle = '#fff'; this._shape(ctx, t, 0, 0);
         ctx.globalAlpha = 1;
       }
+      /* v0.13 状态异常视觉：
+       *   冷冻（stunT）＝冰晶覆盖 + 三根冰棱（完全静止，一眼可辨）
+       *   减速（slowT）＝外圈蓝色光环（强度随倍率） */
+      if (this.stunT > 0) {
+        ctx.globalAlpha = 0.42 + 0.18 * Math.abs(Math.sin(t * 4 + this.phase));
+        ctx.fillStyle = '#bff0ff'; this._shape(ctx, t, 0, 0);
+        ctx.globalAlpha = 0.85;
+        ctx.strokeStyle = '#e8fbff'; ctx.lineWidth = 1.6;
+        for (let i = 0; i < 3; i++) {
+          const a = this.phase + i * (U.TAU / 3);
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * this.r * 0.15, Math.sin(a) * this.r * 0.15);
+          ctx.lineTo(Math.cos(a) * this.r * 1.3, Math.sin(a) * this.r * 1.3);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      } else if (this.slowT > 0) {
+        const k = 1 - Math.min(1, this.slowMul);            // 减速越强，光环越亮
+        ctx.globalAlpha = 0.3 + 0.5 * k;
+        ctx.strokeStyle = '#8fd0ff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, this.r + 4, 0, U.TAU); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
       // 精英 / Boss 血条
       if (this.elite || this.boss) {
         const w = this.r * 2.2, ratio = Math.max(0, this.hp / this.maxhp);
@@ -997,7 +1020,8 @@ window.KUP = window.KUP || {};
       for (const e of game.enemies) {
         if (e.dead) continue;
         if (U.dist2(e.x, e.y, this.x, this.y) < Math.pow(this.r + e.r, 2)) {
-          if (this.slow) e.slowT = 0.4;
+          /* v0.13：滞留区减速走统一的 applySlow（0.4s / ×0.55，取最强来源合并） */
+          if (this.slow) e.applySlow(0.4, 0.55);
           if (doTick) game.damageEnemy(e, this.dmg);
         }
       }

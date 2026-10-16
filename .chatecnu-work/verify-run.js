@@ -907,6 +907,147 @@ KUP.META.reset();
   check('斩音太刀进入升级卡池（通用组，无需招募）', slashSeen);
 }
 
+// 25j. v0.13：状态异常——僵直／冷冻 与 减速
+{
+  check('状态道具齐备：凍結の符（freeze）与 鈍足の符（slow）',
+    KUP.ITEMS.freeze && KUP.ITEMS.freeze.kind === 'freeze' && KUP.ITEMS.freeze.seconds > 0 &&
+    KUP.ITEMS.bind && KUP.ITEMS.bind.kind === 'slow' && KUP.ITEMS.bind.amount < 1);
+  const mkStat = seed => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'kaf', area: 'area0', seed });
+    g.player.weapons = [];                 // 隔离：不让武器干扰状态测试
+    g.player.invuln = true;
+    g.citySolid = false;                   // 隔离：状态测试不受楼体碰撞/位置修正影响
+    return g;
+  };
+  /* --- 冷冻：完全静止 --- */
+  const gF = mkStat(161);
+  const eF = gF.spawnEnemy('noise', 1500, 1500);
+  /* 选一个远离楼体的空地（避免楼体位置修正干扰「静止」判定） */
+  let fSpot = null;
+  for (let r = 140; r <= 700 && !fSpot; r += 40) {
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * KUP.U.TAU;
+      const x = gF.player.x + Math.cos(a) * r, y = gF.player.y + Math.sin(a) * r;
+      if (x < 200 || x > 2800 || y < 200 || y > 2800) continue;
+      if (gF.freeAt(x, y, eF.r + 6)) { fSpot = { x, y }; break; }
+    }
+  }
+  eF.x = fSpot ? fSpot.x : gF.player.x + 300; eF.y = fSpot ? fSpot.y : gF.player.y;
+  eF.kx = 0; eF.ky = 0;
+  const fx0 = eF.x, fy0 = eF.y;
+  check('冷冻施加（全场）', gF.applyFreeze({ seconds: 2, all: true }) >= 1 && eF.stunT > 0);
+  for (let i = 0; i < 50; i++) gF.update(0.02);       // 1 秒
+  check('冷冻中的敌人完全不移动', Math.abs(eF.x - fx0) < 1e-9 && Math.abs(eF.y - fy0) < 1e-9,
+    'dx=' + (eF.x - fx0).toFixed(3) + ' dy=' + (eF.y - fy0).toFixed(3));
+  check('冷冻计时随帧递减', eF.stunT < 2 && eF.stunT > 0, 'stunT=' + eF.stunT.toFixed(2));
+  for (let i = 0; i < 80; i++) gF.update(0.02);       // 解冻
+  check('解冻后恢复移动', eF.stunT <= 0 && Math.hypot(eF.x - fx0, eF.y - fy0) > 1);
+  /* --- 冷冻：无接触伤害；对照组有伤害 --- */
+  const gC1 = mkStat(162);
+  const pC1 = gC1.player; pC1.invuln = false;
+  const eC1 = gC1.spawnEnemy('noise', 1500, 1500);
+  eC1.x = pC1.x; eC1.y = pC1.y;                       // 完全重叠
+  eC1.stunT = 0; pC1.hitT = 0;
+  const hpC1 = pC1.hp;
+  gC1.update(0.02);
+  check('对照：未冷冻的敌人接触即造成伤害', pC1.hp < hpC1, 'hp ' + hpC1 + '→' + pC1.hp);
+  const gC2 = mkStat(163);
+  const pC2 = gC2.player; pC2.invuln = false;
+  const eC2 = gC2.spawnEnemy('noise', 1500, 1500);
+  eC2.x = pC2.x; eC2.y = pC2.y;
+  eC2.stunT = 0; pC2.hitT = 0;
+  const hpC2 = pC2.hp;
+  gC2.applyFreeze({ seconds: 2, all: true });
+  for (let i = 0; i < 20; i++) gC2.update(0.02);
+  check('冷冻中的敌人不造成接触伤害', pC2.hp === hpC2, 'hp ' + hpC2 + '→' + pC2.hp);
+  /* --- 冷冻：Boss 减半、精英 75% --- */
+  const gB = new KUP.Game(canvas);
+  gB.start({ char: 'kaf', area: 'area0', seed: 164 });
+  gB.player.weapons = []; gB.player.invuln = true;
+  const bo = gB.spawnEnemy('boss', 1500, 1500);
+  const el = gB.spawnEnemy('elite', 1500, 1500);
+  gB.applyFreeze({ seconds: 4, all: true });
+  check('冷冻时长减免：Boss ×0.5', Math.abs(bo.stunT - 2) < 1e-6, 'boss=' + bo.stunT.toFixed(2));
+  check('冷冻时长减免：精英 ×0.75', Math.abs(el.stunT - 3) < 1e-6, 'elite=' + el.stunT.toFixed(2));
+  /* --- 冷冻：Boss 行动被暂停（计时器冻结、不产生新的敌袭） --- */
+  const gB2 = new KUP.Game(canvas);
+  gB2.start({ char: 'kaf', area: 'area0', seed: 165 });
+  gB2.player.weapons = []; gB2.player.invuln = true;
+  gB2.boss = gB2.spawnEnemy('boss', 1500, 1500);      // 〈消音〉：ringT 驱动音波环
+  gB2.boss.ringT = 1;
+  gB2.boss.stunT = 3;
+  const dangers0 = gB2.dangers.length;
+  for (let i = 0; i < 40; i++) gB2.updateBossBehavior(0.05);   // 2 秒
+  check('冷冻中的 Boss 行为暂停（不产生新的敌袭）',
+    gB2.boss.ringT === 1 && gB2.dangers.length === dangers0, 'ringT=' + gB2.boss.ringT);
+  /* --- 减速：倍率生效（**同一敌人 A/B 对照**：同位置、同帧数、同随机相位） --- */
+  const gS1 = mkStat(166);
+  const eSlow = gS1.spawnEnemy('noise', 1500, 1500);
+  eSlow.x = gS1.player.x + 500; eSlow.y = gS1.player.y;
+  /* A：无减速 */
+  const runA = () => {
+    eSlow.stunT = 0; eSlow.slowT = 0; eSlow.slowMul = 1; eSlow.kx = 0; eSlow.ky = 0;
+    const x0 = eSlow.x, y0 = eSlow.y;
+    for (let i = 0; i < 25; i++) { eSlow.update(0.02, gS1); gS1.collideCity(eSlow); }
+    return Math.hypot(eSlow.x - x0, eSlow.y - y0);
+  };
+  eSlow.x = gS1.player.x + 500; eSlow.y = gS1.player.y;
+  const dPlain = runA();
+  /* B：减速 ×0.5（同起点） */
+  eSlow.x = gS1.player.x + 500; eSlow.y = gS1.player.y;
+  eSlow.applySlow(8, 0.5);
+  const x1 = eSlow.x, y1 = eSlow.y;
+  for (let i = 0; i < 25; i++) { eSlow.update(0.02, gS1); gS1.collideCity(eSlow); }
+  const dSlow = Math.hypot(eSlow.x - x1, eSlow.y - y1);
+  check('减速倍率写入 slowMul', Math.abs(eSlow.slowMul - 0.5) < 1e-9, 'mul=' + eSlow.slowMul);
+  check('减速的敌人实际移动约为一半（A/B 对照）', dSlow < dPlain * 0.65 && dSlow > dPlain * 0.35,
+    'slow=' + dSlow.toFixed(1) + ' plain=' + dPlain.toFixed(1));
+  /* 全场施加也走同一入口 */
+  const gS3 = mkStat(170);
+  gS3.spawnEnemy('noise', 1500, 1500);
+  check('减速施加（全场 ×0.5）', gS3.applySlow({ seconds: 8, mul: 0.5, all: true }) >= 1 &&
+    gS3.enemies.every(e => e.slowT > 0 && Math.abs(e.slowMul - 0.5) < 1e-9));
+  /* --- 减速：取最强来源、时间取较长 --- */
+  const gS2 = mkStat(167);
+  const eM = gS2.spawnEnemy('noise', 1500, 1500);
+  eM.slowT = 0; eM.slowMul = 1;
+  eM.applySlow(2, 0.5);
+  eM.applySlow(8, 0.7);                               // 更弱但更长 → 倍率不变、时间延长
+  check('减速合并：更弱来源不覆盖倍率、只延长时间',
+    Math.abs(eM.slowMul - 0.5) < 1e-9 && Math.abs(eM.slowT - 8) < 1e-9, 'mul=' + eM.slowMul + ' t=' + eM.slowT);
+  eM.applySlow(1, 0.25);                              // 更强 → 覆盖倍率
+  check('减速合并：更强来源覆盖倍率', Math.abs(eM.slowMul - 0.25) < 1e-9, 'mul=' + eM.slowMul);
+  eM.slowT = 0.01;
+  eM.update(0.02, gS2);
+  check('减速到期后倍率复位为 1', eM.slowT === 0 && eM.slowMul === 1);
+  /* --- 既有滞留音场减速仍生效（走同一 applySlow，×0.55） --- */
+  const gZ2 = mkStat(168);
+  const eZ = gZ2.spawnEnemy('noise', 1500, 1500);
+  gZ2.zones.push(new KUP.Zone(eZ.x, eZ.y, { r: 80, dmg: 0, life: 3, kind: 'field', slow: true }));
+  gZ2.update(0.02);
+  check('滞留音场减速接线到慢速系统（×0.55）',
+    eZ.slowT > 0 && Math.abs(eZ.slowMul - 0.55) < 1e-9, 'mul=' + eZ.slowMul);
+  /* --- 升级池选择通路：凍結の符 / 鈍足の符 --- */
+  const gI2 = new KUP.Game(canvas);
+  gI2.start({ char: 'kaf', area: 'area0', seed: 169 });
+  gI2.spawnEnemy('noise', gI2.player.x + 120, gI2.player.y);
+  gI2.state = 'levelup'; gI2.pendingLevels = 1; gI2.choices = [{ kind: 'item', id: 'freeze' }];
+  gI2.choose(0);
+  check('升级池选择凍結の符 → 全场敌人被冻',
+    gI2.state === 'playing' && gI2.enemies.some(e => e.stunT > 0));
+  gI2.state = 'levelup'; gI2.pendingLevels = 1; gI2.choices = [{ kind: 'item', id: 'bind' }];
+  gI2.choose(0);
+  check('升级池选择鈍足の符 → 全场敌人减速',
+    gI2.enemies.some(e => e.slowT > 0 && Math.abs(e.slowMul - 0.5) < 1e-9));
+  /* 入池：两种状态符都能被抽到 */
+  let stSeen = { freeze: false, bind: false };
+  for (let i = 0; i < 300; i++) {
+    for (const c of gI2.rollChoices()) if (c.kind === 'item' && (c.id === 'freeze' || c.id === 'bind')) stSeen[c.id] = true;
+  }
+  check('两种状态符均进入升级池道具桶', stSeen.freeze && stSeen.bind);
+}
+
 // 25e. v0.10：升级池体验（分桶保底 / 重掷 / 封禁）
 const gLu = new KUP.Game(canvas);
 gLu.start({ char: 'kaf', area: 'area0', seed: 111 });

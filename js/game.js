@@ -650,10 +650,10 @@ window.KUP = window.KUP || {};
     /* ---------- 碰撞 ---------- */
     collide() {
       const p = this.player;
-      // 敌人接触玩家
+      // 敌人接触玩家（冷冻中的敌人无法造成接触伤害：完全停止＝安全的窗口）
       if (p.hitT <= 0) {
         for (const e of this.enemies) {
-          if (e.dead) continue;
+          if (e.dead || e.stunT > 0) continue;
           if (U.dist2(e.x, e.y, p.x, p.y) < Math.pow(e.r + p.r, 2)) {
             this.hurtPlayer(e.dmg);
             break;
@@ -843,6 +843,43 @@ window.KUP = window.KUP || {};
       const ok = this.player.dash();
       if (ok) this.addText(this.player.x, this.player.y - 26, KUP.I18N.t('hud.dash'), '#bfefff', 13);
       return ok;
+    }
+
+    /* ---------- 状态异常：僵直／冷冻 与 减速（v0.13）----------
+     * 统一的施加入口（道具／武器／未来的共鸣进化都走这里）：
+     *   applyFreeze({ seconds, x, y, radius, all })  全场或范围内的敌人**完全静止**
+     *   applySlow({ seconds, mul, x, y, radius, all }) 减速（倍率取最强来源）
+     * 体型减免：Boss ×0.5、精英 ×0.75（避免被永久锁死；Boss 仍需承受压力）。
+     * 返回生效的敌人数量。 */
+    statusTargets(opt) {
+      const out = [];
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        if (!opt.all && opt.x !== undefined && opt.radius !== undefined) {
+          if (U.dist2(e.x, e.y, opt.x, opt.y) > opt.radius * opt.radius) continue;
+        }
+        out.push(e);
+      }
+      return out;
+    }
+    statusScale(e) { return e.boss ? 0.5 : e.elite ? 0.75 : 1; }
+    applyFreeze(opt) {
+      opt = opt || {};
+      const secs = opt.seconds || 2.5;
+      let n = 0;
+      for (const e of this.statusTargets(opt)) {
+        if (e.applyStun(secs * this.statusScale(e))) n++;
+      }
+      return n;
+    }
+    applySlow(opt) {
+      opt = opt || {};
+      const secs = opt.seconds || 8, mul = opt.mul !== undefined ? opt.mul : 0.5;
+      let n = 0;
+      for (const e of this.statusTargets(opt)) {
+        if (e.applySlow(secs * this.statusScale(e), mul)) n++;
+      }
+      return n;
     }
 
     /* ---------- 瞄准（v0.8）----------
@@ -1061,6 +1098,16 @@ window.KUP = window.KUP || {};
             /* v0.11 经验磁铁：限时全场吸引（时长可叠加） */
             p.addBuff('magnet', it.seconds, 1);
             this.addText(p.x, p.y - 26, KUP.I18N.t('item.magnet.text', { s: it.seconds }), '#5ad0ff', 15);
+          } else if (it.kind === 'freeze') {
+            /* v0.13 僵直／冷冻：全场完全静止（含接触伤害与 Boss 行动） */
+            const n = this.applyFreeze({ seconds: it.seconds, all: true });
+            this.addText(p.x, p.y - 26, KUP.I18N.t('item.freeze.text', { s: it.seconds }), '#bff0ff', 15);
+            if (n > 0) KUP.UI.banner(KUP.I18N.t('banner.freeze'), 1.4);
+          } else if (it.kind === 'slow') {
+            /* v0.13 减速：全场减速（倍率取最强来源） */
+            const n = this.applySlow({ seconds: it.seconds, mul: it.amount, all: true });
+            this.addText(p.x, p.y - 26, KUP.I18N.t('item.slow.text', { p: Math.round((1 - it.amount) * 100) }), '#8fd0ff', 15);
+            if (n > 0) KUP.UI.banner(KUP.I18N.t('banner.slow'), 1.4);
           }
           KUP.Audio.sfx('heal');
         }

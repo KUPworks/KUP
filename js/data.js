@@ -673,6 +673,28 @@ KUP.ITEMS = {
       ja: '歌が磁場となる——<b>8 秒間、場の音片すべてが引き寄せられる</b>（回復♥と記憶の卵も）。',
     },
   },
+  /* ===== v0.13 状态异常（僵直／冷冻 与 减速）=====
+   * freeze：「凍結の符」——全场敌人**完全静止**（不移动／不行动／无接触伤害）。
+   * bind  ：「鈍足の符」——全场敌人**减速**（倍率 amount 越小越慢）。
+   * 两者都走 game.applyFreeze/applySlow（Boss ×0.5、精英 ×0.75 的时间减免）。 */
+  freeze: {
+    id: 'freeze', icon: '凍', color: '#bff0ff', kind: 'freeze', seconds: 2.6,
+    name: { zh: '凍結の符', en: 'Ward of Frost', ja: '凍結の符' },
+    desc: {
+      zh: '歌声凝霜——<b>全场怪异 2.6 秒完全僵直（冷冻）</b>：不动、不攻击、无接触伤害。<br><span class="cv-note">Boss 减免为 50%、精英 75%</span>',
+      en: 'Your song frosts over — <b>every aberration is frozen solid for 2.6s</b>: no movement, no attacks, no contact damage.<br><span class="cv-note">Bosses 50%, elites 75% duration</span>',
+      ja: '歌が霜となる——<b>場の異形すべてを 2.6 秒完全に凍結</b>：移動・攻撃・接触ダメージなし。<br><span class="cv-note">Boss は 50%、精英は 75% の時間</span>',
+    },
+  },
+  bind: {
+    id: 'bind', icon: '鈍', color: '#8fd0ff', kind: 'slow', amount: 0.5, seconds: 8,
+    name: { zh: '鈍足の符', en: 'Ward of Sloth', ja: '鈍足の符' },
+    desc: {
+      zh: '歌声变得黏重——<b>全场怪异 8 秒减速至 50%</b>（可与滞留音场的减速叠加，取最强）。',
+      en: 'Your song turns thick — <b>every aberration is slowed to 50% for 8s</b> (stacks with lingering fields, strongest wins).',
+      ja: '歌が粘る——<b>場の異形すべてを 8 秒間 50% に減速</b>（残響音場の減速と重ねがけ、強い方が適用）。',
+    },
+  },
 };
 KUP.ITEM = id => KUP.ITEMS[id] || null;
 

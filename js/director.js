@@ -80,6 +80,9 @@ window.KUP = window.KUP || {};
         KUP.UI.banner(KUP.I18N.t('banner.enrage'), 2, 'warn');
         KUP.Audio.sfx('warning');
       }
+      /* v0.13：被冷冻／僵直的 Boss 暂停行动（计时器冻结、解冻后继续）——
+       * 这是「冷冻」作为应急手段的核心价值：不仅停住移动，也停住敌袭节奏。 */
+      if (b.stunT > 0) return;
       const mode = b.def.pattern || 'mute';
       /* 〈再生〉陸番街：两阶段 */
       if (mode === 'regen' && b.phaseNo === 1 && b.hp <= b.maxhp * 0.5) {
