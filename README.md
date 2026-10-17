@@ -375,6 +375,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 | **界面结构 / 新增屏幕** | `index.html` + `js/ui.js` | 静态文本用 `data-i18n` 标注，**不要内联硬编码中文** |
 | **视觉（配色 / 霓虹 / 字体栈）** | `css/style.css` | 只改样式别动结构 |
 | **画法 / 背景 / 特效** | `js/render.js` | ⚠️ **渲染路径禁止调用随机数**（否则同 seed 不可复现） |
+| **卡顿 / 掉帧** | 先读 `DESIGN.md` §6.0 的「性能」一条 | 三个已知大坑：① 菜单/选择屏上的**全屏 `backdrop-filter: blur()`**（v0.13.6 已删，别再给 `.screen` 加）② 全屏 `mix-blend-mode` 层（已去）③ 每个弹体各自设 `ctx.shadowBlur`（已按密度自适应，阈值 140）。两条常备纪律：弹幕碰撞走 `game.enemyIndex()`（别写回 O(弹体×敌人) 双循环）；**非游玩状态不要每帧 `game.render()`**（主循环已限 ~20fps） |
 | **敌人 AI / 敌袭模式** | `js/director.js` | 按 `pattern` 分派；生成逻辑须走同一随机流 |
 | **敌人绕楼寻路 / 楼体碰撞与空间索引** | `js/game.js` + `js/config.js` | `steerCity`（局部避障转向）＋ `cityIndex`／`_near`（分桶查询）；可调参数在 `C.NAV`。⚠️ 改完建议跑 `node tools/path-cmp.cjs` 对比绕楼质量 |
 | **手感（移动 / 冲刺 / 碰撞 / 大招）** | `js/entities.js` + `js/game.js` | 改完务必实机验证 |
