@@ -526,3 +526,123 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 }
 .slot-io-msg { margin-top: 8px; min-height: 18px; font-size: 12px; color: #8affc9; }
 .slot-io-msg.err { color: #ff9db0; }
+
+/* =====================================================================
+ * 自适应布局（v0.13.7）—— 人类 2026-10-17：「调整 CSS 和 UI，使得不同比例和
+ * 大小的屏幕都更容易对齐，不需要滚动条」。
+ * 做法：
+ *   ① 用 clamp(vmin) 统一「间距 / 字号 / 卡片最小宽」，屏幕越小整体等比收紧；
+ *   ② 卡区改用 **auto-fit 网格**（不再靠固定 flex 宽度），宽屏多列、窄屏少列、自动对齐；
+ *   ③ 所有本来会产生滚动的地方（.menu-inner 的 overflow-y、形态条的 overflow-x）**改成换行**，
+ *      并为极矮屏（<720px 高）额外收紧/隐藏次要信息（长 lore、副标题行）；
+ *   ④ 详情行做行数钳制（-webkit-line-clamp），避免某个长描述把整屏顶出滚动条。
+ * 放在文件末尾，靠「后写优先」覆盖前面的老规则（同特异度）。
+ * ===================================================================== */
+:root {
+  --ui-gap-s: clamp(3px, 0.55vmin, 7px);
+  --ui-gap-m: clamp(5px, 0.95vmin, 12px);
+  --ui-gap-l: clamp(8px, 1.5vmin, 20px);
+  --ui-fs-xs: clamp(9px, 1.02vmin, 11px);
+  --ui-fs-s: clamp(10px, 1.15vmin, 13px);
+  --ui-fs-m: clamp(11px, 1.3vmin, 15px);
+  --ui-fs-l: clamp(14px, 2.1vmin, 26px);
+  --ui-card: clamp(70px, 8.2vmin, 116px);
+  --ui-pad: clamp(8px, 1.5vmin, 24px);
+}
+
+/* 屏幕层：不滚动，内容靠收紧/换行适配 */
+.screen { padding: var(--ui-gap-l); overflow: hidden; }
+.menu-inner {
+  width: min(94vw, 640px);
+  max-height: 100%;
+  overflow: hidden;              /* 取代原来的 max-height:96vh + overflow-y:auto（滚动条） */
+  padding: var(--ui-pad) clamp(6px, 1vmin, 12px);
+}
+.menu-inner.wide { width: min(97vw, 1120px); }
+
+/* 标题/副标题按屏幕缩短 */
+.select-title { font-size: var(--ui-fs-l); letter-spacing: .06em; margin-bottom: var(--ui-gap-s); }
+.select-title .sub { font-size: var(--ui-fs-xs); letter-spacing: .16em; margin-top: 2px; }
+
+/* 角色卡：auto-fit 网格 —— 宽屏一排多人、窄屏自动减列，永远对齐且不滚动 */
+#char-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--ui-card), 1fr));
+  gap: var(--ui-gap-m);
+  margin: var(--ui-gap-m) 0 var(--ui-gap-s);
+  justify-items: stretch;
+}
+.char-card { min-width: 0; padding: var(--ui-gap-s) var(--ui-gap-s); }
+.char-card .char-name { font-size: var(--ui-fs-s); }
+.char-card .char-reading, .char-card .char-epithet { font-size: var(--ui-fs-xs); }
+
+/* 角色详情：钳 3 行，长描述不再撑高 */
+#char-detail {
+  font-size: var(--ui-fs-s); line-height: 1.6; margin-top: 0; min-height: 0;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* 选择块：更紧的纵向节奏 */
+.pick-block { margin-top: var(--ui-gap-m); }
+.pick-title { font-size: var(--ui-fs-xs); letter-spacing: .1em; margin-bottom: var(--ui-gap-s); }
+
+/* 系列按钮行 */
+.chip-row { gap: var(--ui-gap-s); margin: 0 0 var(--ui-gap-s); }
+.chip { font-size: var(--ui-fs-xs); padding: 1px clamp(6px, 1vmin, 10px); line-height: 1.6; }
+
+/* 形态/支援条：**改成换行**，彻底去掉横向滚动条 */
+.mini-strip { gap: var(--ui-gap-s); }
+.mini-strip.x-scroll {
+  flex-wrap: wrap; justify-content: center; overflow: visible; padding: 0;
+}
+.mini-strip.x-scroll .mini-card { min-width: 0; flex: 0 1 auto; padding: 3px clamp(5px, .9vmin, 9px); }
+.mini-strip .mini-card { min-width: 0; padding: 3px clamp(5px, .9vmin, 9px); }
+.mini-strip .mini-name { font-size: var(--ui-fs-xs); line-height: 1.3; }
+.mini-strip .mini-sub { font-size: var(--ui-fs-xs); margin-top: 1px; line-height: 1.35; }
+
+/* 详情行：2 行钳制 */
+.pick-detail {
+  font-size: var(--ui-fs-xs); line-height: 1.55; margin-top: var(--ui-gap-s); min-height: 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* 底部按钮 */
+.select-actions { margin-top: var(--ui-gap-m); gap: var(--ui-gap-m); }
+.select-actions .btn-primary, .select-actions .btn-ghost { padding: clamp(5px, .9vmin, 11px) clamp(12px, 2vmin, 26px); font-size: var(--ui-fs-s); }
+
+/* 列表型屏幕（商店/图鉴/存档）：网格自适应，不在小屏上撑出滚动条 */
+#shop-list, #memory-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(clamp(120px, 16vmin, 200px), 1fr)); gap: var(--ui-gap-m); }
+.shop-card, .mem-item { min-width: 0; }
+
+/* 菜单页：长 lore 在小高度屏幕上收成 2 行，保证按钮不被挤出 */
+#screen-menu .lore {
+  font-size: var(--ui-fs-s); line-height: 1.7; margin: var(--ui-gap-m) 0 var(--ui-gap-l);
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+#screen-menu .logo-jp { font-size: clamp(26px, 7vmin, 68px); }
+
+/* 极矮屏（如 1366×640 / 横屏手机）：进一步收紧，只保留必要信息 */
+@media (max-height: 720px) {
+  :root { --ui-gap-m: 5px; --ui-gap-l: 8px; --ui-card: clamp(60px, 7vmin, 92px); }
+  #screen-menu .lore { -webkit-line-clamp: 2; }
+  #char-detail { -webkit-line-clamp: 2; }
+  .pick-detail { -webkit-line-clamp: 1; }
+  .select-title .sub { display: none; }
+  .select-actions { margin-top: 6px; }
+}
+/* 极窄屏：单列 */
+@media (max-width: 720px) {
+  #char-cards { grid-template-columns: repeat(auto-fit, minmax(64px, 1fr)); }
+  .menu-inner, .menu-inner.wide { width: 98vw; }
+}
+
+
+/* 极矮屏兜底（800×600 这类 4:3 小窗）：菜单页的装饰信息让位，保证不出现滚动条 */
+@media (max-height: 660px) {
+  #screen-menu .lore { -webkit-line-clamp: 1; margin: 3px 0 6px; }
+  #screen-menu .logo-en, #screen-menu .code-line { display: none; }
+  #screen-menu .credit, #screen-menu .ctrl-line { font-size: var(--ui-fs-xs); margin-top: 2px; }
+  .menu-inner { padding: 6px 6px; }
+  #char-detail, .pick-detail { display: none; }   /* 极矮屏：详情行让位，卡片本身仍可点 */
+  .menu-btns { margin-top: 6px; gap: 6px; }
+}
