@@ -47,7 +47,11 @@ window.KUP = window.KUP || {};
         this.player.draw(ctx, t);
         for (const w of this.player.weapons) w.drawOrbs(ctx, this.player);
       }
-      for (const pr of this.projs) pr.draw(ctx, t);
+      /* v0.13.6：弹体密集时关掉每个弹体的 shadowBlur（canvas 阴影＝独立模糊 pass，
+       * 400 弹体时单帧 render 会冲到 15ms+ ⇒ 卡顿）。阈值 140：
+       * 正常游玩基本触不到，治安战高波次才降级为「实心弹体」。 */
+      const projGlow = this.projs.length <= 140;
+      for (const pr of this.projs) pr.draw(ctx, t, projGlow);
       for (const pt of this.parts) pt.draw(ctx);
       for (const tx of this.texts) tx.draw(ctx);
       this.drawBounds(ctx);

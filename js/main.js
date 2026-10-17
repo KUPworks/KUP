@@ -152,19 +152,29 @@ window.KUP = window.KUP || {};
 
   /* 主循环 */
   let last = performance.now();
+  /* v0.13.6 性能：**菜单/选择屏不再跟着 60fps 重绘**。
+   * canvas 每帧重绘会让浏览器把「静止的 DOM 覆盖层 + 变化的背景」整体重新合成，
+   * 而 `.screen` 上原本还有全屏 `backdrop-filter: blur()`（已移除），等于每帧全屏重模糊
+   * ⇒ 菜单里操作也卡。这里把非游玩状态的渲染降到 ~20fps（背景只是缓慢平移，肉眼无差）。 */
+  let menuAcc = 0;
   function loop(now) {
     const dt = Math.min((now - last) / 1000, 1 / 30);
     last = now;
-    if (game.state === 'playing') {
+    const playing = game.state === 'playing';
+    if (playing) {
       if (game.debug.mv) KUP.Input.keys['w'] = true; // 调试自动行走
       game.update(dt);
-    } else if (game.state === 'menu' || game.state === 'select') {
-      // 菜单/番街选择背景缓慢平移
-      game.cam.x += 16 * dt;
-      if (game.cam.x > KUP.CONFIG.ARENA - game.view.w) game.cam.x = 0;
-      game.cam.y = (KUP.CONFIG.ARENA - game.view.h) / 2;
+      game.render(now / 1000);
+    } else {
+      if (game.state === 'menu' || game.state === 'select') {
+        // 菜单/番街选择背景缓慢平移
+        game.cam.x += 16 * dt;
+        if (game.cam.x > KUP.CONFIG.ARENA - game.view.w) game.cam.x = 0;
+        game.cam.y = (KUP.CONFIG.ARENA - game.view.h) / 2;
+      }
+      menuAcc += dt;
+      if (menuAcc >= 1 / 20) { menuAcc = 0; game.render(now / 1000); }
     }
-    game.render(now / 1000);
     if (game.state !== 'menu' && game.state !== 'select' && game.state !== 'area' && game.state !== 'memory') {
       KUP.UI.updateHUD(game);
     }

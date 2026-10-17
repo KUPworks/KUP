@@ -647,10 +647,13 @@ window.KUP = window.KUP || {};
       this.life -= dt;
       if (this.life <= 0) this.dead = true;
     }
-    draw(ctx, t) {
+    draw(ctx, t, glow) {
       ctx.save();
       ctx.translate(this.x, this.y);
-      ctx.shadowColor = this.color; ctx.shadowBlur = 8;
+      /* v0.13.6：辉光（canvas shadow）＝**每个弹体一次独立模糊 pass**，高密度下极贵
+       * （实测 400 弹体时 render 单帧冲到 15ms+）。由渲染侧按密度决定是否开：
+       * 弹体数 ≤ 阈值照旧发光，超了只画实心形状——正常密度下外观完全不变。 */
+      if (glow !== false) { ctx.shadowColor = this.color; ctx.shadowBlur = 8; }
       if (this.kind === 'note') {
         ctx.rotate(Math.atan2(this.vy, this.vx) + Math.PI / 2);
         ctx.fillStyle = this.color;

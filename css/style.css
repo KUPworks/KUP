@@ -25,11 +25,13 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 #app { position: fixed; inset: 0; }
 #game { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
-/* CRT 扫描线 */
+/* CRT 扫描线
+ * v0.13.6：去掉 `mix-blend-mode: multiply` —— 混合模式使这一整层每帧额外参与一次合成
+ * （canvas 在动就得重算），是菜单/局内卡顿的放大器之一。改用普通半透明黑线，观感基本一致。 */
 #scanlines {
   position: absolute; inset: 0; pointer-events: none; z-index: 40;
-  background: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px);
-  mix-blend-mode: multiply; opacity: .55;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.10) 0 1px, transparent 1px 3px);
+  opacity: .55;
 }
 /* 低血量危险红晕 */
 #danger {
@@ -43,8 +45,11 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .screen {
   position: absolute; inset: 0; z-index: 50;
   display: flex; align-items: center; justify-content: center;
-  background: radial-gradient(ellipse at 50% 30%, rgba(30,16,70,.88), rgba(5,3,12,.96) 75%);
-  backdrop-filter: blur(2px);
+  background: radial-gradient(ellipse at 50% 30%, rgba(30,16,70,.90), rgba(5,3,12,.965) 75%);
+  /* v0.13.6：**删掉 `backdrop-filter: blur(2px)`**。全屏 backdrop-filter 会让浏览器
+   * 每帧把整块背景（＝一直重绘的 canvas）重新模糊一次，CPU/软件合成下直接变成掉帧，
+   * 表现就是「菜单里操作也卡」。背景本来就是深色径向渐变，去掉 blur 观感几乎无差
+   * （此处不透明度略提高 0.02 以补足那一点朦胧感）。 */
 }
 .menu-inner { max-width: 640px; width: 92%; text-align: center; padding: 24px 12px; max-height: 96vh; overflow-y: auto; }
 .menu-inner.wide { max-width: 980px; }
