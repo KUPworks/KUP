@@ -234,9 +234,9 @@ KUP.META.addTickets(45);
 check('復興率 55% + 45 票 招募地邑阿栖', KUP.META.payRecruit('asu') && KUP.META.isCharUnlocked('asu'));
 
 // 11c. 皮肤（形態）：通用形态 ＋ 系列化全量形态（v0.13.5）；黑／白（魔女候補）；JK 制服（同伴）
-check('魔女形态：通用形态仍在（花魁鳥／姬連雀）且全量形态已系列化（7 系列、化歩 22 条）',
+check('魔女形态：通用形态仍在（花魁鳥／姬連雀）且全量形态已系列化（7 系列、化歩 21 条）',
   ['none', 'ouranchou', 'himerenjaku'].every(id => KUP.formsFor('witch', 'kaf').some(f => f.id === id)) &&
-  KUP.FORM_SERIES.length === 7 && KUP.formsFor('witch', 'kaf').length === 22,
+  KUP.FORM_SERIES.length === 7 && KUP.formsFor('witch', 'kaf').length === 21,
   String(KUP.formsFor('witch', 'kaf').length) + ' 条 / ' + KUP.FORM_SERIES.length + ' 系列');
 check('魔女候補皮肤＝黑／白', KUP.formsFor('recruit').map(f => f.id).join(',') === 'none,kuro,shiro');
 /* ★ 出处等级记在**数据层** `src`（界面上已不显示，见 js/ui.js selectForm 的注释）；
@@ -1711,11 +1711,11 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   const SER = KUP.FORM_SERIES;
   check('形态系列共 7 个', SER.length === 7, SER.map(s => s.id).join(','));
   const expect = {
-    kaf_singing: 17, rim_meta: 7, haru_matoi: 8, sekai_anima: 5, koko_type: 4, vwp_shared: 3, legacy: 1,
+    kaf_singing: 16, rim_meta: 7, haru_matoi: 8, sekai_anima: 5, koko_type: 4, vwp_shared: 3, legacy: 1,
   };
   const got = {};
   for (const f of KUP.FORMS) if (f.series) got[f.series] = (got[f.series] || 0) + 1;
-  check('各系列形态数与采集稿口径一致（化歩 17／狸眼 7／派流 8／世界 5／此処 4／共用 3／自创 1）',
+  check('各系列形态数与采集稿口径一致（化歩 16＝17 去「枭黑」／狸眼 7／派流 8／世界 5／此処 4／共用 3／自创 1）',
     SER.every(s => got[s.id] === expect[s.id]),
     SER.map(s => s.id + ':' + (got[s.id] || 0) + '/' + expect[s.id]).join(' '));
   check('每条魔女形态都归入系列', KUP.FORMS.filter(f => f.kinds && f.kinds.indexOf('witch') >= 0 && f.id !== 'none').every(f => !!f.series));
@@ -1750,9 +1750,10 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
     leaked.length === 0, leaked.map(f => f.id + ':' + f.name.ja).join(',') || '已按取舍跳过');
   check('括号变体的基座形态仍在（燕／軍鶏／雉 等）',
     ['tsubame', 'shamo', 'kiji'].every(id => KUP.FORMS.some(f => f.id === id)));
-  /* 2025–2026 新衣装（只在官方商品页有的名字）已收录 */
-  check('官方商品页才有的新衣装已收录（梟／梟黑／銀兜／金兜／Dr.Futurity）',
-    ['fukurou', 'fukurou_kuro', 'ginkabuto', 'kinakabuto', 'dr_futurity'].every(id => KUP.FORMS.some(f => f.id === id)));
+  /* 2025–2026 新衣装（只在官方商品页有的名字）已收录；人类点名不要的「枭黑」已移除 */
+  check('官方商品页才有的新衣装已收录（梟／銀兜／金兜／Dr.Futurity）',
+    ['fukurou', 'ginkabuto', 'kinakabuto', 'dr_futurity'].every(id => KUP.FORMS.some(f => f.id === id)));
+  check('人类点名的「枭黑」未做（fukurou_kuro 不存在）', !KUP.FORMS.some(f => f.id === 'fukurou_kuro'));
   check('采集稿标「名称不明」的照原样保留、不替它取名',
     (() => { const f = KUP.FORM('pc_1'); return !!f && f.name.zh.indexOf('parallel canvas') >= 0; })());
 }
@@ -1790,7 +1791,7 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   check('分组顺序＝本命系列 → 共用 → 自创，且不含「通常形態」',
     g.map(x => x.key).join(',') === 'kaf_singing,vwp_shared,legacy' && g.every(x => x.forms.every(f => f.id !== 'none')),
     g.map(x => x.key + ':' + x.forms.length).join(' '));
-  check('化歩一组 17 条、共用 3 条、自创 1 条', g[0].forms.length === 17 && g[1].forms.length === 3 && g[2].forms.length === 1);
+  check('化歩一组 16 条、共用 3 条、自创 1 条', g[0].forms.length === 16 && g[1].forms.length === 3 && g[2].forms.length === 1);
   check('每组都有三语短名（系列按钮用）', g.every(x => x.short && x.short.zh && x.short.en && x.short.ja),
     g.map(x => x.key).join(','));
   check('此処的分组＝此処 4／共用 3／自创 1', (() => {
@@ -1799,7 +1800,7 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   })());
   check('魔女候補／同伴没有系列分组（UI 因而不显示系列按钮）',
     KUP.formGroups('recruit', 'aru').length === 1 && KUP.formGroups('companion', null).length === 1);
-  check('「全部」＝该角色可选的全部形态数（化歩 22 条）', KUP.formsFor('witch', 'kaf').length === 22,
+  check('「全部」＝该角色可选的全部形态数（化歩 21 条）', KUP.formsFor('witch', 'kaf').length === 21,
     String(KUP.formsFor('witch', 'kaf').length));
 }
 
