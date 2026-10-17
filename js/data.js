@@ -1263,14 +1263,14 @@ KUP.FORMS = [
       ja: '衣装の色は**黄緑↔蔵青**の間で変化する（公式の記載）。',
     },
   },
-  { id: 'aogara_kuro', series: 'kaf_singing', name: { zh: '青雀黑', en: 'Aogara Kuro', ja: '青雀黑（あおがら くろ）' }, accent: 'sparrow_wing', color: '#2f4f6f' },
-  { id: 'kinkei', series: 'kaf_singing', name: { zh: '金鸡', en: 'Kinkei', ja: '金鶏（きんけい）' }, color: '#ffb25a' },
+  // { id: 'aogara_kuro', series: 'kaf_singing', name: { zh: '青雀黑', en: 'Aogara Kuro', ja: '青雀黑（あおがら くろ）' }, accent: 'sparrow_wing', color: '#2f4f6f' },
+  // { id: 'kinkei', series: 'kaf_singing', name: { zh: '金鸡', en: 'Kinkei', ja: '金鶏（きんけい）' }, color: '#ffb25a' },
   { id: 'tsubame', series: 'kaf_singing', name: { zh: '燕', en: 'Tsubame', ja: '燕（つばめ）' }, accent: 'bird_tail', color: '#8fb8ff' },
-  { id: 'shamo', series: 'kaf_singing', name: { zh: '军鸡', en: 'Shamo', ja: '軍鶏（しゃも）' }, color: '#e04a3f' },
+  // { id: 'shamo', series: 'kaf_singing', name: { zh: '军鸡', en: 'Shamo', ja: '軍鶏（しゃも）' }, color: '#e04a3f' },
   { id: 'kiji', series: 'kaf_singing', name: { zh: '雉', en: 'Kiji', ja: '雉（きじ）' }, accent: 'bird_tail', color: '#ff8a4e' },
   { id: 'raichou', series: 'kaf_singing', name: { zh: '雷鸟', en: 'Raichō', ja: '雷鳥（らいちょう）' }, color: '#e8ecf6' },
   { id: 'saichou', series: 'kaf_singing', name: { zh: '犀鸟', en: 'Saichō', ja: '犀鳥（さいちょう）' }, color: '#c9a6ff' },
-  { id: 'ougibato', series: 'kaf_singing', name: { zh: '扇鸠', en: 'Ōgibato', ja: '扇鳩（おうぎばと）' }, color: '#ffd98a' },
+  // { id: 'ougibato', series: 'kaf_singing', name: { zh: '扇鸠', en: 'Ōgibato', ja: '扇鳩（おうぎばと）' }, color: '#ffd98a' },
   {
     id: 'fukurou', series: 'kaf_singing', name: { zh: '枭', en: 'Fukurō', ja: '梟（ふくろう）' }, color: '#b58cff',
     note: {
@@ -1369,16 +1369,16 @@ KUP.FORMS = [
   },
   { id: 'zeta_capricorni', series: 'koko_type', name: { zh: 'type-2nd ζ Capricorni', en: 'type-2nd ζ Capricorni', ja: 'type-2nd ζ Capricorni' }, accent: 'star_orbit', color: '#7fb6ff' },
   { id: 'betelgeuse', series: 'koko_type', name: { zh: 'type-real Betelgeuse', en: 'type-real Betelgeuse', ja: 'type-real Betelgeuse' }, accent: 'star_orbit', color: '#ff9f8a' },
-  /* 五人共用（人类 2026-10-17：花魁鳥・八咫烏算共用） */
-  {
-    id: 'ouranchou_rev', series: 'vwp_shared', name: { zh: '花魁鳥 Revolutions', en: 'Oiran-chō Revolutions', ja: '花魁鳥 Revolutions（えとぴりか れぼりゅーしょんず）' },
-    note: {
-      zh: '五人共用的战斗形态（2022 V.W.P 1st ONE-MAN LIVE「現象」）——花魁鳥的强化版。<br>范围 <b>+18%</b>、冷却 <b>−10%</b>，最大生命 <b>−12%</b>。',
-      en: 'The shared battle form (2022 V.W.P 1st ONE-MAN LIVE "現象") — a reinforced Oiran-chō.<br>Area <b>+18%</b>, cooldown <b>−10%</b>, max HP <b>−12%</b>.',
-      ja: '五人共用の戦闘形態（2022 V.W.P 1st ONE-MAN LIVE「現象」）——花魁鳥の強化版。<br>範囲 <b>+18%</b>、クールタイム <b>−10%</b>、最大生命 <b>−12%</b>。',
-    },
-    mods: { area: 1.18, cd: 0.90, hp: 0.88 },
-  },
+  // /* 五人共用（人类 2026-10-17：花魁鳥・八咫烏算共用） */
+  // {
+  //   id: 'ouranchou_rev', series: 'vwp_shared', name: { zh: '花魁鳥 Revolutions', en: 'Oiran-chō Revolutions', ja: '花魁鳥 Revolutions（えとぴりか れぼりゅーしょんず）' },
+  //   note: {
+  //     zh: '五人共用的战斗形态（2022 V.W.P 1st ONE-MAN LIVE「現象」）——花魁鳥的强化版。<br>范围 <b>+18%</b>、冷却 <b>−10%</b>，最大生命 <b>−12%</b>。',
+  //     en: 'The shared battle form (2022 V.W.P 1st ONE-MAN LIVE "現象") — a reinforced Oiran-chō.<br>Area <b>+18%</b>, cooldown <b>−10%</b>, max HP <b>−12%</b>.',
+  //     ja: '五人共用の戦闘形態（2022 V.W.P 1st ONE-MAN LIVE「現象」）——花魁鳥の強化版。<br>範囲 <b>+18%</b>、クールタイム <b>−10%</b>、最大生命 <b>−12%</b>。',
+  //   },
+  //   mods: { area: 1.18, cd: 0.90, hp: 0.88 },
+  // },
   {
     id: 'yatagarasu', series: 'vwp_shared', name: { zh: '八咫烏', en: 'Yatagarasu', ja: '八咫烏（やたがらす）' }, accent: 'crest', color: '#d94fb0',
     note: {
@@ -1407,33 +1407,33 @@ KUP.FORMS = [
     color: '#f2f0ff', color2: '#a9b6d8',
     src: { zh: '本作暂定皮肤（黑／白）', en: 'Tentative skin (Black/White) original to this work', ja: '本作の暫定皮膚（黒／白）' },
   },
-  /* ---- 同伴（彩季詩得）：JK 制服（2026-10 改定；后续每位同伴分别定制） ---- */
-  {
-    id: 'jk_summer', kinds: ['companion'], accent: 'sailor',
-    name: { zh: 'JK制服・夏服', en: 'JK Uniform · Summer', ja: 'JK制服・夏服' },
-    label: { zh: 'JK制服（夏服）—— 白襟水手服', en: 'JK uniform (summer) — white sailor collar', ja: 'JK制服（夏服）——白襟セーラー' },
-    desc: {
-      zh: '復興課的夏季制服——白襟水手服。<br>拾取范围 <b>+10%</b>、移动速度 <b>+5%</b>。',
-      en: 'The Division\'s summer uniform — a white sailor collar.<br>Pickup <b>+10%</b>, move speed <b>+5%</b>.',
-      ja: '復興課の夏制服——白襟セーラー。<br>取得 <b>+10%</b>、移動速度 <b>+5%</b>。',
-    },
-    mods: { pickup: 1.1, speed: 1.05 },
-    color: '#eaf4ff', color2: '#2f5fa8',
-    src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
-  },
-  {
-    id: 'jk_winter', kinds: ['companion'], accent: 'blazer',
-    name: { zh: 'JK制服・冬服', en: 'JK Uniform · Winter', ja: 'JK制服・冬服' },
-    label: { zh: 'JK制服（冬服）—— 深蓝西装外套', en: 'JK uniform (winter) — navy blazer', ja: 'JK制服（冬服）——紺ブレザー' },
-    desc: {
-      zh: '復興課的冬季制服——深蓝西装外套。<br>最大生命 <b>+6%</b>、全部冷却 <b>−3%</b>。',
-      en: 'The Division\'s winter uniform — a navy blazer.<br>Max HP <b>+6%</b>, all cooldowns <b>−3%</b>.',
-      ja: '復興課の冬制服——紺ブレザー。<br>最大生命 <b>+6%</b>、全クールダウン <b>−3%</b>。',
-    },
-    mods: { hp: 1.06, cd: 0.97 },
-    color: '#f6f1e6', color2: '#1d2a52',
-    src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
-  },
+  // /* ---- 同伴（彩季詩得）：JK 制服（2026-10 改定；后续每位同伴分别定制） ---- */
+  // {
+  //   id: 'jk_summer', kinds: ['companion'], accent: 'sailor',
+  //   name: { zh: 'JK制服・夏服', en: 'JK Uniform · Summer', ja: 'JK制服・夏服' },
+  //   label: { zh: 'JK制服（夏服）—— 白襟水手服', en: 'JK uniform (summer) — white sailor collar', ja: 'JK制服（夏服）——白襟セーラー' },
+  //   desc: {
+  //     zh: '復興課的夏季制服——白襟水手服。<br>拾取范围 <b>+10%</b>、移动速度 <b>+5%</b>。',
+  //     en: 'The Division\'s summer uniform — a white sailor collar.<br>Pickup <b>+10%</b>, move speed <b>+5%</b>.',
+  //     ja: '復興課の夏制服——白襟セーラー。<br>取得 <b>+10%</b>、移動速度 <b>+5%</b>。',
+  //   },
+  //   mods: { pickup: 1.1, speed: 1.05 },
+  //   color: '#eaf4ff', color2: '#2f5fa8',
+  //   src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
+  // },
+  // {
+  //   id: 'jk_winter', kinds: ['companion'], accent: 'blazer',
+  //   name: { zh: 'JK制服・冬服', en: 'JK Uniform · Winter', ja: 'JK制服・冬服' },
+  //   label: { zh: 'JK制服（冬服）—— 深蓝西装外套', en: 'JK uniform (winter) — navy blazer', ja: 'JK制服（冬服）——紺ブレザー' },
+  //   desc: {
+  //     zh: '復興課的冬季制服——深蓝西装外套。<br>最大生命 <b>+6%</b>、全部冷却 <b>−3%</b>。',
+  //     en: 'The Division\'s winter uniform — a navy blazer.<br>Max HP <b>+6%</b>, all cooldowns <b>−3%</b>.',
+  //     ja: '復興課の冬制服——紺ブレザー。<br>最大生命 <b>+6%</b>、全クールダウン <b>−3%</b>。',
+  //   },
+  //   mods: { hp: 1.06, cd: 0.97 },
+  //   color: '#f6f1e6', color2: '#1d2a52',
+  //   src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
+  // },
 ];
 /* ---------- 形态系列 → 形态：补齐共同字段（v0.13.5） ----------
  * 形态只写自己的差异；label／系列说明／配色／轮廓配件／出处在这里从 KUP.FORM_SERIES 补齐。
