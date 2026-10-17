@@ -161,10 +161,11 @@
       <div id="char-cards"></div>
       <div id="char-detail" data-i18n="select.default"></div>
 
-      <!-- 皮肤（特殊歌唱用形態）—— 内容随角色类型变化 -->
+      <!-- 皮肤（特殊歌唱用形態）—— 内容随角色变化；v0.13.5：全量形态按**系列**切换（同一屏内），卡片可横向滚动 -->
       <div class="pick-block">
         <div class="pick-title" id="form-title" data-i18n="form.title">皮肤 · 特殊歌唱用形態</div>
-        <div id="form-strip" class="mini-strip"></div>
+        <div id="form-chips" class="chip-row hidden"></div>
+        <div id="form-strip" class="mini-strip x-scroll"></div>
         <div id="form-detail" class="pick-detail"></div>
       </div>
 

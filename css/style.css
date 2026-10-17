@@ -312,6 +312,20 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .pick-block { margin-top: 14px; }
 .pick-title { font-size: 12px; letter-spacing: .16em; color: #9a90d6; margin-bottom: 8px; }
 .mini-strip { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+/* v0.13.5：全量形态条——同一屏内横向滚动（避免 45+ 张卡把界面撑成"一墙"） */
+.mini-strip.x-scroll { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; overflow-y: hidden;
+  padding: 2px 2px 8px; scrollbar-width: thin; }
+.mini-strip.x-scroll .mini-card { min-width: 104px; flex: 0 0 auto; padding: 6px 8px; }
+.mini-strip.x-scroll .mini-name { font-size: 12px; line-height: 1.25; }
+/* 系列切换按钮（皮肤条上方一行） */
+.chip-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 2px 0 8px; }
+.chip {
+  padding: 3px 10px; font-size: 12px; cursor: pointer; color: #cfc6ff;
+  background: rgba(20,12,45,.7); border: 1px solid rgba(120,100,220,.35); border-radius: 999px;
+  transition: color .12s, border-color .12s, background .12s;
+}
+.chip:hover { color: #fff; border-color: rgba(160,140,255,.7); }
+.chip.on { color: #fff; background: rgba(96,72,190,.55); border-color: rgba(190,170,255,.9); box-shadow: 0 0 10px rgba(150,120,255,.45); }
 .mini-card {
   min-width: 118px; padding: 8px 12px; cursor: pointer; text-align: center;
   background: rgba(20,12,45,.72); border: 1px solid rgba(120,100,220,.35); border-radius: 7px;

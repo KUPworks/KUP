@@ -31,7 +31,7 @@ window.KUP = window.KUP || {};
         'area-cards', 'area-detail', 'fukkou-fill', 'fukkou-label', 'memory-list', 'memory-count',
         'ult-wrap', 'ult-fill', 'win-sub', 'fukkou-menu-line',
         'companion-strip', 'companion-detail', 'companion-form-wrap', 'companion-form-strip',
-        'companion-form-detail', 'form-strip', 'form-detail', 'form-title', 'hud-companion', 'companion-form-title',
+        'companion-form-detail', 'form-strip', 'form-detail', 'form-title', 'form-chips', 'hud-companion', 'companion-form-title',
         'shop-list', 'shop-tickets', 'fukkou-menu-tickets',
         'menu-slot-line', 'slot-list', 'slot-warn', 'slot-io-text', 'slot-io-msg',
         'order-best-line', 'hud-wave'];
@@ -795,10 +795,13 @@ window.KUP = window.KUP || {};
       this.els['companion-form-detail'].innerHTML = KUP.I18N.tv(f.desc) +
         '<br><span class="area-src">' + (f.src ? KUP.I18N.tv(f.src) : '') + '</span>';
     },
-    /* 皮肤（形態）选择条 —— 内容随所选角色变化：
-     * 魔女之子 → 通用形态（花魁鳥／姬連雀）＋**该角色的专属觉醒形态**（v0.13.4：
-     *   化歩＝青雀／狸眼＝幼年期の終わり／派流＝九紋龍／世界＝Heliotrope／此処＝アルナイル）；
-     * 可招募角色（魔女候補）→ 皮肤（黑／白）；同伴（復興課）→ JK 制服，见 showCompanionFormStrip */
+    /* 皮肤（形態）选择条 —— **同一屏**内按系列切换 + 横向滚动。
+     * v0.13.5：全量形态有 45+ 条（花譜 17／狸眼 7／派流 8／世界 5／此処 4／共用 3／自创 1），
+     * 一次铺开会变成"一墙卡"。于是：
+     *   ① 一行**系列按钮**（默认选中该角色的本命系列，例如选化歩就停在「化歩」）；
+     *   ② 下方只画**当前系列**的卡片，超出可横向滚动（「通常形態」永远在第一格）；
+     *   ③ 「共用」「自创」「全部」各一个按钮——全部仍在一屏内，不需要进别的页面。
+     * 魔女候補／同伴皮肤没有系列 ⇒ 不显示系列按钮，行为与以前一致。 */
     showFormStrip() {
       const strip = this.els['form-strip'];
       if (!strip) return;
@@ -809,20 +812,49 @@ window.KUP = window.KUP || {};
         this.selectedForm = 'none';
         KUP.META.setForm('none');
       }
+      const groups = KUP.formGroups(kind, c ? c.id : null);
+      /* 当前显示的系列：默认＝本命系列（第一组）；角色/类型一变就重新落到第一组 */
+      if (this.formGroupKey && !groups.some(g => g.key === this.formGroupKey)) this.formGroupKey = null;
+      if (!this.formGroupKey) this.formGroupKey = groups.length ? groups[0].key : null;
+      const chips = this.els['form-chips'];
+      if (chips) {
+        chips.innerHTML = '';
+        const showChips = groups.length > 1;          // 只有一组时不必显示按钮
+        chips.classList.toggle('hidden', !showChips);
+        if (showChips) {
+          const mk = (key, text) => {
+            const b = document.createElement('button');
+            b.className = 'chip' + (this.formGroupKey === key ? ' on' : '');
+            b.textContent = text;
+            b.addEventListener('click', () => {
+              KUP.Audio.sfx('select');
+              this.formGroupKey = key;
+              this.showFormStrip();
+            });
+            chips.appendChild(b);
+          };
+          for (const g of groups) mk(g.key, KUP.I18N.tv(g.short || g.name) + ' ' + g.forms.length);
+          mk('__all', KUP.I18N.t('form.all') + ' ' + list.length);
+        }
+      }
+      const cur = this.formGroupKey === '__all' ? list
+        : (groups.find(g => g.key === this.formGroupKey) || { forms: list }).forms;
       strip.innerHTML = '';
       if (this.els['form-title']) {
         this.els['form-title'].textContent = c
           ? KUP.I18N.t(kind === 'recruit' ? 'form.title.recruit' : 'form.title.witch', { name: c.short || c.name })
           : KUP.I18N.t('form.title');
       }
-      for (const f of list) {
+      /* 通常形態永远在第一格（不属于任何系列） */
+      const ordered = [KUP.FORM('none')].concat(cur.filter(f => f.id !== 'none'));
+      for (const f of ordered) {
         const isNone = f.id === 'none';
         const card = document.createElement('div');
         card.className = 'mini-card' + (this.selectedForm === f.id ? ' selected' : '');
         card.dataset.id = f.id;
         card.style.setProperty('--c', isNone ? (c ? c.color : '#7a7398') : f.color);
         card.innerHTML = '<div class="mini-name">' + KUP.I18N.tv(f.name) + '</div>' +
-          '<div class="mini-sub">' + KUP.I18N.tv(f.label) + '</div>';
+          (isNone ? '<div class="mini-sub">' + KUP.I18N.tv(f.label) + '</div>' : '');
         card.addEventListener('click', () => { KUP.Audio.sfx('select'); this.selectForm(f.id); });
         strip.appendChild(card);
       }
@@ -841,6 +873,7 @@ window.KUP = window.KUP || {};
       /* 未招募的角色不可选用 */
       if (id && !KUP.META.isCharUnlocked(id)) id = null;
       this.selectedChar = id || null;
+      this.formGroupKey = null;          // v0.13.5：换角色 → 皮肤栏回到该角色的本命系列
       const cards = this.els['char-cards'].children;
       for (const card of cards) card.classList.toggle('selected', card.dataset.id === id);
       $('btn-depart').disabled = !id;

@@ -259,6 +259,57 @@ window.KUP = window.KUP || {};
           ctx.fillStyle = '#ffe9a8';
           ctx.beginPath(); ctx.arc(i * 7, bob - 22 - (i === 0 ? 2 : 0), 1, 0, U.TAU); ctx.fill();
         }
+      } else if (accent === 'bird_plume') {     // 花譜系：頭上の羽根飾り（3 枚扇状）
+        ctx.strokeStyle = '#ffe9a8'; ctx.lineWidth = 2;
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath();
+          ctx.moveTo(i * 4, bob - 20);
+          ctx.quadraticCurveTo(i * 9, bob - 32, i * 13, bob - 38 + Math.abs(i) * 4);
+          ctx.stroke();
+        }
+      } else if (accent === 'bird_tail') {      // 花譜系（尾羽型）：右下へ流れる長い尾羽
+        ctx.strokeStyle = '#cfe8ff'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(4, bob - 8);
+        ctx.quadraticCurveTo(16, bob - 2, 22, bob + 10);
+        ctx.stroke();
+        ctx.globalAlpha = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(2, bob - 6);
+        ctx.quadraticCurveTo(15, bob - 8, 24, bob + 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else if (accent === 'sf_visor') {       // 理芽系：SF 風のバイザー ＋ 軌道点
+        ctx.fillStyle = 'rgba(232,236,246,0.55)';
+        ctx.beginPath();
+        ctx.moveTo(-9, bob - 13); ctx.lineTo(9, bob - 13); ctx.lineTo(7, bob - 9); ctx.lineTo(-7, bob - 9);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#9fe8ff';
+        ctx.beginPath(); ctx.arc(11, bob - 20, 1.6, 0, U.TAU); ctx.fill();
+      } else if (accent === 'koi_scales') {     // 春猿火系：肩の鯉鱗（重ねた 3 枚）
+        ctx.strokeStyle = '#ffd98a'; ctx.lineWidth = 1.4;
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.arc(-2 + i * 5, bob - 7 + (i % 2) * 2, 3.2, Math.PI * 0.15, Math.PI * 0.95);
+          ctx.stroke();
+        }
+      } else if (accent === 'flower_veil') {    // 世界系：花のヴェール ＋ 花びら
+        ctx.globalAlpha = 0.35; ctx.fillStyle = '#c9a6ff';
+        ctx.beginPath();
+        ctx.moveTo(-12, bob - 16);
+        ctx.quadraticCurveTo(0, bob - 4, 12, bob - 16);
+        ctx.quadraticCurveTo(0, bob - 24, -12, bob - 16);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#efe0ff';
+        for (let i = 0; i < 2; i++) {
+          ctx.beginPath(); ctx.ellipse(-8 + i * 16, bob - 24 - i * 3, 2.4, 1.4, i ? 0.6 : -0.6, 0, U.TAU); ctx.fill();
+        }
+      } else if (accent === 'star_orbit') {     // 幸祜系：傾いた軌道リング ＋ 星
+        ctx.strokeStyle = '#9fe8ff'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.ellipse(0, bob - 24, 13, 5, 0.28, 0, U.TAU); ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(12, bob - 22, 1.8, 0, U.TAU); ctx.fill();
       } else if (accent === 'star_tiara') {     // アルナイル（此処）：星のティアラ
         ctx.strokeStyle = '#9fe8ff'; ctx.lineWidth = 1.6;
         ctx.beginPath(); ctx.moveTo(-9, bob - 21); ctx.quadraticCurveTo(0, bob - 25, 9, bob - 21); ctx.stroke();
