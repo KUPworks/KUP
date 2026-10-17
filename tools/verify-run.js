@@ -1568,5 +1568,93 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   check('音符飞行距离不随「范围」变化（模组未声明 life）', nt1.g.projs[0].life === nt2.g.projs[0].life);
 }
 
+/* ========== v0.13.3：支援物品（同伴层退出） ========== */
+
+// 25q. 支援物品：五件、顺序对应五位魔女之子、**先不做差异化**（数值全同）
+{
+  const SP = KUP.SUPPORTS;
+  check('支援物品共 5 件', Array.isArray(SP) && SP.length === 5, (SP || []).map(s => s.id).join(','));
+  const order = ['icecream', 'chocolate', 'candy', 'puff', 'arare'];
+  check('支援物品顺序＝冰淇淋／巧克力／糖果／泡芙／炸年糕果子',
+    SP.map(s => s.id).join(',') === order.join(','), SP.map(s => s.id).join(','));
+  check('arare 的中文名＝炸年糕果子', KUP.SUPPORT('arare').name.zh === '炸年糕果子', KUP.SUPPORT('arare').name.zh);
+  /* 顺序对应五位魔女之子（花譜／理芽／異世界情緒／春猿火／幸祜）——现在只作记录 */
+  const owners = SP.map(s => s.owner).join(',');
+  check('五件顺序对应五位魔女之子（kaf／rim／isekaijoucho／harusaruhi／koko）',
+    owners === 'kaf,rim,isekaijoucho,harusaruhi,koko', owners);
+  check('每件都有三语名与三语说明',
+    SP.every(s => s.name.zh && s.name.en && s.name.ja && s.desc.zh && s.desc.en && s.desc.ja));
+  /* 先不做差异化：五件 perk 数值必须完全一致（以后要做差异化改这一条即可） */
+  const perkSig = s => JSON.stringify(s.perk);
+  check('先不做差异化：五件 perk 数值完全相同', SP.every(s => perkSig(s) === perkSig(SP[0])), perkSig(SP[0]));
+  check('支援物品都标了局外解锁价', SP.every(s => s.unlock && s.unlock.cost > 0),
+    SP.map(s => s.unlock.cost).join('/'));
+}
+
+// 25q-2. 局外解锁 ＋ 出击时选一件：meta 流程与出击接线
+{
+  KUP.META.reset();
+  check('支援物品默认未解锁', !KUP.META.isSupportUnlocked('icecream'));
+  KUP.META.setSupport('icecream');
+  check('未解锁的支援物品选不上（回落为不带）', KUP.META.ensure().support === null);
+  check('市民票不足时买不了', KUP.META.paySupport('icecream') === false);
+  KUP.META.ensure().tickets = 25;
+  check('花市民票可解锁（局外解锁）', KUP.META.paySupport('icecream') === true &&
+    KUP.META.isSupportUnlocked('icecream') && KUP.META.tickets() === 5, '票=' + KUP.META.tickets());
+  check('重复购买被拒（不会重复扣票）', KUP.META.paySupport('icecream') === false && KUP.META.tickets() === 5);
+  KUP.META.setSupport('icecream');
+  check('解锁后可选中并写入存档', KUP.META.ensure().support === 'icecream');
+  KUP.META.setSupport('nonexistent');
+  check('未知支援物选不上', KUP.META.ensure().support === null);
+  /* 出击接线：带上支援物 → perk 生效（gather：拾取 +20%、经验 +15%） */
+  KUP.META.setSupport('icecream');
+  const gS = new KUP.Game(canvas);
+  gS.start({ char: 'kaf', area: 'area0', seed: 812, support: 'icecream' });
+  check('出击时带上支援物品（供 HUD/结算显示）', !!gS.support && gS.support.id === 'icecream');
+  const gNo = new KUP.Game(canvas);
+  gNo.start({ char: 'kaf', area: 'area0', seed: 812 });
+  check('支援物品生效：拾取半径 ×1.2', Math.abs(gS.player.pickup - gNo.player.pickup * 1.2) < 1e-6,
+    gNo.player.pickup.toFixed(1) + ' → ' + gS.player.pickup.toFixed(1));
+  check('支援物品生效：经验 ×1.15', Math.abs(gS.player.xpMult - gNo.player.xpMult * 1.15) < 1e-6,
+    gNo.player.xpMult.toFixed(3) + ' → ' + gS.player.xpMult.toFixed(3));
+  check('未解锁的支援物品不生效（URL 直开也不给）', (() => {
+    KUP.META.setSupport(null);
+    KUP.META.ensure().supports = [];              // 清掉解锁
+    const gX = new KUP.Game(canvas);
+    gX.start({ char: 'kaf', area: 'area0', seed: 813, support: 'chocolate' });
+    return gX.support === null && Math.abs(gX.player.pickup - gNo.player.pickup) < 1e-6;
+  })());
+  check('结算 stats 带支援物品名', (() => {
+    const st = gS.stats();
+    return st.support === 'icecream' && !!st.supportName;
+  })());
+  /* 旧存档兼容：没有 supports/support 字段的记录读进来后补默认值 */
+  const legacy = { fukkou: 3, tickets: 7, chars: [], companions: ['ciel'], shop: {}, cleared: {}, eggs: [] };
+  KUP.STORE.write('progress', KUP.META._key(), legacy, { now: true });
+  KUP.META.load(true);
+  const dOld = KUP.META.ensure();
+  check('旧存档（无 supports 字段）读入后补空列表且选择为 null',
+    Array.isArray(dOld.supports) && dOld.supports.length === 0 && dOld.support === null,
+    JSON.stringify({ supports: dOld.supports, support: dOld.support }));
+  check('旧存档的 companions 列表不受影响', dOld.companions.indexOf('ciel') >= 0);
+}
+
+// 25q-3. 彩季詩得「先退出」：数据与 JK 皮肤保留，但不可选、不进招募列表
+{
+  const ciel = KUP.COMPANION('ciel');
+  check('彩季詩得数据保留（含 perk）', !!ciel && !!ciel.perk && !!ciel.desc.zh);
+  check('彩季被标为暂不登场（retired）', ciel.retired === true);
+  check('出击界面可见的同伴为空（彩季不出现）', KUP.companionsActive().length === 0);
+  check('同伴皮肤的 JK 形态仍保留（以后可复用）',
+    KUP.formsFor('companion').length >= 2, KUP.formsFor('companion').map(f => f.id).join(','));
+  KUP.META.ensure().companions = ['ciel'];            // 旧存档里已解锁的彩季
+  KUP.META.setCompanion('ciel');
+  check('retired 的同伴不可被选（旧存档也不会自动带上）', KUP.META.ensure().companion === null);
+  const gC = new KUP.Game(canvas);
+  gC.start({ char: 'kaf', area: 'area0', seed: 814, companion: 'ciel' });
+  check('即使 URL 指定彩季，本局也不会出现同行实体', gC.recruit === null && gC.player.recruit === null);
+  check('旧存档字段仍在（companions 列表不被破坏）', KUP.META.ensure().companions.indexOf('ciel') >= 0);
+}
+
 console.log(fail === 0 ? '\nALL PASS' : '\n' + fail + ' FAILED');
 process.exit(fail === 0 ? 0 : 1);

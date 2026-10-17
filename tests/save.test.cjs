@@ -275,6 +275,9 @@ section('9. 结构校验：手改存档被过滤/钳制');
     chars: [KUP.CHARS.filter(c => c.recruit).map(c => c.id)[0] || 'x', 'not-a-char'],
     companions: ['not-a-companion'], shop: { bun: 999, nope: 3 },
     form: 'not-a-form', companion: 'not-a-companion', companionForm: 'none',
+    /* v0.13.3 支援物品：非法 id 必须被丢弃；选择必须是「已知且已解锁」 */
+    supports: ['not-a-support', KUP.SUPPORTS[0].id],
+    support: 'not-a-support',
     best: { win: 'yes', time: '120', kills: '30', level: 5, witch: 12345 },
     stats: { runs: -3, wins: 1e9, playtime: 'x' },
   };
@@ -288,6 +291,9 @@ section('9. 结构校验：手改存档被过滤/钳制');
   eq(d.eggCount, 1, 'eggCount 不得小于已解锁碎片数');
   eq(d.chars.length, 1, '非法角色 id 被丢弃');
   eq(d.companions.length, 0, '非法同伴 id 被丢弃');
+  eq(d.supports.length, 1, '非法支援物品 id 被丢弃，合法者保留');
+  eq(d.supports[0], KUP.SUPPORTS[0].id, '合法支援物品 id 保留');
+  eq(d.support, null, '未解锁/未知的支援物品选择回落 null');
   eq(d.shop.bun, d.shop.bun, '商店等级存在');
   const bunMax = KUP.SHOP_ITEM('bun').maxLv;
   eq(d.shop.bun, bunMax, '商店等级被钳制到 maxLv(' + bunMax + ')');

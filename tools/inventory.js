@@ -16,7 +16,8 @@ for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', 'js
 const KUP = ctx.KUP;
 console.log('AREAS      ' + KUP.AREAS.length);
 console.log('CHARS      ' + KUP.CHARS.length + '（招募 ' + KUP.CHARS.filter(c => c.recruit).length + '）');
-console.log('COMPANIONS ' + KUP.COMPANIONS.length);
+console.log('COMPANIONS ' + KUP.COMPANIONS.length + '（登场 ' + KUP.companionsActive().length + '）');
+console.log('SUPPORTS   ' + KUP.SUPPORTS.length + ' ' + KUP.SUPPORTS.map(s => s.id).join(','));
 console.log('WEAPONS    ' + Object.keys(KUP.WEAPONS).length + ' 行为: ' + [...new Set(Object.values(KUP.WEAPONS).map(w => w.behavior))].join('/'));
 console.log('PASSIVES   ' + Object.keys(KUP.PASSIVES).length);
 console.log('ITEMS      ' + Object.keys(KUP.ITEMS).length);
