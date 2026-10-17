@@ -14,6 +14,7 @@ window.KUP = window.KUP || {};
     selectedArea: null,
     selectedCompanion: null,
     selectedCompanionForm: 'none',
+    selectedSupport: null,          // v0.13.3：支援物品（取代同伴槽）
     selectedForm: 'none',
     lastWeaponSig: '',
     els: {},
@@ -41,6 +42,7 @@ window.KUP = window.KUP || {};
         this.selectedForm = d.form;
         this.selectedCompanion = d.companion;
         this.selectedCompanionForm = d.companionForm;
+        this.selectedSupport = d.support;
         const lr = d.lastRun;
         if (lr) {
           this.selectedArea = lr.area || null;
@@ -115,6 +117,7 @@ window.KUP = window.KUP || {};
           form: this.selectedForm,
           companion: this.selectedCompanion,
           companionForm: this.selectedCompanionForm,
+          support: this.selectedSupport,
         });
       });
       $('btn-resume').addEventListener('click', () => this.resume());
@@ -129,6 +132,7 @@ window.KUP = window.KUP || {};
           form: this.selectedForm || lr.form,
           companion: this.selectedCompanion || lr.companion,
           companionForm: this.selectedCompanionForm || lr.companionForm,
+          support: this.selectedSupport || lr.support,
         });
       };
       $('btn-restart').addEventListener('click', restart);
@@ -401,8 +405,31 @@ window.KUP = window.KUP || {};
           wrap.appendChild(card);
         };
         for (const c of KUP.CHARS) if (c.recruit) mkRecruit(c, 'char');
-        for (const c of KUP.COMPANIONS) mkRecruit(c, 'comp');
-        if (!KUP.CHARS.some(c => c.recruit) && !KUP.COMPANIONS.length) {
+        for (const c of KUP.companionsActive()) mkRecruit(c, 'comp');
+        /* v0.13.3 支援物品：**局外解锁**（花市民票，无门槛）——解锁后可在出击界面携带 */
+        const mkSupport = (sp) => {
+          const got = KUP.META.isSupportUnlocked(sp.id);
+          const cost = (sp.unlock && sp.unlock.cost) || 0;
+          const afford = KUP.META.tickets() >= cost;
+          const card = document.createElement('div');
+          card.className = 'shop-card recruit' + (got ? ' joined' : (afford ? '' : ' poor'));
+          card.style.setProperty('--c', sp.color || '#8fd0ff');
+          card.innerHTML =
+            '<div class="shop-icon">' + (sp.icon || KUP.I18N.tv(sp.name).charAt(0)) + '</div>' +
+            '<div class="shop-name">' + KUP.I18N.tv(sp.name) + '</div>' +
+            '<div class="shop-desc">' + KUP.I18N.t('support.kind') + '<br>' + KUP.I18N.tv(sp.desc) + '</div>' +
+            '<div class="shop-cost">' + (got ? KUP.I18N.t('shop.joined') : ('🎫 ' + cost + ' · ' + KUP.I18N.t('support.unlockShort'))) + '</div>';
+          if (!got) card.addEventListener('click', () => {
+            if (KUP.META.paySupport(sp.id)) {
+              KUP.Audio.sfx('levelup');
+              this.showSupportStrip();
+              this.showShop();
+            } else KUP.Audio.sfx('hurt');
+          });
+          wrap.appendChild(card);
+        };
+        for (const sp of KUP.SUPPORTS) mkSupport(sp);
+        if (!KUP.CHARS.some(c => c.recruit) && !KUP.companionsActive().length && !KUP.SUPPORTS.length) {
           wrap.innerHTML = '<div class="pick-detail">' + KUP.I18N.t('shop.none') + '</div>';
         }
       }
@@ -690,44 +717,49 @@ window.KUP = window.KUP || {};
       this.showCompanionStrip();
       this.selectChar(this.selectedChar);
     },
-    /* 同伴（同行支援：彩季詩得＝復興課課員）选择条 —— 同样需要招募 */
-    showCompanionStrip() {
+    /* 支援物品选择条（v0.13.3：取代原「同伴」槽）——
+     * 五件支援物（冰淇淋／巧克力／糖果／泡芙／炸年糕果子）顺序对应五位魔女之子，
+     * 但**先不做差异化**（数值全同）；解锁靠「局外花市民票」（瓦利斯 · 培养・招募页）。
+     * DOM 沿用原来的 companion-* 容器，避免动 index.html 的结构（只改文案）。 */
+    showSupportStrip() {
       const strip = this.els['companion-strip'];
       if (!strip) return;
       strip.innerHTML = '';
       const mk = (id, name, sub, color, locked, lockedText) => {
         const card = document.createElement('div');
-        card.className = 'mini-card' + (locked ? ' locked' : '') + (this.selectedCompanion === id ? ' selected' : '');
+        card.className = 'mini-card' + (locked ? ' locked' : '') + (this.selectedSupport === id ? ' selected' : '');
         card.dataset.id = id || '';
         card.style.setProperty('--c', color || '#8fd0ff');
         card.innerHTML = '<div class="mini-name">' + name + '</div><div class="mini-sub">' + (locked ? lockedText : (sub || '')) + '</div>';
-        if (!locked) card.addEventListener('click', () => { KUP.Audio.sfx('select'); this.selectCompanion(id); });
+        if (!locked) card.addEventListener('click', () => { KUP.Audio.sfx('select'); this.selectSupport(id); });
         strip.appendChild(card);
       };
-      mk(null, KUP.I18N.t('companion.none'), '', '#7a7398', false, '');
-      for (const r of KUP.COMPANIONS) {
-        const locked = !KUP.META.isCompanionUnlocked(r.id);
-        const u = r.unlock || {};
-        const lockedText = u.area
-          ? KUP.I18N.t('companion.unlockArea', { area: KUP.I18N.tv(KUP.AREA(u.area).name) })
-          : KUP.I18N.t('companion.unlockFukkou', { n: u.fukkou });
-        mk(r.id, r.name, KUP.I18N.tv(r.rank) + ' · ' + KUP.I18N.t('select.cv', { cv: r.cv }), r.color, locked, '🔒 ' + lockedText);
+      mk(null, KUP.I18N.t('support.none'), '', '#7a7398', false, '');
+      for (const sp of KUP.SUPPORTS) {
+        const locked = !KUP.META.isSupportUnlocked(sp.id);
+        const cost = (sp.unlock && sp.unlock.cost) || 0;
+        mk(sp.id, KUP.I18N.tv(sp.name), KUP.I18N.tv(sp.desc).replace(/<[^>]+>/g, ''), sp.color,
+          locked, '🔒 ' + KUP.I18N.t('support.unlock', { n: cost }));
       }
-      this.selectCompanion(this.selectedCompanion);
+      this.selectSupport(this.selectedSupport);
+      /* 同伴皮肤（JK 制服）随同伴层一起暂不登场：无同伴 ⇒ 自动隐藏 */
+      this.showCompanionFormStrip();
     },
-    selectCompanion(id) {
-      if (id && !KUP.META.isCompanionUnlocked(id)) return;
-      this.selectedCompanion = id || null;
-      KUP.META.setCompanion(this.selectedCompanion);
+    selectSupport(id) {
+      if (id && !KUP.META.isSupportUnlocked(id)) return;
+      this.selectedSupport = id || null;
+      KUP.META.setSupport(this.selectedSupport);
       const strip = this.els['companion-strip'];
       if (strip) for (const card of strip.children) {
         card.classList.toggle('selected', (card.dataset.id || '') === (id || ''));
       }
       this.els['companion-detail'].innerHTML = id
-        ? KUP.I18N.tv(KUP.COMPANION(id).desc)
-        : KUP.I18N.t('companion.solo');
-      this.showCompanionFormStrip();
+        ? KUP.I18N.tv(KUP.SUPPORT(id).desc)
+        : KUP.I18N.t('support.solo');
     },
+    /* 兼容旧调用（同伴槽已由支援物品取代） */
+    showCompanionStrip() { this.showSupportStrip(); },
+    selectCompanion() { /* no-op：同伴层 v0.13.3 起暂不登场 */ },
     /* 同伴皮肤（黑／白，暂定）选择条 —— 无同伴时隐藏 */
     showCompanionFormStrip() {
       const wrap = this.els['companion-form-wrap'];
@@ -1024,11 +1056,13 @@ window.KUP = window.KUP || {};
         (g.state === 'playing' && (hpRatio < 0.3 || g.dangerNear))
           ? (0.3 + 0.18 * Math.sin(performance.now() / 180)).toFixed(2) : 0;      // 同伴（同行支援）标识
       if (this.els['hud-companion']) {
+        /* v0.13.3：HUD 改显示「支援物品」（同伴层暂不登场；旧存档里若确有同伴则仍优先显示） */
         const comp = g.recruit;
+        const sup = g.support;
         this.els['hud-companion'].textContent = comp
-          ? KUP.I18N.t('hud.companion', { name: comp.name })
-          : '';
-        this.els['hud-companion'].style.opacity = comp ? 1 : 0;
+          ? KUP.I18N.t('hud.companion', { name: KUP.nameOf(comp) })
+          : (sup ? KUP.I18N.t('hud.support', { name: KUP.I18N.tv(sup.name) }) : '');
+        this.els['hud-companion'].style.opacity = (comp || sup) ? 1 : 0;
       }
       /* v0.13 治安战：HUD 常驻波次（WAVE N） */
       if (this.els['hud-wave']) {
