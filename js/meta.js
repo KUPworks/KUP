@@ -62,6 +62,11 @@ window.KUP = window.KUP || {};
     const companions = Array.isArray(d.companions)
       ? Array.from(new Set(d.companions.filter(id => compsAll.some(c => c.id === id))))
       : [];
+    /* v0.13.3 支援物品：已解锁名单（旧存档没有这个字段 ⇒ 空列表，向后兼容） */
+    const supAll = KUP.SUPPORTS || [];
+    const supports = Array.isArray(d.supports)
+      ? Array.from(new Set(d.supports.filter(id => supAll.some(s => s.id === id))))
+      : [];
     /* 番街通关次数：只保留已知番街 */
     const cleared = {};
     if (d.cleared && typeof d.cleared === 'object') {
@@ -132,10 +137,13 @@ window.KUP = window.KUP || {};
       eggCount: Math.max(eggs.length, int(d.eggCount, eggs.length)),
       chars: chars,
       companions: companions,
+      supports: supports,
       shop: shop,
       form: forms.some(f => f.id === d.form) ? d.form : 'none',
       companion: compsAll.some(c => c.id === d.companion) ? d.companion : null,
       companionForm: forms.some(f => f.id === d.companionForm) ? d.companionForm : 'none',
+      /* 支援物品的当前选择：必须是已知且**已解锁**的（未解锁视为没带） */
+      support: (supAll.some(s => s.id === d.support) && supports.indexOf(d.support) >= 0) ? d.support : null,
       best: best,
       lastRun: lastRun,
       lastRunId: typeof d.lastRunId === 'string' ? d.lastRunId : null,
@@ -315,6 +323,22 @@ window.KUP = window.KUP || {};
     },
     isCompanionUnlocked(id) { return this.ensure().companions.indexOf(id) >= 0; },
     isRecruitUnlocked(id) { return this.isCharUnlocked(id) || this.isCompanionUnlocked(id); },
+    /* ---------- 支援物品（v0.13.3）----------
+     * 「局外解锁 ＋ 出击时选一件」：解锁＝在瓦利斯花市民票（无门槛，随时可买）；
+     * 未解锁的支援物在出击界面显示为锁定，不能携带。 */
+    isSupportUnlocked(id) { return this.ensure().supports.indexOf(id) >= 0; },
+    paySupport(id) {
+      const d = this.ensure();
+      const ent = KUP.SUPPORT(id);
+      if (!ent) return false;
+      if (d.supports.indexOf(id) >= 0) return false;             // 已解锁
+      const cost = (ent.unlock && ent.unlock.cost) || 0;
+      if (d.tickets < cost) return false;                         // 市民票不足
+      d.tickets -= cost;
+      d.supports.push(id);
+      this.save();
+      return true;
+    },
     /* ---------- 武装解锁（v0.11）----------
      * 「招募对应角色前，角色武器不会出现在卡池」：
      *   - 无 owner 的武器（滞留・投掷系等通用组）恒解锁；
@@ -356,7 +380,7 @@ window.KUP = window.KUP || {};
         if (!c.recruit || d.chars.indexOf(c.id) >= 0) continue;
         if (meets(c.unlock)) added.chars.push(c);
       }
-      for (const c of KUP.COMPANIONS) {
+      for (const c of KUP.companionsActive()) {
         if (d.companions.indexOf(c.id) >= 0) continue;
         if (meets(c.unlock)) added.companions.push(c);
       }
@@ -365,7 +389,7 @@ window.KUP = window.KUP || {};
     recruitable() {
       const d = this.ensure(), out = { chars: [], companions: [] };
       for (const c of KUP.CHARS) if (c.recruit && d.chars.indexOf(c.id) < 0) out.chars.push(c);
-      for (const c of KUP.COMPANIONS) if (d.companions.indexOf(c.id) < 0) out.companions.push(c);
+      for (const c of KUP.companionsActive()) if (d.companions.indexOf(c.id) < 0) out.companions.push(c);
       return out;
     },
 
@@ -508,10 +532,17 @@ window.KUP = window.KUP || {};
     setForm(id) { if (KUP.FORMS.some(f => f.id === id)) { this.ensure().form = id; this.saveSoon(); } },
     setCompanion(id) {
       const d = this.ensure();
-      d.companion = (id && KUP.COMPANIONS.some(c => c.id === id) && this.isCompanionUnlocked(id)) ? id : null;
+      /* retired 的同伴（如 v0.13.3 起暂不登场的彩季詩得）不可被选 */
+      d.companion = (id && KUP.companionsActive().some(c => c.id === id) && this.isCompanionUnlocked(id)) ? id : null;
       this.saveSoon();
     },
     setCompanionForm(id) { if (KUP.FORMS.some(f => f.id === id)) { this.ensure().companionForm = id; this.saveSoon(); } },
+    /* 支援物品选择（v0.13.3）：必须已解锁，否则视为不带 */
+    setSupport(id) {
+      const d = this.ensure();
+      d.support = (id && this.isSupportUnlocked(id)) ? id : null;
+      this.saveSoon();
+    },
 
     /* ---------- 多标签页：外部改动 → 重载内存态 ---------- */
     watchExternal() {

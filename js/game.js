@@ -295,7 +295,8 @@ window.KUP = window.KUP || {};
       this.debug = { t: 0, lv: 0, god: false, char: null, autoStart: false };
       this._navQ = 0;          // 楼体空间索引的去重标记（见 _near）
       /* 当前 run（一局 = 一次『Q』任務）。URL/UI 只改这里，其余派生状态由 applyRun 生成。 */
-      this.run = { id: null, char: null, area: C.DEFAULT_AREA, mod: C.DEFAULT_MOD, seed: C.DEFAULT_SEED, companion: null, form: 'none', companionForm: 'none', aim: 'auto' };
+      this.run = { id: null, char: null, area: C.DEFAULT_AREA, mod: C.DEFAULT_MOD, seed: C.DEFAULT_SEED,
+        companion: null, form: 'none', companionForm: 'none', support: null, aim: 'auto' };
       this.applyRun(false);
       this.city = this.buildCity();
       this.reset();
@@ -447,6 +448,8 @@ window.KUP = window.KUP || {};
       if (opts.companion !== undefined) this.run.companion = opts.companion;
       if (opts.form != null) this.run.form = opts.form;
       if (opts.companionForm != null) this.run.companionForm = opts.companionForm;
+      /* v0.13.3：支援物品（取代同伴槽）——局外解锁，出击时选一件 */
+      if (opts.support !== undefined) this.run.support = opts.support;
       if (opts.seed != null) this.run.seed = opts.seed | 0;
       else if (!this.debug.seedLocked) {
         // UI 起局：每局随机种子——连打三局必不同（URL ?seed= 时锁定以复现）
@@ -462,10 +465,22 @@ window.KUP = window.KUP || {};
       if (KUP.META && !KUP.META.isUnlocked(this.run.area)) {
         console.warn('[KUP] 番街 ' + this.run.area + ' 復興率未达 ' + KUP.META.thresholdOf(this.run.area) + '%（当前 ' + KUP.META.total() + '%）——URL 调试直开。');
       }
-      /* 同伴（復興課課員 等）：未招募则不带同行 */
+      /* 同伴（復興課課員 等）：未招募则不带同行。
+       * v0.13.3：彩季詩得先退出（retired）——同伴层暂不登场，支援改由下面的「支援物品」承担 */
       if (this.run.companion && KUP.META && !KUP.META.isCompanionUnlocked(this.run.companion)) {
         console.warn('[KUP] 同伴 ' + this.run.companion + ' 尚未加入（未满足招募条件），本局单独出击。');
         this.run.companion = null;
+      }
+      /* v0.13.3：retired 的同伴（如彩季詩得）一律不登场——数据保留、UI 不显示，
+       * 即使 URL 直开 ?companion=ciel 也不会出现同行实体 */
+      const compDef = KUP.COMPANION(this.run.companion);
+      if (compDef && compDef.retired) {
+        console.warn('[KUP] 同伴 ' + this.run.companion + ' 暂不登场（retired）——本局独自出击。');
+        this.run.companion = null;
+      }
+      /* 支援物品：未解锁则不带（URL 直开只提示） */      if (this.run.support && KUP.META && !KUP.META.isSupportUnlocked(this.run.support)) {
+        console.warn('[KUP] 支援物品 ' + this.run.support + ' 尚未解锁（瓦利斯 · 培养・招募），本局不带支援。');
+        this.run.support = null;
       }
       /* 形態/皮肤必须与角色类型匹配（witch / recruit），否则回落通常形態 */
       const charKind = KUP.charKind(charDef);
@@ -481,7 +496,7 @@ window.KUP = window.KUP || {};
 
       const def = charDef;
       this.lastChar = def.id; // 记录最近游玩角色，供重开使用
-      this.lastRun = { char: def.id, area: this.run.area, mod: this.run.mod, companion: this.run.companion, form: this.run.form, companionForm: this.run.companionForm };
+      this.lastRun = { char: def.id, area: this.run.area, mod: this.run.mod, companion: this.run.companion, form: this.run.form, companionForm: this.run.companionForm, support: this.run.support };
       /* 本局唯一 id：结算幂等键（同一局不会被重复计入復興率/市民票）。
        * 时间 + 随机后缀，避免同一毫秒内连开两局撞号。 */
       this.run.id = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -490,13 +505,18 @@ window.KUP = window.KUP || {};
       this.reset();
       const recruit = KUP.COMPANION(this.run.companion);
       this.recruit = recruit;
+      /* v0.13.3：支援物品（取代同伴槽）——perk 走同一套结算（gather 在 Player.recompute、
+       * regen 在 game.update），所以「彩季退出」不影响支援效果的接线。 */
+      const support = KUP.SUPPORT(this.run.support);
+      this.support = support;
+      const perk = (recruit && recruit.perk) || (support && support.perk) || null;
       const shopMods = KUP.META ? KUP.META.shopMods() : {};
       this.shopMods = shopMods;
       this.player = new KUP.Player(def, this.mods, {
         form: form,
         recruit: recruit,
         recruitForm: companionForm,
-        perk: recruit ? recruit.perk : null,
+        perk: perk,
         shopMods: shopMods,
       });
       /* v0.11 建筑实体：出生点（竞技场中心）若被楼体堵住，把玩家挪到**最近的
@@ -506,10 +526,10 @@ window.KUP = window.KUP || {};
         this.walkableNearest(spot);
         if (!spot.dead) { this.player.x = spot.x; this.player.y = spot.y; }
       }
-      /* 同伴 perk：周期回复（regen）在 update 中结算；gather 已在 Player.recompute 内生效 */
-      if (recruit && recruit.perk.type === 'regen') {
-        this.regenEvery = recruit.perk.every || 20;
-        this.regenPct = recruit.perk.pct || 0.04;
+      /* 支援 perk：周期回复（regen）在 update 中结算；gather 已在 Player.recompute 内生效 */
+      if (perk && perk.type === 'regen') {
+        this.regenEvery = perk.every || 20;
+        this.regenPct = perk.pct || 0.04;
         this.regenT = this.regenEvery;
       }
       this.player.weapons.push(new WeaponRuntime(KUP.WEAPONS[def.weapon], 1));
@@ -1405,6 +1425,9 @@ window.KUP = window.KUP || {};
         companion: this.recruit ? this.recruit.name : null,
         companionForm: this.player.recruitForm.id,
         companionFormLabel: KUP.I18N.tv(this.player.recruitForm.name),
+        /* v0.13.3：支援物品（取代同伴槽） */
+        support: this.support ? this.support.id : null,
+        supportName: this.support ? KUP.I18N.tv(this.support.name) : null,
         /* v0.13 治安战：模式标记、波次、点数、治安战最高记录 */
         order: !!this.endless,
         wave: this.orderWave || 1,

@@ -68,7 +68,11 @@ window.KUP = window.KUP || {};
     if (game.debug.recruit && KUP.META) {            // 调试：临时解锁全部招募（仅内存）
       KUP.CHARS.filter(c => c.recruit).forEach(c => { if (!KUP.META.isCharUnlocked(c.id)) KUP.META.data.chars.push(c.id); });
       KUP.COMPANIONS.forEach(c => { if (!KUP.META.isCompanionUnlocked(c.id)) KUP.META.data.companions.push(c.id); });
-      console.info('[KUP] 调试：已临时解锁全部招募（仅内存，未写入存档）');
+      /* v0.13.3：支援物品也一并解锁（方便实机验证「出击时选一件」） */
+      if (KUP.SUPPORTS && KUP.META.data.supports) {
+        KUP.SUPPORTS.forEach(s => { if (!KUP.META.isSupportUnlocked(s.id)) KUP.META.data.supports.push(s.id); });
+      }
+      console.info('[KUP] 调试：已临时解锁全部招募（含支援物品；仅内存，未写入存档）');
     }
     if (q.get('skip') === '1') {
       game.debug.char = game.debug.char || 'kaf';

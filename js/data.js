@@ -929,12 +929,96 @@ KUP.COMPANIONS = [
     },
     /* 招募条件：通关肆番街（復興課的活动区域）＋ 招募费（市民票） */
     unlock: { area: 'area4', cost: 40, desc: { zh: '通关肆番街后加入', en: 'Joins after clearing Area 4', ja: '肆番街クリアで加入' } },
+    /* v0.13.3：**彩季詩得先退出**（人类 2026-10-17 决定）——数据与 JK 皮肤全部保留，
+     * retired 只表示「不在出击界面出现、不可被选」；以后想恢复只需去掉这个标记。
+     * 同行支援的位置改由下面的「支援物品」承担（见 KUP.SUPPORTS）。 */
+    retired: true,
   },
 ];
 KUP.COMPANION = id => KUP.COMPANIONS.find(c => c.id === id) || null;
 /* 兼容别名（旧调用） */
 KUP.RECRUITS = KUP.COMPANIONS;
 KUP.RECRUIT = KUP.COMPANION;
+/* 在出击界面可见/可选的同伴（retired 的不算） */
+KUP.companionsActive = () => KUP.COMPANIONS.filter(c => !c.retired);
+
+/* ---------- 支援物品（v0.13.3：同行支援从「同伴角色」改为「物品」） ----------
+ * 人类 2026-10-17：「彩季先退出，支援做成支援物品」——五件支援物**顺序对应五位魔女之子**
+ * （花譜／理芽／異世界情緒／春猿火／幸祜），但**先不做差异化**：五件 `perk` 数值完全相同，
+ * 以后要做差异化只改各自那条 perk 即可（结构已经就位）。
+ *   - `owner`：该支援物对应的魔女之子 id（现在只作记录，不参与数值）。
+ *   - `perk` ：支援效果；`type:'gather'` 的乘法项由 Player.recompute 结算，
+ *             `type:'regen'` 由 game.update 周期结算（沿用旧同伴的两种机制）。
+ *   - `unlock.cost`：**局外解锁**价（市民票，在瓦利斯的「培养・招募」页购买）。
+ * 命名：冰淇淋／巧克力／糖果／泡芙／炸年糕果子（arare＝炸年糕果子，人类 2026-10-17 更正）。 */
+KUP.SUPPORTS = [
+  {
+    id: 'icecream', icon: '冰', color: '#8fd0ff',
+    name: { zh: '冰淇淋', en: 'Ice Cream', ja: 'アイスクリーム' },
+    /* 顺序 1／5 ↔ 花譜（魔女之子 カフ） */
+    owner: 'kaf',
+    desc: {
+      zh: '冰凉的支援——观测支援化作一口甜。<b>拾取范围 +20%、经验 +15%</b>。',
+      en: 'A cool reinforcement — observational support in a scoop. <b>Pickup +20%, XP +15%</b>.',
+      ja: '冷たい支援——観測支援はひとくちの甘さに。<b>取得範囲 +20%、経験 +15%</b>。',
+    },
+    perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
+    unlock: { cost: 20 },
+  },
+  {
+    id: 'chocolate', icon: '巧', color: '#c98a6b',
+    name: { zh: '巧克力', en: 'Chocolate', ja: 'チョコレート' },
+    /* 顺序 2／5 ↔ 理芽（魔女之子 リメ） */
+    owner: 'rim',
+    desc: {
+      zh: '苦涩回甘的支援——观测支援化作一块可可。<b>拾取范围 +20%、经验 +15%</b>。',
+      en: 'Bittersweet reinforcement — observational support in a square of cocoa. <b>Pickup +20%, XP +15%</b>.',
+      ja: 'ほろ苦い支援——観測支援はひとかけのカカオに。<b>取得範囲 +20%、経験 +15%</b>。',
+    },
+    perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
+    unlock: { cost: 20 },
+  },
+  {
+    id: 'candy', icon: '糖', color: '#ff8ac4',
+    name: { zh: '糖果', en: 'Candy', ja: 'キャンディ' },
+    /* 顺序 3／5 ↔ 異世界情緒（魔女之子 セカイ） */
+    owner: 'isekaijoucho',
+    desc: {
+      zh: '含在口中的支援——观测支援化作一颗硬糖。<b>拾取范围 +20%、经验 +15%</b>。',
+      en: 'A candy held on the tongue — observational support, hard and bright. <b>Pickup +20%, XP +15%</b>.',
+      ja: '口に含む支援——観測支援はひと粒の飴に。<b>取得範囲 +20%、経験 +15%</b>。',
+    },
+    perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
+    unlock: { cost: 20 },
+  },
+  {
+    id: 'puff', icon: '芙', color: '#ffd98a',
+    name: { zh: '泡芙', en: 'Cream Puff', ja: 'シュークリーム' },
+    /* 顺序 4／5 ↔ 春猿火（魔女之子 ハル） */
+    owner: 'harusaruhi',
+    desc: {
+      zh: '蓬松的支援——观测支援化作一只奶油泡芙。<b>拾取范围 +20%、经验 +15%</b>。',
+      en: 'A fluffy reinforcement — observational support in choux pastry. <b>Pickup +20%, XP +15%</b>.',
+      ja: 'ふわりとした支援——観測支援はシュークリームに。<b>取得範囲 +20%、経験 +15%</b>。',
+    },
+    perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
+    unlock: { cost: 20 },
+  },
+  {
+    id: 'arare', icon: '炸', color: '#ffb25a',
+    name: { zh: '炸年糕果子', en: 'Fried Rice-Cake Bits', ja: 'あられ' },
+    /* 顺序 5／5 ↔ 幸祜（魔女之子 ココ） */
+    owner: 'koko',
+    desc: {
+      zh: '香脆的支援——观测支援化作一把炸年糕果子（arare）。<b>拾取范围 +20%、经验 +15%</b>。',
+      en: 'A crisp reinforcement — observational support as fried rice-cake bits (arare). <b>Pickup +20%, XP +15%</b>.',
+      ja: '香ばしい支援——観測支援はあられに。<b>取得範囲 +20%、経験 +15%</b>。',
+    },
+    perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
+    unlock: { cost: 20 },
+  },
+];
+KUP.SUPPORT = id => KUP.SUPPORTS.find(s => s.id === id) || null;
 
 /* ---------- 皮肤＝「形態」（★ 官方命名法：「（魔女）特殊歌唱用形態 ○○」） ----------
  * 官方 LIVE 的服装/形态命名实例：「特殊歌唱用形態 星鴉」「魔女特殊歌唱用形態 花魁鳥」（粉丝 wiki 转引官方命名）。
