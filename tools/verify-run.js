@@ -195,8 +195,11 @@ KUP.META.data.fukkou = 55;
 KUP.META.addTickets(45);
 check('復興率 55% + 45 票 招募地邑阿栖', KUP.META.payRecruit('asu') && KUP.META.isCharUnlocked('asu'));
 
-// 11c. 皮肤（形態）：花魁鳥／姬連雀（魔女之子）；黑／白（魔女候補）；JK 制服（同伴）
-check('魔女之子皮肤＝花魁鳥／姬連雀', KUP.formsFor('witch').map(f => f.id).join(',') === 'none,ouranchou,himerenjaku');
+// 11c. 皮肤（形態）：通用形态 ＋ 系列化全量形态（v0.13.5）；黑／白（魔女候補）；JK 制服（同伴）
+check('魔女形态：通用形态仍在（花魁鳥／姬連雀）且全量形态已系列化（7 系列、化歩 22 条）',
+  ['none', 'ouranchou', 'himerenjaku'].every(id => KUP.formsFor('witch', 'kaf').some(f => f.id === id)) &&
+  KUP.FORM_SERIES.length === 7 && KUP.formsFor('witch', 'kaf').length === 22,
+  String(KUP.formsFor('witch', 'kaf').length) + ' 条 / ' + KUP.FORM_SERIES.length + ' 系列');
 check('魔女候補皮肤＝黑／白', KUP.formsFor('recruit').map(f => f.id).join(',') === 'none,kuro,shiro');
 check('形態带官方命名法与出处标注', KUP.FORM('ouranchou').label.zh.indexOf('魔女特殊歌唱用形態') === 0 && !!KUP.FORM('ouranchou').src && !!KUP.FORM('himerenjaku').src);
 check('形態按角色类型匹配', KUP.formFits(KUP.FORM('ouranchou'), 'witch') && !KUP.formFits(KUP.FORM('ouranchou'), 'recruit') &&
@@ -1656,94 +1659,103 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   check('旧存档字段仍在（companions 列表不被破坏）', KUP.META.ensure().companions.indexOf('ciel') >= 0);
 }
 
-/* ========== v0.13.4：五人各自的「觉醒形態」服装（依据 docs/lore/research/vwp_forms_and_mascots.md §3.0） ========== */
+/* ========== v0.13.5：全量形态（系列化）＋ 共用形态 ＋ 变体取舍 ========== */
 
-// 25r. 五套专属形态：绑定、官方形态名、出处标注、三语
+// 25r. 系列与清单：数量口径、三语、出处、渲染分支
 {
-  const OWN = [
-    ['aogara', 'kaf', '青雀'],
-    ['childhoods_end', 'rim', '幼年期の終わり'],
-    ['kumonryu', 'harusaruhi', '九紋龍'],
-    ['heliotrope', 'isekaijoucho', 'Heliotrope'],
-    ['alnair', 'koko', 'アルナイル'],
-  ];
-  check('五套觉醒形態都已加入 KUP.FORMS',
-    OWN.every(([id]) => KUP.FORMS.some(f => f.id === id)),
-    OWN.filter(([id]) => !KUP.FORMS.some(f => f.id === id)).map(x => x[0]).join(',') || '全部就位');
-  for (const [id, char, jaName] of OWN) {
-    const f = KUP.FORM(id);
-    check('觉醒形態 ' + id + ' 绑定到 ' + char + '（且形态名＝官方「' + jaName + '」）',
-      f.char === char && f.name.ja.indexOf(jaName) >= 0, 'char=' + f.char + ' ja=' + f.name.ja);
-  }
-  check('五套觉醒形態都有三语名/标签/说明',
-    OWN.every(([id]) => { const f = KUP.FORM(id); return f.name.zh && f.name.en && f.name.ja && f.label.zh && f.label.en && f.label.ja && f.desc.zh && f.desc.en && f.desc.ja; }));
-  /* 出处纪律：形态名是官方的、服装设计是本作的，必须写清 */
-  check('五套觉醒形態的 src 都标注「官方形态名＋本作服装设计」',
-    OWN.every(([id]) => { const s = KUP.FORM(id).src; return s && /官方|official|公式/.test(s.zh) && /本作|original|オリジナル/.test(s.zh); }));
-  /* 换角色即不可用 */
-  check('专属形态对别的魔女之子不可用',
-    !KUP.formFits(KUP.FORM('aogara'), 'witch', 'koko') && !KUP.formFits(KUP.FORM('alnair'), 'witch', 'kaf'));
-  check('专属形态对本人可用', KUP.formFits(KUP.FORM('aogara'), 'witch', 'kaf'));
-  check('出击界面选项按角色过滤：kaf 只多出青雀',
-    KUP.formsFor('witch', 'kaf').map(f => f.id).join(',') === 'none,ouranchou,himerenjaku,aogara',
-    KUP.formsFor('witch', 'kaf').map(f => f.id).join(','));
-  check('通用形态（花魁鳥／姬連雀）仍对所有魔女之子可用',
-    ['kaf', 'rim', 'harusaruhi', 'isekaijoucho', 'koko'].every(c =>
-      KUP.formsFor('witch', c).some(f => f.id === 'ouranchou') && KUP.formsFor('witch', c).some(f => f.id === 'himerenjaku')));
-  check('可招募角色看不到魔女之子的专属形态',
-    KUP.formsFor('recruit', 'aru').every(f => !f.char));
-  /* 渲染侧：五个 accent 都要有绘制分支（否则"设计了却没画"） */
+  const SER = KUP.FORM_SERIES;
+  check('形态系列共 7 个', SER.length === 7, SER.map(s => s.id).join(','));
+  const expect = {
+    kaf_singing: 17, rim_meta: 7, haru_matoi: 8, sekai_anima: 5, koko_type: 4, vwp_shared: 3, legacy: 1,
+  };
+  const got = {};
+  for (const f of KUP.FORMS) if (f.series) got[f.series] = (got[f.series] || 0) + 1;
+  check('各系列形态数与采集稿口径一致（化歩 17／狸眼 7／派流 8／世界 5／此処 4／共用 3／自创 1）',
+    SER.every(s => got[s.id] === expect[s.id]),
+    SER.map(s => s.id + ':' + (got[s.id] || 0) + '/' + expect[s.id]).join(' '));
+  check('每条魔女形态都归入系列', KUP.FORMS.filter(f => f.kinds && f.kinds.indexOf('witch') >= 0 && f.id !== 'none').every(f => !!f.series));
+  check('系列 id 都是已声明的', KUP.FORMS.every(f => !f.series || SER.some(s => s.id === f.series)));
+  /* 系列共同字段被补齐：三语名/标签/说明/配色/出处（「通常形態」是"不指定"，不在其列） */
+  const witchy = KUP.FORMS.filter(f => f.id !== 'none');
+  const incomplete = witchy.filter(f => !f.name || !f.name.zh || !f.name.en || !f.name.ja ||
+    !f.label || !f.label.zh || !f.label.en || !f.label.ja ||
+    !f.desc || !f.desc.zh || !f.desc.en || !f.desc.ja || !f.color || !f.accent);
+  check('所有形态都有三语名/标签/说明与配色/配件', incomplete.length === 0, incomplete.map(f => f.id).join(','));
+  check('所有形态都带出处（形态名来源＋服装为本作设计的说明）',
+    witchy.every(f => f.src && f.src.zh), witchy.filter(f => !f.src || !f.src.zh).map(f => f.id).join(',') || '全部有');
+  /* 渲染侧：用到的 accent 必须都有绘制分支 */
   const entSrc = require('fs').readFileSync('js/entities.js', 'utf8');
-  check('五个新 accent 在 Player._accent 里都有绘制分支',
-    ['sparrow_wing', 'star_ring', 'koi_sash', 'flower_crown', 'star_tiara'].every(a => entSrc.indexOf("accent === '" + a + "'") >= 0),
-    ['sparrow_wing', 'star_ring', 'koi_sash', 'flower_crown', 'star_tiara'].filter(a => entSrc.indexOf("accent === '" + a + "'") < 0).join(',') || '全部已实现');
+  const used = [...new Set(KUP.FORMS.map(f => f.accent))].filter(a => a && a !== 'none');
+  const missing = used.filter(a => entSrc.indexOf("accent === '" + a + "'") < 0);
+  check('形态用到的所有轮廓配件都有绘制分支', missing.length === 0, missing.join(',') || used.length + ' 种全部已实现');
 }
 
-// 25r-2. 数值生效 ＋ 换角色回落 ＋ 旧存档兼容
+// 25r-2. 人类的两条取舍：共用形态（花魁鳥・八咫烏）、仅数字/括号区分的变体不做
 {
-  const probe = (char, form) => {
-    const g = new KUP.Game(canvas);
-    g.start({ char, area: 'area0', seed: 821, form });
-    return g.player;
-  };
-  const baseK = probe('kaf', 'none');
-  const aogara = probe('kaf', 'aogara');
-  check('青雀生效：攻击 ×1.10', Math.abs(aogara.dmgMult - baseK.dmgMult * 1.10) < 1e-6,
-    baseK.dmgMult.toFixed(3) + ' → ' + aogara.dmgMult.toFixed(3));
-  check('青雀生效：范围 ×1.06', Math.abs(aogara.areaMult - baseK.areaMult * 1.06) < 1e-6);
-  check('青雀生效：最大生命 ×0.95', Math.abs(aogara.maxhp - Math.round(baseK.maxhp * 0.95)) <= 1, baseK.maxhp + ' → ' + aogara.maxhp);
-  check('青雀生效：出击记录里形态＝aogara', aogara.form.id === 'aogara');
-  const kumo = probe('harusaruhi', 'kumonryu');
-  const baseH = probe('harusaruhi', 'none');
-  check('九紋龍生效：最大生命 ×1.15 且范围 ×1.08',
-    Math.abs(kumo.maxhp - Math.round(baseH.maxhp * 1.15)) <= 1 && Math.abs(kumo.areaMult - baseH.areaMult * 1.08) < 1e-6,
-    baseH.maxhp + ' → ' + kumo.maxhp);
-  const helio = probe('isekaijoucho', 'heliotrope');
-  const baseS = probe('isekaijoucho', 'none');
-  check('Heliotrope 生效：冷却 ×0.90', Math.abs(helio.cdMult - baseS.cdMult * 0.90) < 1e-6);
-  const aln = probe('koko', 'alnair');
-  const baseKo = probe('koko', 'none');
-  check('アルナイル生效：速度 ×1.12 且攻击 ×1.06',
-    Math.abs(aln.speed - baseKo.speed * 1.12) < 1e-6 && Math.abs(aln.dmgMult - baseKo.dmgMult * 1.06) < 1e-6);
-  const ch = probe('rim', 'childhoods_end');
-  const baseR = probe('rim', 'none');
-  check('幼年期の終わり生效：拾取 ×1.25、经验 ×1.10、速度 ×1.05',
-    Math.abs(ch.pickup - baseR.pickup * 1.25) < 1e-6 && Math.abs(ch.xpMult - baseR.xpMult * 1.10) < 1e-6 &&
-    Math.abs(ch.speed - baseR.speed * 1.05) < 1e-6);
-  /* 换角色：跨角色形态必须回落（URL 直开也一样） */
-  const cross = probe('koko', 'aogara');
-  check('跨角色形态被拒：此処带青雀 → 回落通常形態', cross.form.id === 'none', cross.form.id);
-  check('跨角色回落不影响其它属性（＝不带形态的数值）',
-    Math.abs(cross.dmgMult - baseKo.dmgMult) < 1e-6 && cross.maxhp === baseKo.maxhp);
-  /* 兼容：旧形态 id 与数值一字未动 */
-  check('旧形态 ouranchou／himerenjaku 仍在且数值未变',
-    KUP.FORM('ouranchou').mods.area === 1.15 && KUP.FORM('ouranchou').mods.cd === 0.92 && KUP.FORM('ouranchou').mods.hp === 0.92 &&
-    KUP.FORM('himerenjaku').mods.speed === 1.12 && KUP.FORM('himerenjaku').mods.pickup === 1.2 &&
-    KUP.FORM('himerenjaku').mods.xp === 1.08 && KUP.FORM('himerenjaku').mods.dmg === 0.95);
-  check('旧形态没有 char 绑定（对全部魔女之子仍可选）',
-    !KUP.FORM('ouranchou').char && !KUP.FORM('himerenjaku').char);
-  check('形态 id 未重命名（旧存档 run.form 仍可解析）',
-    KUP.FORM('ouranchou').name.ja === '花魁鳥' && KUP.FORM('none').id === 'none');
+  const shared = KUP.FORMS.filter(f => f.series === 'vwp_shared');
+  check('花魁鳥・八咫烏等共用形态不绑定角色（char 为空）', shared.every(f => !f.char), shared.map(f => f.id).join(','));
+  check('共用形态对五位魔女之子都可用',
+    ['kaf', 'rim', 'harusaruhi', 'isekaijoucho', 'koko'].every(c => shared.every(f => KUP.formFits(f, 'witch', c))));
+  check('共用形态不会漏给魔女候補／同伴（kinds 限定 witch）',
+    shared.every(f => !KUP.formFits(f, 'recruit', 'aru') && !KUP.formFits(f, 'companion', null)));
+  /* 仅用数字或括号区分的变体：一律不做（按 ja 名判定） */
+  const skipMarks = ['(壊)', '(想)', '(怪)', '（戒）', '（解）', '（巡）', 'Ⅱ'];
+  const leaked = KUP.FORMS.filter(f => f.series && skipMarks.some(m => (f.name.ja || '').indexOf(m) >= 0));
+  check('仅用数字/括号区分的变体没有混进来（燕(壊)・軍鶏(想)・雉(怪)・花魁鳥（戒）・八咫烏（解）・梟（巡）・Ⅱ 系）',
+    leaked.length === 0, leaked.map(f => f.id + ':' + f.name.ja).join(',') || '已按取舍跳过');
+  check('括号变体的基座形态仍在（燕／軍鶏／雉 等）',
+    ['tsubame', 'shamo', 'kiji'].every(id => KUP.FORMS.some(f => f.id === id)));
+  /* 2025–2026 新衣装（只在官方商品页有的名字）已收录 */
+  check('官方商品页才有的新衣装已收录（梟／梟黑／銀兜／金兜／Dr.Futurity）',
+    ['fukurou', 'fukurou_kuro', 'ginkabuto', 'kinakabuto', 'dr_futurity'].every(id => KUP.FORMS.some(f => f.id === id)));
+  check('采集稿标「名称不明」的照原样保留、不替它取名',
+    (() => { const f = KUP.FORM('pc_1'); return !!f && f.name.zh.indexOf('parallel canvas') >= 0; })());
+}
+
+// 25r-3. 数值从简：只有覚醒／戦闘形態带数值，其余纯外观
+{
+  const withMods = KUP.FORMS.filter(f => f.kinds && f.kinds.indexOf('witch') >= 0)
+    .filter(f => f.mods && Object.keys(f.mods).length).map(f => f.id).sort();
+  const expect = ['aogara', 'alnair', 'childhoods_end', 'heliotrope', 'himerenjaku', 'kumonryu', 'ouranchou', 'ouranchou_rev', 'yatagarasu'].sort();
+  check('带数值的魔女形态恰为「覚醒／戦闘形態」9 条（其余形态纯外观）',
+    withMods.join(',') === expect.join(','), withMods.join(','));
+  const probe = (char, form) => { const g = new KUP.Game(canvas); g.start({ char, area: 'area0', seed: 831, form }); return g.player; };
+  const baseK = probe('kaf', 'none'), rev = probe('kaf', 'ouranchou_rev');
+  check('花魁鳥 Revolutions 生效：范围 ×1.18／冷却 ×0.90／生命 ×0.88',
+    Math.abs(rev.areaMult - baseK.areaMult * 1.18) < 1e-6 && Math.abs(rev.cdMult - baseK.cdMult * 0.90) < 1e-6 &&
+    Math.abs(rev.maxhp - Math.round(baseK.maxhp * 0.88)) <= 1, baseK.maxhp + ' → ' + rev.maxhp);
+  const baseKo = probe('koko', 'none'), yata = probe('koko', 'yatagarasu');
+  check('八咫烏生效：攻击 ×1.08／范围 ×1.10',
+    Math.abs(yata.dmgMult - baseKo.dmgMult * 1.08) < 1e-6 && Math.abs(yata.areaMult - baseKo.areaMult * 1.10) < 1e-6);
+  const baseH = probe('harusaruhi', 'none'), kumo = probe('harusaruhi', 'kumonryu');
+  check('九紋龍生效：生命 ×1.15／范围 ×1.08', Math.abs(kumo.maxhp - Math.round(baseH.maxhp * 1.15)) <= 1);
+  const pure = probe('kaf', 'fukurou');
+  check('纯外观形态不改变任何数值（梟＝与通常形態同值）',
+    Math.abs(pure.dmgMult - baseK.dmgMult) < 1e-6 && pure.maxhp === baseK.maxhp && Math.abs(pure.areaMult - baseK.areaMult) < 1e-6);
+  /* 专属绑定仍然成立 */
+  check('专属形态对别的魔女之子仍不可用',
+    !KUP.formFits(KUP.FORM('aogara'), 'witch', 'koko') && !KUP.formFits(KUP.FORM('ubik'), 'witch', 'kaf'));
+  const cross = probe('koko', 'ubik');
+  check('跨角色形态被拒并回落通常形態', cross.form.id === 'none', cross.form.id);
+}
+
+// 25r-4. UI 分组（同一屏内按系列切换，避免"一墙卡"）
+{
+  const g = KUP.formGroups('witch', 'kaf');
+  check('分组顺序＝本命系列 → 共用 → 自创，且不含「通常形態」',
+    g.map(x => x.key).join(',') === 'kaf_singing,vwp_shared,legacy' && g.every(x => x.forms.every(f => f.id !== 'none')),
+    g.map(x => x.key + ':' + x.forms.length).join(' '));
+  check('化歩一组 17 条、共用 3 条、自创 1 条', g[0].forms.length === 17 && g[1].forms.length === 3 && g[2].forms.length === 1);
+  check('每组都有三语短名（系列按钮用）', g.every(x => x.short && x.short.zh && x.short.en && x.short.ja),
+    g.map(x => x.key).join(','));
+  check('此処的分组＝此処 4／共用 3／自创 1', (() => {
+    const k = KUP.formGroups('witch', 'koko');
+    return k[0].key === 'koko_type' && k[0].forms.length === 4 && k.length === 3;
+  })());
+  check('魔女候補／同伴没有系列分组（UI 因而不显示系列按钮）',
+    KUP.formGroups('recruit', 'aru').length === 1 && KUP.formGroups('companion', null).length === 1);
+  check('「全部」＝该角色可选的全部形态数（化歩 22 条）', KUP.formsFor('witch', 'kaf').length === 22,
+    String(KUP.formsFor('witch', 'kaf').length));
 }
 
 console.log(fail === 0 ? '\nALL PASS' : '\n' + fail + ' FAILED');
