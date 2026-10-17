@@ -341,7 +341,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 | **视觉（配色 / 霓虹 / 字体栈）** | `css/style.css` | 只改样式别动结构 |
 | **画法 / 背景 / 特效** | `js/render.js` | ⚠️ **渲染路径禁止调用随机数**（否则同 seed 不可复现） |
 | **敌人 AI / 敌袭模式** | `js/director.js` | 按 `pattern` 分派；生成逻辑须走同一随机流 |
-| **敌人绕楼寻路 / 楼体碰撞与空间索引** | `js/game.js` + `js/config.js` | `steerCity`（局部避障转向）＋ `cityIndex`／`_near`（分桶查询）；可调参数在 `C.NAV`。⚠️ 改完建议跑 `tmp/path-cmp.cjs` 对比绕楼质量 |
+| **敌人绕楼寻路 / 楼体碰撞与空间索引** | `js/game.js` + `js/config.js` | `steerCity`（局部避障转向）＋ `cityIndex`／`_near`（分桶查询）；可调参数在 `C.NAV`。⚠️ 改完建议跑 `node tools/path-cmp.cjs` 对比绕楼质量 |
 | **手感（移动 / 冲刺 / 碰撞 / 大招）** | `js/entities.js` + `js/game.js` | 改完务必实机验证 |
 | **存档结构** | `js/store.js` + `js/meta.js` | ⚠️ **改它必须跑 `node tests/save.test.cjs`**，并考虑 schema 迁移 |
 | **加 URL 调试参数** | `js/main.js` | 记得同步更新本文件第八节 |

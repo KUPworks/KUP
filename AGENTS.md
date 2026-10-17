@@ -54,7 +54,7 @@
 | `js/main.js` | 输入 + 主循环 + 启动 + URL 调试参数 | 加调试参数请同步 `README.md` 参数表 |
 | `css/style.css` | 霓虹视觉 + 按语言切换字体栈 | 只改样式，别动结构 |
 | `tests/save.test.cjs` | 存档层回归测试（无需浏览器） | 改存档行为时**同步补测试** |
-| `tools/` | 校验与盘点脚本：`verify-run.js`（玩法回归）、`check-html.js`（HTML 结构）、`inventory.js`（数据盘点） | 改玩法／数据／HTML 后按 §4 跑；**入库** |
+| `tools/` | 校验／盘点／对比脚本：`verify-run.js`（玩法回归）、`check-html.js`（HTML 结构）、`inventory.js`（数据盘点）、`solid-cmp.cjs`／`path-cmp.cjs`（模拟对比）、`github-device-login.js`（HTTPS 回退）、`research/`（证据采集） | 改玩法／数据／HTML 后按 §4 跑；**入库**，脚本自带用法注释 |
 | `docs/lore/research/` | 世界观**原始采集稿**（证据层：原样转录，不改写结论） | 入库；`pdfpages/` 等派生产物不入库 |
 | `tmp/` | 临时草稿与浏览器截图（可随时重建） | **不入库**（整个目录被 .gitignore 忽略） |
 | `docs/lore/` | **世界观考据统一目录**：`README.md`（总览与查询索引）、`worldview.md`（主详录）、`related-settings.md`（周边考据）、`legacy-research-2025.md`（⚠️ 已废弃的早期调研） | 改世界观前**先读 `docs/lore/README.md`** |
@@ -186,9 +186,9 @@ git revert <sha>                             # 已提交且已共享时，用 re
   - 主机密钥指纹应与 GitHub 官方一致：`SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU`（ED25519，对照 https://api.github.com/meta）。
 - **推送后必须核对**：`git ls-remote origin` 中 `refs/heads/<分支>` 的哈希要与本地 `git rev-parse <分支>` 一致，再向人类汇报；不一致视为未完成。
 - **沙箱限制（本机实测，省得再踩一遍）**：DSH 沙箱屏蔽了 Windows 加密/凭据子系统（SChannel）与 MSYS 管道。系统 `curl.exe`、PowerShell 的 .NET HTTPS（`Invoke-RestMethod`）、GCM 一律报 `SEC_E_NO_CREDENTIALS` /「基础连接已经关闭」；MSYS 的 `sh.exe`、Git 自带的 `D:\Git\usr\bin\ssh.exe` 报 `couldn't create signal pipe`。可用通道只有：**原生 OpenSSH**、**Node（自带 OpenSSL）**、**git 自带 OpenSSL 传输（HTTPS）**。
-- **回退方案（SSH 不可用时）**：HTTPS + 设备码 token。临时脚本 `tmp/github-device-login.js`（在 .gitignore 忽略的目录里、不在仓库中；HTTPS 依赖已配好的 `http.proxy`）：
+- **回退方案（SSH 不可用时）**：HTTPS + 设备码 token。脚本 `tools/github-device-login.js`（**已入库**，无密钥；设备码状态写在 `tmp/`；HTTPS 依赖已配好的 `http.proxy`）：
   ```powershell
-  node tmp/github-device-login.js --proxy=http://127.0.0.1:7890
+  node tools/github-device-login.js --proxy=http://127.0.0.1:7890
   $b64 = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("x-access-token:$tok"))
   git -c credential.helper= -c "http.extraheader=Authorization: Basic $b64" push origin <分支>
   ```
