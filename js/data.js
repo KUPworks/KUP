@@ -1028,7 +1028,9 @@ KUP.SUPPORT = id => KUP.SUPPORTS.find(s => s.id === id) || null;
  *   - 可招募角色·魔女候補（kinds:['recruit']）：黑／白 —— 暂定名；后续每位分别定制
  *   - 同伴（kinds:['companion']）：黑／白 —— 与候选共用调色板，后续为每位同伴定制
  * 实现方式：。
- *   accent: plume 羽饰 / crest 冠羽 / veil 面纱 / halo 光晕 / none
+ *   accent: plume 羽饰 / crest 冠羽 / veil 面纱 / halo 光晕 / sailor 水手领 / blazer 西装外套
+ *          / sparrow_wing 青雀翼羽 / star_ring 银环 / koi_sash 鲤纹带 / flower_crown 花冠 / star_tiara 星冕
+ *          / none
  *   → 比纯颜色更可辨（轮廓差异），且：
  *     只需在 Player._accent 与同伴绘制处按 form.accent 分支，或改读 form.sprite。 */
 KUP.FORMS = [
@@ -1057,6 +1059,103 @@ KUP.FORMS = [
     mods: { speed: 1.12, pickup: 1.2, xp: 1.08, dmg: 0.95 },
     color: '#8affc9', color2: '#0f6b52',
     src: { zh: '本作同人命名（官方无此形态名）', en: 'Fan-made naming (no official form of this name)', ja: '本作の同人命名（公式にこの形態名はない）' },
+  },
+  /* ---- 五人各自的「觉醒形態」（v0.13.4 追加） ------------------------------
+   * ★ 依据：docs/lore/research/vwp_forms_and_mascots.md §3.0——官方站
+   *   srd.kamitsubaki.jp/game/virtual_reality/ 的 BGM 曲目表（**日英并列**）给出了
+   *   五人的**觉醒（変身）形态名**，且与非公式 wiki 的衣装清单一一对应（已闭合）：
+   *     化歩＝青雀（Kafu's Awakening）／狸眼＝幼年期の終わり＝Childhood's End（Rime's）
+   *     派流＝九紋龍（Haru's）／世界＝Heliotrope（Sekai's）／此処＝アルナイル＝Alnair（Koko's）
+   *   ⇒ **形态名是官方的**；**具体的服装设计（配色／部件／纹样）是本作自创**，
+   *     因为采集稿只给名称（唯二可引用的外观线索：花魁鳥＝汉宁帽＋花朵装饰；理芽新衣装
+   *     UBIK 的观感注记「长发、大人っぽい」，且该观感出自观众评论、不是设定）。
+   * ★ 绑定：`char` 字段＝该形态只属于这位魔女之子（`formFits` 会据此过滤，
+   *   换角色时出击界面自动回落「通常形態」，`game.start` 也会拒绝跨角色形态）。
+   * ★ 母题（**本作归纳，官方从未这样表述**，见采集稿 §2.2.7）：鳥／SF 小説／錦鯉／花／恒星。 */
+  {
+    id: 'aogara', kinds: ['witch'], char: 'kaf', accent: 'sparrow_wing',
+    name: { zh: '青雀', en: 'Aogara · Blue Sparrow', ja: '青雀（あおがら）' },
+    label: { zh: '魔女特殊歌唱用形態 青雀（化歩）', en: 'Witch Special Singing Form: Aogara (Kafu)', ja: '魔女特殊歌唱用形態 青雀（化歩）' },
+    desc: {
+      zh: '化歩的觉醒形态——蓝青羽织配背上的青雀翼羽，袖口一线白。<br>攻击 <b>+10%</b>、范围 <b>+6%</b>，最大生命 <b>−5%</b>。',
+      en: 'Kafu\'s awakened form — a deep-blue haori with sparrow wing feathers at the back and a white cuff line.<br>Atk <b>+10%</b>, area <b>+6%</b>, max HP <b>−5%</b>.',
+      ja: '化歩の覚醒形態——藍青の羽織に背の青雀の翼羽、袖口に白の一線。<br>攻撃 <b>+10%</b>、範囲 <b>+6%</b>、最大生命 <b>−5%</b>。',
+    },
+    mods: { playerDmg: 1.10, area: 1.06, hp: 0.95 },
+    color: '#5ad0ff', color2: '#123a63',
+    src: {
+      zh: '形态名＝官方（VR 曲目表「変身／青雀」）；服装设计＝本作自创',
+      en: 'Form name: official (VR tracklist "変身／青雀"); costume design: original to this work',
+      ja: '形態名＝公式（VR 曲目表「変身／青雀」）。衣装デザイン＝本作オリジナル',
+    },
+  },
+  {
+    id: 'childhoods_end', kinds: ['witch'], char: 'rim', accent: 'star_ring',
+    name: { zh: '幼年期の終わり', en: "Childhood's End", ja: '幼年期の終わり' },
+    label: { zh: '魔女特殊歌唱用形態 幼年期の終わり（狸眼）', en: "Witch Special Singing Form: Childhood's End (Rime)", ja: '魔女特殊歌唱用形態 幼年期の終わり（狸眼）' },
+    desc: {
+      zh: '狸眼的觉醒形态——银白的紧身礼服披一层薄纱，长发以银环束起，衣摆缀星屑。<br>拾取范围 <b>+25%</b>、经验 <b>+10%</b>、移动速度 <b>+5%</b>，最大生命 <b>−8%</b>。',
+      en: "Rime's awakened form — a silver-white gown under gauze, long hair bound by a silver ring, stardust on the hem.<br>Pickup <b>+25%</b>, XP <b>+10%</b>, move speed <b>+5%</b>, max HP <b>−8%</b>.",
+      ja: '狸眼の覚醒形態——銀白のドレスに薄紗、長い髪は銀のリングで束ね、裾に星屑。<br>取得 <b>+25%</b>、経験 <b>+10%</b>、移動速度 <b>+5%</b>、最大生命 <b>−8%</b>。',
+    },
+    mods: { pickup: 1.25, xp: 1.10, speed: 1.05, hp: 0.92 },
+    color: '#e8ecf6', color2: '#5b6480',
+    src: {
+      zh: '形态名＝官方（VR 曲目表「変身／幼年期の終わり」＝Childhood\'s End）；服装设计＝本作自创',
+      en: 'Form name: official (VR tracklist "変身／幼年期の終わり" = Childhood\'s End); costume design: original to this work',
+      ja: '形態名＝公式（VR 曲目表「変身／幼年期の終わり」＝Childhood\'s End）。衣装デザイン＝本作オリジナル',
+    },
+  },
+  {
+    id: 'kumonryu', kinds: ['witch'], char: 'harusaruhi', accent: 'koi_sash',
+    name: { zh: '九紋龍', en: 'Kumonryū', ja: '九紋龍（くもんりゅう）' },
+    label: { zh: '魔女特殊歌唱用形態 九紋龍（派流）', en: 'Witch Special Singing Form: Kumonryū (Haru)', ja: '魔女特殊歌唱用形態 九紋龍（派流）' },
+    desc: {
+      zh: '派流的觉醒形态——黑地的长着「纏」束以红金龙纹之带，肩头一片鲤鳞。<br>最大生命 <b>+15%</b>、范围 <b>+8%</b>，移动速度 <b>−5%</b>。',
+      en: "Haru's awakened form — a black \"matōi\" robe tied with a crimson-and-gold dragon sash, koi scales at the shoulder.<br>Max HP <b>+15%</b>, area <b>+8%</b>, move speed <b>−5%</b>.",
+      ja: '派流の覚醒形態——黒地の「纏」に紅金の龍紋帯、肩に鯉の鱗。<br>最大生命 <b>+15%</b>、範囲 <b>+8%</b>、移動速度 <b>−5%</b>。',
+    },
+    mods: { hp: 1.15, area: 1.08, speed: 0.95 },
+    color: '#ff8a4e', color2: '#3b1030',
+    src: {
+      zh: '形态名＝官方（VR 曲目表「変身／九紋龍」）；服装设计＝本作自创',
+      en: 'Form name: official (VR tracklist "変身／九紋龍"); costume design: original to this work',
+      ja: '形態名＝公式（VR 曲目表「変身／九紋龍」）。衣装デザイン＝本作オリジナル',
+    },
+  },
+  {
+    id: 'heliotrope', kinds: ['witch'], char: 'isekaijoucho', accent: 'flower_crown',
+    name: { zh: 'Heliotrope', en: 'Heliotrope', ja: 'Heliotrope（ヘリオトロープ）' },
+    label: { zh: '魔女特殊歌唱用形態 Heliotrope（世界）', en: 'Witch Special Singing Form: Heliotrope (Sekai)', ja: '魔女特殊歌唱用形態 Heliotrope（世界）' },
+    desc: {
+      zh: '世界的觉醒形态——淡紫的汉宁帽缀一圈天芥菜花冠，胸前一枚花饰。<br>冷却 <b>−10%</b>、范围 <b>+8%</b>，最大生命 <b>−5%</b>。',
+      en: "Sekai's awakened form — a pale violet hennin crowned with heliotrope blossoms, a single flower at the breast.<br>Cooldown <b>−10%</b>, area <b>+8%</b>, max HP <b>−5%</b>.",
+      ja: '世界の覚醒形態——淡紫のヘニン帽にヘリオトロープの花冠、胸元に花飾り。<br>クールタイム <b>−10%</b>、範囲 <b>+8%</b>、最大生命 <b>−5%</b>。',
+    },
+    mods: { cd: 0.90, area: 1.08, hp: 0.95 },
+    color: '#c9a6ff', color2: '#3a2350',
+    src: {
+      zh: '形态名＝官方（VR 曲目表「変身／Heliotrope」）；服装设计＝本作自创',
+      en: 'Form name: official (VR tracklist "変身／Heliotrope"); costume design: original to this work',
+      ja: '形態名＝公式（VR 曲目表「変身／Heliotrope」）。衣装デザイン＝本作オリジナル',
+    },
+  },
+  {
+    id: 'alnair', kinds: ['witch'], char: 'koko', accent: 'star_tiara',
+    name: { zh: '阿尔那伊尔', en: 'Alnair', ja: 'アルナイル' },
+    label: { zh: '魔女特殊歌唱用形態 アルナイル（此処）', en: 'Witch Special Singing Form: Alnair (Koko)', ja: '魔女特殊歌唱用形態 アルナイル（此処）' },
+    desc: {
+      zh: '此処的觉醒形态——蓝白星光外套配星冕，衣摆拖出一道星屑。<br>移动速度 <b>+12%</b>、攻击 <b>+6%</b>，冷却 <b>+4%</b>。',
+      en: "Koko's awakened form — a blue-white starlight coat with a star tiara, a trail of stardust at the hem.<br>Move speed <b>+12%</b>, Atk <b>+6%</b>, cooldown <b>+4%</b>.",
+      ja: '此処の覚醒形態——藍白のスターライトコートに星のティアラ、裾に星屑の尾。<br>移動速度 <b>+12%</b>、攻撃 <b>+6%</b>、クールタイム <b>+4%</b>。',
+    },
+    mods: { speed: 1.12, playerDmg: 1.06, cd: 1.04 },
+    color: '#9fe8ff', color2: '#1b2f5e',
+    src: {
+      zh: '形态名＝官方（VR 曲目表「変身／アルナイル」＝Alnair）；服装设计＝本作自创',
+      en: 'Form name: official (VR tracklist "変身／アルナイル" = Alnair); costume design: original to this work',
+      ja: '形態名＝公式（VR 曲目表「変身／アルナイル」＝Alnair）。衣装デザイン＝本作オリジナル',
+    },
   },
   /* ---- 可招募角色（魔女候補）与同伴：皮肤暂定「黑」「白」 ---- */
   {
@@ -1106,11 +1205,18 @@ KUP.FORMS = [
   },
 ];
 KUP.FORM = id => KUP.FORMS.find(f => f.id === id) || KUP.FORMS[0];
-/* 形态是否适用于某持有者类型（kinds 为 null ＝ 通用） */
-KUP.formFits = (f, kind) => !f.kinds || f.kinds.indexOf(kind) >= 0;
-/* 按持有者类型取可用形态（含通用的「通常形態」）
- * kind: 'witch'（魔女之子）| 'recruit'（可招募角色·魔女候補）| 'companion'（同伴） */
-KUP.formsFor = kind => KUP.FORMS.filter(f => KUP.formFits(f, kind));
+/* 形态是否适用于某持有者（kinds 为 null ＝ 通用；char 为 null ＝ 不绑定具体角色）
+ * kind: 'witch'（魔女之子）| 'recruit'（魔女候補）| 'companion'（同伴）
+ * charId: 具体角色 id（可省）——带 `char` 的形态只属于该角色，换角色即不可用 */
+KUP.formFits = (f, kind, charId) => {
+  if (f.kinds && f.kinds.indexOf(kind) < 0) return false;
+  if (f.char && f.char !== charId) return false;
+  return true;
+};
+/* 按持有者取可用形态（含通用的「通常形態」） */
+KUP.formsFor = (kind, charId) => KUP.FORMS.filter(f => KUP.formFits(f, kind, charId));
+/* 某角色的专属形态（出击界面用它提示"这位魔女有专属觉醒形态"） */
+KUP.formsOfChar = charId => KUP.FORMS.filter(f => f.char && f.char === charId);
 /* 角色（含招募角色）对应的皮肤类型 */
 KUP.charKind = c => (c && c.recruit) ? 'recruit' : 'witch';
 

@@ -222,6 +222,52 @@ window.KUP = window.KUP || {};
         ctx.beginPath(); ctx.arc(-5, bob - 8, 1.6, 0, U.TAU); ctx.fill();
         ctx.strokeStyle = '#c9d6f5'; ctx.lineWidth = 1.2;
         ctx.beginPath(); ctx.moveTo(1, bob - 5); ctx.lineTo(7, bob - 9); ctx.stroke();
+      } else if (accent === 'sparrow_wing') {   // 青雀（化歩）：背の青雀翼羽 ＋ 袖口の白線
+        ctx.strokeStyle = '#8ff0ff'; ctx.lineWidth = 2;
+        for (let i = 0; i < 2; i++) {
+          ctx.beginPath();
+          ctx.moveTo(-6 - i * 3, bob - 12);
+          ctx.quadraticCurveTo(-14 - i * 4, bob - 20 - i * 3, -20 - i * 5, bob - 16 - i * 4);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.moveTo(-7, bob - 5); ctx.lineTo(-2, bob - 8); ctx.stroke();
+      } else if (accent === 'star_ring') {      // 幼年期の終わり（狸眼）：銀のリング ＋ 星屑
+        ctx.strokeStyle = '#e8ecf6'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.ellipse(0, bob - 26, 11, 4, -0.35, 0, U.TAU); ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.arc(-8 + i * 8, bob - 33 + (i % 2) * 3, 1.2, 0, U.TAU); ctx.fill();
+        }
+      } else if (accent === 'koi_sash') {       // 九紋龍（派流）：紅金の龍紋帯 ＋ 肩の鯉鱗
+        ctx.save();
+        ctx.rotate(-0.5);
+        ctx.fillStyle = '#c9203f';
+        ctx.fillRect(-14, bob - 12, 28, 4.5);
+        ctx.fillStyle = '#ffd98a';
+        for (let i = -1; i <= 1; i++) {
+          ctx.beginPath(); ctx.arc(i * 8, bob - 9.8, 1.7, 0, U.TAU); ctx.fill();
+        }
+        ctx.restore();
+        ctx.strokeStyle = '#ffb25a'; ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(9, bob - 13, 3.4, 0.6, 3.4); ctx.stroke();
+      } else if (accent === 'flower_crown') {   // Heliotrope（世界）：天芥菜の花冠
+        for (let i = -1; i <= 1; i++) {
+          ctx.fillStyle = i === 0 ? '#efe0ff' : '#b98cff';
+          ctx.beginPath(); ctx.arc(i * 7, bob - 22 - (i === 0 ? 2 : 0), 2.6, 0, U.TAU); ctx.fill();
+          ctx.fillStyle = '#ffe9a8';
+          ctx.beginPath(); ctx.arc(i * 7, bob - 22 - (i === 0 ? 2 : 0), 1, 0, U.TAU); ctx.fill();
+        }
+      } else if (accent === 'star_tiara') {     // アルナイル（此処）：星のティアラ
+        ctx.strokeStyle = '#9fe8ff'; ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(-9, bob - 21); ctx.quadraticCurveTo(0, bob - 25, 9, bob - 21); ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(0, bob - 36); ctx.lineTo(2.2, bob - 30); ctx.lineTo(8, bob - 28);
+        ctx.lineTo(2.2, bob - 26); ctx.lineTo(0, bob - 20); ctx.lineTo(-2.2, bob - 26);
+        ctx.lineTo(-8, bob - 28); ctx.lineTo(-2.2, bob - 30);
+        ctx.closePath(); ctx.fill();
       }
       ctx.restore();
     }

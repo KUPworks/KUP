@@ -485,8 +485,9 @@ window.KUP = window.KUP || {};
       /* 形態/皮肤必须与角色类型匹配（witch / recruit），否则回落通常形態 */
       const charKind = KUP.charKind(charDef);
       let form = KUP.FORM(this.run.form);
-      if (!KUP.formFits(form, charKind)) {
-        console.warn('[KUP] 形態 ' + form.id + ' 不适用于 ' + charKind + '，回落通常形態。');
+      if (!KUP.formFits(form, charKind, charDef.id)) {
+        console.warn('[KUP] 形態 ' + form.id + ' 不适用于 ' + charKind
+          + (form.char ? '（专属形态：' + form.char + '）' : '') + '，回落通常形態。');
         this.run.form = 'none';
         form = KUP.FORM('none');
       }

@@ -795,15 +795,16 @@ window.KUP = window.KUP || {};
       this.els['companion-form-detail'].innerHTML = KUP.I18N.tv(f.desc) +
         '<br><span class="area-src">' + (f.src ? KUP.I18N.tv(f.src) : '') + '</span>';
     },
-    /* 皮肤（形態）选择条 —— 内容随所选角色的类型变化：
-     * 魔女之子 → 特殊歌唱用形態（花魁鳥／姬連雀）；可招募角色（魔女候補）→ 皮肤（黑／白）
-     * 同伴（復興課）→ JK 制服（夏服／冬服），见 showCompanionFormStrip */
+    /* 皮肤（形態）选择条 —— 内容随所选角色变化：
+     * 魔女之子 → 通用形态（花魁鳥／姬連雀）＋**该角色的专属觉醒形态**（v0.13.4：
+     *   化歩＝青雀／狸眼＝幼年期の終わり／派流＝九紋龍／世界＝Heliotrope／此処＝アルナイル）；
+     * 可招募角色（魔女候補）→ 皮肤（黑／白）；同伴（復興課）→ JK 制服，见 showCompanionFormStrip */
     showFormStrip() {
       const strip = this.els['form-strip'];
       if (!strip) return;
       const c = this.selectedChar ? KUP.CHAR(this.selectedChar) : null;
       const kind = c ? KUP.charKind(c) : 'witch';
-      const list = KUP.formsFor(kind);
+      const list = KUP.formsFor(kind, c ? c.id : null);
       if (!list.some(f => f.id === this.selectedForm)) {
         this.selectedForm = 'none';
         KUP.META.setForm('none');
