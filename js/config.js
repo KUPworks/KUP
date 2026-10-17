@@ -2,7 +2,7 @@ window.KUP = window.KUP || {};
 
 /* ================= 全局配置 ================= */
 KUP.CONFIG = {
-  VERSION: '0.13.1-nav',
+  VERSION: '0.13.2-lore',
   ARENA: 3000,            // 正方形竞技场边长
   PLAYER_R: 13,
   PLAYER_HIT_CD: 0.55,    // 玩家受击无敌帧
@@ -126,33 +126,42 @@ KUP.WAVES = [
 /* 番街（关卡主线）。命名与分区的**首要依据＝REGENERATE 官方页【官方】**：
  *   零番街＝下町／壱番街＝オフィス地区／弐番街＝歓楽街／参番街＝農園地区／肆番街＝科学研究特区（しばんがい）
  *   （佐证：动画第1集「三号街」；动画 OST「弐番街にて」；SINKA LIVE 副标题「神椿市参番街」「神椿市伍番街」）
- *   ⇒ 前五区按官方定位命名；伍・陸番街官方未给定位，本作沿用 NARRATIVE CITYGUIDE 侧分区并**显式标注**（src）。
+ *   ⇒ 前五区按官方定位命名；伍・陸番街官方页未给定位，取自 **NARRATIVE CITYGUIDE 侧分区**
+ *     （世界观详录 §8.1；日语维基条目亦列有同七区）。
+ * ★ 出处等级只记在**数据层**（`src` 字段）与本注释里，**不再在界面上显示**——
+ *   人类 2026-10 决定：玩家只看得到「官方定位／势力／解锁条件」这类可玩信息。
  * 字段：
  *   role 官方定位；resident 居住的魔女之子 id（REGENERATE 官方）；faction 势力（每番街一组织）；
- *   src 'regenerate'（官方定位）| 'narrative'（NARRATIVE 侧，本作沿用并标注）；
+ *   src 'regenerate'（官方定位）| 'narrative'（NARRATIVE 侧，本作沿用）| 'original'（本作模式）；
  *   chapter 关卡章节名（动画各话副标题）；waves 独立波次表；events 章节演出；
  *   theme 地图主题；accent 界面强调色；hue/blocks/win/tone/fog 布景参数。
  * ★ 復興率（KUP.META.THRESHOLDS）解锁下一番街。 */
 KUP.AREAS = [
   {
-    id: 'area0', boss: 'boss0', name: { zh: '零番街', en: 'Area 0 · Lower Town', ja: '零番街' },
-    role: { zh: '下町', en: 'Lower Town', ja: '下町' },
+    id: 'area0', boss: 'boss0', name: { zh: '零番街', en: 'Area 0', ja: '零番街' },
+    /* ★ 官方英/中文出自 srd「VIRTUAL REALITY」页（逐字摘录见 docs/lore/research/official_srd_en_cn.md）：
+     *   `Area 0, the downtown area`／官方中文保留「零番街」不译、只译地区性质（下町）。
+     *   ⚠️ 此前写的「Lower Town」**不是官方英文**（本仓库自译），已改。 */
+    role: { zh: '下町', en: 'Downtown', ja: '下町' },
     resident: 'kaf',
-    faction: { zh: '観統衿架（化歩的養育者）', en: 'Fostered by Erika KANTO', ja: '観統衿架（化歩の養育者）' },
+    /* 観統衿架：官方英文 CAST 作 `Erika Midoh`、官方中文作「观统 衿架」（⇒ 観統＝姓，Midoh） */
+    faction: { zh: '観統衿架（化歩的姐姐／養育者）', en: 'Her elder sister, Erika Midoh', ja: '観統衿架（化歩の姉／養育者）' },
     src: 'regenerate',
-    desc: { zh: '下町。高层与下町共存，共創課オフィス与「塔」所在。', en: 'Lower town: towers over old downtown, home of the Co-creation Office.', ja: '下町。共創課オフィスと「塔」のある街。' },
+    desc: { zh: '高层建筑与复古下町共存，城市中枢的「塔」矗立于此。', en: 'High-rises stand over the old downtown, and the city\'s central "Tower" rises here.', ja: '高層ビル群とレトロな下町が共存し、街の中枢「塔」がそびえ立つ。' },
     chapter: { zh: '魔女の娘 -Witchling-', en: 'Witchling', ja: '魔女の娘 -Witchling-' },
     hue: [200, 300], blocks: 130, win: 0.6, tone: 'rgba(16,10,36,0.92)', fog: 0,
     accent: '#7dd4ff',
     waves: KUP.WAVES, // 零番街＝基线节奏
   },
   {
-    id: 'area1', boss: 'boss1', name: { zh: '壱番街', en: 'Area 1 · Office District', ja: '壱番街' },
-    role: { zh: 'オフィス地区（办公区）', en: 'Office District', ja: 'オフィス地区' },
+    id: 'area1', boss: 'boss1', name: { zh: '壱番街', en: 'Area 1', ja: '壱番街' },
+    role: { zh: '办公区', en: 'Office District', ja: 'オフィス地区' },
     resident: 'rim',
-    faction: { zh: '谷置家／谷置室長（課長）', en: 'The Tanioki family / Chief Tanioki', ja: '谷置家／谷置室長（課長）' },
+    /* 谷置室長＝谷置 制磁：官方中文页直接写作「谷置 制磁」、官方英文作 `Seiji Tanioki`
+     * （⇒ 制磁＝セイジ）。本仓库长期列为「待查证」的姓名，出处至此确定。 */
+    faction: { zh: '谷置家／谷置 制磁（室長）', en: 'The Tanioki family / Seiji Tanioki', ja: '谷置家／谷置室長（課長）' },
     src: 'regenerate',
-    desc: { zh: '办公区。玻璃幕墙与再开发的明暗对比（NARRATIVE CITYGUIDE 侧另记有十九里海岸的灵异传闻）。', en: 'Office district: glass towers and redevelopment contrast (the NARRATIVE CITYGUIDE adds ghost tales of the Jūkuri shore).', ja: 'オフィス地区。再開発の明暗（NARRATIVE CITYGUIDE 側には十九里海岸の霊異譚も）。' },
+    desc: { zh: '面海的副都心与旧港町相邻——玻璃幕墙与再开发的明暗对比。', en: 'A seaside subcenter beside an old port town — glass towers against the patchwork of redevelopment.', ja: '海に接する副都心と旧港町が隣り合う——再開発の明暗。' },
     chapter: { zh: '悪意 -Malice-', en: 'Malice', ja: '悪意 -Malice-' },
     hue: [185, 235], blocks: 150, win: 0.75, tone: 'rgba(10,20,42,0.92)', fog: 0.06,
     accent: '#4ec8ff',
@@ -165,16 +174,17 @@ KUP.AREAS = [
       { t: 285, rate: 3.3, types: { noise: 1.8, glitch: 2.4, tank: 0.75 } },
     ],
     events: [
-      { t: 120, name: { zh: '悪意累积 —— 恶意化为怪异的潮水', en: 'Malice builds — the tide swells', ja: '悪意の蓄積——悪意が怪異の潮となる' }, surge: 14 },
+      { t: 120, name: { zh: '恶意累积 —— 恶意化为破维魔的潮水', en: 'Malice builds — the tide swells', ja: '悪意の蓄積——悪意がテセラクターの潮となる' }, surge: 14 },
     ],
   },
   {
-    id: 'area2', boss: 'boss2', name: { zh: '弐番街', en: 'Area 2 · Pleasure Quarter', ja: '弐番街' },
-    role: { zh: '歓楽街', en: 'Pleasure Quarter', ja: '歓楽街' },
+    id: 'area2', boss: 'boss2', name: { zh: '弐番街', en: 'Area 2', ja: '弐番街' },
+    /* 官方英文作 `the entertainment district`（非「Pleasure Quarter」，后者是本仓库自译）；官方中文作「欢乐街」 */
+    role: { zh: '欢乐街', en: 'Entertainment District', ja: '歓楽街' },
     resident: 'harusaruhi',
     faction: { zh: '台風眼（派流率领的不良少年团／黑帮）', en: 'Taifūgan (Haru\'s gang)', ja: '台風眼（派流が率いる不良集団）' },
     src: 'regenerate',
-    desc: { zh: '欢乐街。哀愁横丁、逆転横丁与灯火全灭的大言霊神社；派流的地盘「台風眼」在此。', en: 'A rowdy pleasure quarter of alleys — and a shrine whose lanterns never light. Haru\'s gang "Taifūgan" holds this turf.', ja: '歓楽街。灯の消えた大言霊神社。派流の「台風眼」の縄張り。' },
+    desc: { zh: '哀愁横丁、逆転横丁与灯火全灭的大言霊神社；治安最差、由居民自主管理——派流的地盘「台風眼」在此。', en: 'Alleys and a shrine whose lanterns never light. The worst-policed district, run by its own residents; Haru\'s gang "Taifūgan" holds this turf.', ja: '哀愁横丁・逆転横丁と、灯の消えた大言霊神社。治安は最も悪く、住民が自主管理する——派流の「台風眼」の縄張り。' },
     chapter: { zh: '欲望 -Desire-', en: 'Desire', ja: '欲望 -Desire-' },
     hue: [295, 400], blocks: 145, win: 0.5, tone: 'rgba(26,10,30,0.92)', fog: 0.05,
     accent: '#ff7ad9',
@@ -187,16 +197,19 @@ KUP.AREAS = [
       { t: 285, rate: 3.6, types: { noise: 2.6, glitch: 1.8, tank: 0.65 } },
     ],
     events: [
-      { t: 110, name: { zh: '欲望增殖 —— 怪異贪食着街区', en: 'Desire proliferates — the aberrations feast', ja: '欲望の増殖——怪異が街を貪る' }, surge: 18 },
+      { t: 110, name: { zh: '欲望增殖 —— 破维魔贪食着街区', en: 'Desire proliferates — Tesseracters feast', ja: '欲望の増殖——テセラクターが街を貪る' }, surge: 18 },
     ],
   },
   {
-    id: 'area3', boss: 'boss3', name: { zh: '参番街', en: 'Area 3 · Farmlands', ja: '参番街' },
-    role: { zh: '農園地区（农园地区）', en: 'Farmlands', ja: '農園地区' },
+    id: 'area3', boss: 'boss3', name: { zh: '参番街', en: 'Area 3', ja: '参番街' },
+    /* 官方英文作 `the agricultural area`（非「Farmlands」）；官方中文作「农园区」 */
+    role: { zh: '农园区', en: 'Agricultural Area', ja: '農園地区' },
     resident: 'isekaijoucho',
-    faction: { zh: 'ヰ世界救済教団（奉世界为「活神」的魔女崇拝教団）', en: 'Issekai Salvation Order (worships Sekai as a living god)', ja: 'ヰ世界救済教団（世界を生き神とする魔女崇拝教団）' },
+    /* ★ 教団的官方英文＝`Isekai Salvation Cult`（同页另一处作 `Church of IIsekai Salvation`，官方自身不统一）；
+     *   官方中文把性质译作「**崇巫教团**」（非「魔女崇拜教团」）；生き神 官方英文＝`living deity`。 */
+    faction: { zh: 'ヰ世界救済教団（参番街的崇巫教团，奉世界为「活神」）', en: 'Isekai Salvation Cult (worships Sekai as a living deity)', ja: 'ヰ世界救済教団（世界を生き神とする魔女崇拝教団）' },
     src: 'regenerate',
-    desc: { zh: '农园地区。巨大農園与アネモネ自然公園，季节性的浓雾封街；「ヰ世界救済教団」的据点。', en: 'Farmland: the great plantation and Anemone Park, sealed by seasonal fog — and the seat of the Issekai Salvation Order.', ja: '農園地区。巨大農園とアネモネ自然公園、季節の濃霧。ヰ世界救済教団の拠点。' },
+    desc: { zh: '巨大農園与アネモネ自然公園，季节性的浓雾封街；「ヰ世界救済教団」的据点。', en: 'The great plantation and Anemone Park, sealed by seasonal fog — and the seat of the Isekai Salvation Cult.', ja: '巨大農園とアネモネ自然公園、季節の濃霧。ヰ世界救済教団の拠点。' },
     chapter: { zh: 'ファミリア -Familiar-', en: 'Familiar', ja: 'ファミリア -Familiar-' },
     hue: [80, 150], blocks: 58, win: 0.25, tone: 'rgba(10,28,22,0.92)', fog: 0.18,
     accent: '#7dff9a', theme: 'farm', // 温室／田垄
@@ -209,16 +222,19 @@ KUP.AREAS = [
       { t: 285, rate: 2.9, types: { noise: 1.6, glitch: 1.5, tank: 1.3 } },
     ],
     events: [
-      { t: 100, name: { zh: 'ファミリアの影 —— 巨躯的影子接近', en: 'Shadows of the Familiar', ja: 'ファミリアの影——巨躯の影が迫る' }, surge: 6 },
+      /* ★ 章节名沿用动画第5話官方副标题「ファミリア」，但**不能把眷魔写成敌人**——
+       *   lore §4.2／§11 行 22：全体眷魔都是「破维魔盟友」，与对应魔女可能有摩擦，
+       *   **不存在完全敌对**。故这里只写「影子横过农园」，不写“眷魔来袭”。 */
+      { t: 100, name: { zh: 'ファミリアの影 —— 巨躯的影子横过农园', en: 'Shadows of the Familiar — a giant shape crosses the fields', ja: 'ファミリアの影——巨躯の影が農地を横切る' }, surge: 6 },
     ],
   },
   {
-    id: 'area4', boss: 'boss4', name: { zh: '肆番街', en: 'Area 4 · Science Research Zone', ja: '肆番街（しばんがい）' },
+    id: 'area4', boss: 'boss4', name: { zh: '肆番街', en: 'Area 4', ja: '肆番街（しばんがい）' },
     role: { zh: '科学研究特区', en: 'Science Research Zone', ja: '科学研究特区' },
     resident: 'koko',
-    faction: { zh: '復興課（彩季詩得＝CIEL 在此相遇）', en: 'Reconstruction Div. (where Shieru/CIEL is met)', ja: '復興課（彩季詩得＝CIEL と出会う街）' },
+    faction: { zh: '復興課（彩季詩得＝CIEL 在此相遇）', en: 'Reconstruction Div. (where Ciel Saiki is met)', ja: '復興課（彩季詩得＝CIEL と出会う街）' },
     src: 'regenerate',
-    desc: { zh: '科学研究特区。灾害后仍留有大量废墟，宛如反乌托邦 SF；復興課的活动区域。', en: 'The science research zone: still half in ruins, like a dystopian SF set — the Reconstruction Division\'s ground.', ja: '科学研究特区。廃墟の残るディストピア SF の貌。復興課の活動区域。' },
+    desc: { zh: '曾是学问与艺术之街，灾害后大半沦为废墟，宛如反乌托邦 SF；復興課的活动区域。', en: 'Once a district of learning and the arts, now largely ruins, like a dystopian SF set — the Reconstruction Division\'s ground.', ja: 'かつては学問と芸術の街、災害後は大半が廃墟となりディストピア SF の貌。復興課の活動区域。' },
     chapter: { zh: '現象 -Phenomenon-', en: 'Phenomenon', ja: '現象 -Phenomenon-' },
     hue: [195, 335], blocks: 152, win: 0.35, tone: 'rgba(14,12,30,0.94)', fog: 0.1,
     accent: '#b58cff', theme: 'ruins', // 锈迹骨架
@@ -235,12 +251,17 @@ KUP.AREAS = [
     ],
   },
   {
-    id: 'area5', boss: 'boss5', name: { zh: '伍番街', en: 'Area 5 · Industrial (fan-made)', ja: '伍番街' },
-    role: { zh: '工业地区（本作自创）', en: 'Industrial (original to this work)', ja: '工業地区（本作独自）' },
+    id: 'area5', boss: 'boss5', name: { zh: '伍番街', en: 'Area 5', ja: '伍番街' },
+    /* 伍・陸番街：官方英/中文页都没给（官方 EN 页只到 Area 4）⇒ 沿用 zh/ja 命名规则自译，标注为沿用 */
+    role: { zh: '工业地区', en: 'Industrial Area', ja: '工業地区' },
     resident: null,
-    faction: { zh: '—（官方未给定位，本作自创）', en: '— (no official role; original to this work)', ja: '—（公式の定位なし・本作独自）' },
+    /* 官方页未给本区组织；NARRATIVE 侧亦无对应势力 ⇒ 留空（UI 会跳过该行，不显示「势力：—」） */
+    faction: null,
     src: 'narrative',
-    desc: { zh: '工业地区。停工工厂、化学コンビナート与旧・眼裏町的废墟。（存在由 SINKA LIVE 副标题「神椿市伍番街」佐证，定位为本作自创）', en: 'Industry: idle plants, chemical complexes, and the ruins of old Meura-cho. (Its existence is attested by the SINKA LIVE subtitle "Kamitsubaki City Area 5"; the role here is original.)', ja: '工業地区。止まった工場と旧・眼裏町の廃墟。（存在は SINKA LIVE 副題「神椿市伍番街」で裏付け、定位は本作独自）' },
+    /* 出处：区名与「工業地区」定位取自 NARRATIVE CITYGUIDE 侧分区（世界观详录 §8.1；
+     * 日语维基「舞台『神椿市』」条亦列有同七区）。存在另由 SINKA LIVE 副标题「神椿市伍番街」佐证。
+     * ⚠️ 旧文案写「定位为本作自创」**有误**——本区不是自创，是沿用 NARRATIVE 分区。 */
+    desc: { zh: '停工工厂、化学联合企业与旧・眼裏町的废墟。', en: 'Idle plants, chemical complexes, and the ruins of old Meura-chō.', ja: '止まった工場と化学コンビナート、旧・眼裏町の廃墟。' },
     chapter: { zh: 'ブラックアウト -Beginning of the end-', en: 'Blackout', ja: 'ブラックアウト -Beginning of the end-' },
     hue: [15, 60], blocks: 120, win: 0.5, tone: 'rgba(28,18,10,0.92)', fog: 0.22,
     accent: '#ffb25a', theme: 'industry', // 烟囱
@@ -257,12 +278,15 @@ KUP.AREAS = [
     ],
   },
   {
-    id: 'area6', boss: 'boss6', name: { zh: '陸番街', en: 'Area 6 · Restricted (fan-made)', ja: '陸番街' },
-    role: { zh: '立入禁止区（本作自创）', en: 'Restricted Zone (original to this work)', ja: '立入禁止区画（本作独自）' },
+    id: 'area6', boss: 'boss6', name: { zh: '陸番街', en: 'Area 6', ja: '陸番街' },
+    role: { zh: '立入禁止区画', en: 'Restricted Zone', ja: '立入禁止区画' },
     resident: null,
-    faction: { zh: '—（官方未给定位，本作自创）', en: '— (no official role; original to this work)', ja: '—（公式の定位なし・本作独自）' },
+    /* 同 area5：本区无对应组织（NARRATIVE 侧亦无），留空让 UI 跳过 */
+    faction: null,
     src: 'narrative',
-    desc: { zh: '立入禁止区画。复兴完全未着手，几乎无建筑，只有雾与被遗弃的地面。（NARRATIVE CITYGUIDE 侧分区，本作沿用并标注）', en: 'Restricted zone. No reconstruction at all — only fog and abandoned ground. (From the NARRATIVE CITYGUIDE partition, reused with attribution.)', ja: '立入禁止区画。復興未着手、霧と放棄された地面だけ。（NARRATIVE CITYGUIDE 側の分区を出典明記で沿用）' },
+    /* 出处：区名与「立入禁止区画」定位取自 NARRATIVE CITYGUIDE 侧分区（世界观详录 §8.1）。
+     * ⚠️ 旧文案写「本作自创」**有误**——本区不是自创，是沿用 NARRATIVE 分区。 */
+    desc: { zh: '复兴完全未着手，几乎无建筑，只有雾与被遗弃的地面。', en: 'No reconstruction at all — only fog and abandoned ground.', ja: '復興未着手、霧と放棄された地面だけ。' },
     chapter: { zh: '再生 -Regenerate-', en: 'Regenerate', ja: '再生 -Regenerate-' },
     hue: [255, 300], blocks: 26, win: 0.05, tone: 'rgba(18,12,32,0.95)', fog: 0.35,
     accent: '#8f86c9', theme: 'restricted', // 雾＋残骸
@@ -290,9 +314,9 @@ KUP.AREAS = [
     name: { zh: '治安战', en: 'Order War', ja: '治安戦' },
     role: { zh: '无尽战斗（本作模式）', en: 'Endless battle (original mode)', ja: '無限戦闘（本作モード）' },
     resident: null,
-    faction: { zh: '復興課・治安維持（本作设定）', en: 'Reconstruction Div. — keeping order (original to this work)', ja: '復興課・治安維持（本作設定）' },
+    faction: { zh: '復興課・治安維持', en: 'Reconstruction Div. — keeping order', ja: '復興課・治安維持' },
     src: 'original',
-    desc: { zh: '復興課的治安维持作战——怪异没有尽头地涌来。这里<b>没有败北</b>，只有「战斗结束」；成绩记入治安战最高记录。', en: 'The Reconstruction Division\'s order-keeping operation — aberrations pour in without end. There is <b>no defeat</b> here, only "battle over"; your score is kept as the Order War record.', ja: '復興課の治安維持作戦——異形は際限なく押し寄せる。ここに<b>敗北はない</b>。「戦闘終了」と、治安戦の最高記録だけがある。' },
+    desc: { zh: '復興課的治安维持作战——破维魔没有尽头地涌来。这里<b>没有败北</b>，只有「战斗结束」；成绩记入治安战最高记录。', en: 'The Reconstruction Division\'s order-keeping operation — Tesseracters pour in without end. There is <b>no defeat</b> here, only "battle over"; your score is kept as the Order War record.', ja: '復興課の治安維持作戦——テセラクターは際限なく押し寄せる。ここに<b>敗北はない</b>。「戦闘終了」と、治安戦の最高記録だけがある。' },
     chapter: { zh: '治安戦 -Order War-', en: 'Order War', ja: '治安戦 -Order War-' },
     hue: [40, 95], blocks: 110, win: 0.55, tone: 'rgba(24,16,34,0.92)', fog: 0.08,
     accent: '#ffd25a',

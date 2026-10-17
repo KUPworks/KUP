@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -39,7 +39,7 @@
         <div id="ult-bar-wrap"><div id="ult-fill"></div></div>
       </div>
       <div id="boss-wrap" class="hidden">
-        <div id="boss-name">大テセラクター〈消音〉</div>
+        <div id="boss-name">大破维魔〈消音〉</div>
         <div id="boss-bar-wrap"><div id="boss-bar"></div></div>
       </div>
       <div id="danger-warn" class="hidden" data-i18n="hud.danger">⚠ 危険 —— 回避せよ（Shift 冲刺）</div>
@@ -65,10 +65,10 @@
         <button class="lang-btn" data-lang="en">EN</button>
         <button class="lang-btn" data-lang="ja">日本語</button>
       </div>
-      <p class="lore" data-i18n-html="menu.lore">七年前的大黑寂后奇迹复兴的研究学园都市「神椿市」——<br>
-      如今再度被人类恶意与欲望所生的怪异 <b>破维魔</b> 侵蚀。<br>
-      <b>歌即是魔法。</b>唯有五人的 <b>魔女之子</b>——森先化歩、谷置狸眼、朝主派流、夜河世界、輪廻此処——的歌声能够净化怪异。<br>
-      观测者啊，用歌声击碎怪异、收集「音片（フラグメント）」，夺回这条街的和声。</p>
+      <p class="lore" data-i18n-html="menu.lore">七年前的大黒寂后奇迹复兴的研究学园都市「神椿市」——<br>
+      如今再度被人类恶意与欲望所生的怪物 <b>破维魔</b> 侵蚀。<br>
+      <b>歌即是魔法。</b>唯有五人的 <b>魔女之子</b>——森先化歩、谷置狸眼、朝主派流、夜河世界、輪廻此処——的歌声能够净化它们。<br>
+      观测者啊，用歌声击碎破维魔、收集「音片（フラグメント）」，夺回这条街的和声。</p>
       <button id="btn-start" class="btn-primary" data-i18n="menu.start">开始净化 ▶</button>
       <div id="fukkou-menu" class="fukkou-menu">
         <div id="fukkou-bar-outer"><div id="fukkou-fill"></div></div>
@@ -119,7 +119,7 @@
   <!-- ============ 瓦利斯（VALIS 的饭店）：局外强化与培养 ============ -->
   <div id="screen-shop" class="screen hidden">
     <div class="menu-inner wide">
-      <div class="select-title"><span data-i18n="shop.title">歌と中華料理の店・瓦利欺</span> <span class="sub" data-i18n="shop.subtitle">VALIS 的饭店 —— 局外强化与培养</span></div>
+      <div class="select-title"><span data-i18n="shop.title">歌与中餐店・瓦利斯</span> <span class="sub" data-i18n="shop.subtitle">瓦利斯的饭店 —— 局外强化与培养</span></div>
       <div class="shop-head">
         <div class="shop-tabs">
           <button class="shop-tab active" data-tab="upgrade" data-i18n="shop.tab.upgrade">局外强化</button>
@@ -157,7 +157,7 @@
   <!-- ============ 角色选择（主角＝魔女之子／魔女候補） ============ -->
   <div id="screen-select" class="screen hidden">
     <div class="menu-inner wide">
-      <div class="select-title"><span data-i18n="select.title">选择出击的魔女之子</span> <span class="sub">Witchling / Witch Candidate — 角色 ≠ 声优</span></div>
+      <div class="select-title"><span data-i18n="select.title">选择出击的魔女之子</span> <span class="sub">Witchling / Witch Candidate</span></div>
       <div id="char-cards"></div>
       <div id="char-detail" data-i18n="select.default"></div>
 
@@ -250,19 +250,19 @@
   </div>
 </div>
 
-<script src="js/config.js?v=0.13.1-nav"></script>
-<script src="js/utils.js?v=0.13.1-nav"></script>
+<script src="js/config.js?v=0.13.2-lore"></script>
+<script src="js/utils.js?v=0.13.2-lore"></script>
 <!-- 存档层：必须在 i18n/audio/meta 之前（它们都经由 KUP.STORE 读写持久化数据） -->
-<script src="js/store.js?v=0.13.1-nav"></script>
-<script src="js/i18n.js?v=0.13.1-nav"></script>
-<script src="js/audio.js?v=0.13.1-nav"></script>
-<script src="js/data.js?v=0.13.1-nav"></script>
-<script src="js/meta.js?v=0.13.1-nav"></script>
-<script src="js/entities.js?v=0.13.1-nav"></script>
-<script src="js/game.js?v=0.13.1-nav"></script>
-<script src="js/director.js?v=0.13.1-nav"></script>
-<script src="js/render.js?v=0.13.1-nav"></script>
-<script src="js/ui.js?v=0.13.1-nav"></script>
-<script src="js/main.js?v=0.13.1-nav"></script>
+<script src="js/store.js?v=0.13.2-lore"></script>
+<script src="js/i18n.js?v=0.13.2-lore"></script>
+<script src="js/audio.js?v=0.13.2-lore"></script>
+<script src="js/data.js?v=0.13.2-lore"></script>
+<script src="js/meta.js?v=0.13.2-lore"></script>
+<script src="js/entities.js?v=0.13.2-lore"></script>
+<script src="js/game.js?v=0.13.2-lore"></script>
+<script src="js/director.js?v=0.13.2-lore"></script>
+<script src="js/render.js?v=0.13.2-lore"></script>
+<script src="js/ui.js?v=0.13.2-lore"></script>
+<script src="js/main.js?v=0.13.2-lore"></script>
 </body>
 </html>

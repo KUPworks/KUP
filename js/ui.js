@@ -286,13 +286,22 @@ window.KUP = window.KUP || {};
       $('btn-area-next').disabled = !unlocked;
       const a = KUP.AREAS.find(x => x.id === id);
       if (!a) { this.els['area-detail'].innerHTML = KUP.I18N.t('area.default'); return; }
-      /* 居住的魔女之子 + 势力（§15.5 每番街一组织）+ 出处标注（官方定位／NARRATIVE 侧） */
+      /* 居住的魔女之子 + 势力（§15.5 每番街一组织） */
       const resident = a.resident ? KUP.CHARS.find(c => c.id === a.resident) : null;
-      let html = '<b>' + KUP.I18N.tv(a.name) + '</b>（' + KUP.I18N.tv(a.role) + '）— ' + KUP.I18N.tv(a.desc);
+      /* 括注与破折号随语言切换：ja/zh 用全角「（）—」，en 用半角「() —」
+       * （官方英文写作 `Area 2, the entertainment district`，本作在区名后括注地区词，故半角更自然） */
+      const isEn = KUP.I18N.lang === 'en';
+      const roleText = isEn
+        ? ' (' + KUP.I18N.tv(a.role) + ') — '
+        : '（' + KUP.I18N.tv(a.role) + '）— ';
+      let html = '<b>' + KUP.I18N.tv(a.name) + '</b>' + roleText + KUP.I18N.tv(a.desc);
       if (resident) {
-        html += '<br><span class="area-faction">' + KUP.I18N.t('area.resident', { name: resident.name, cv: resident.cv }) + '</span>';
+        html += '<br><span class="area-faction">' + KUP.I18N.t('area.resident', { name: KUP.nameOf(resident), cv: KUP.cvOf(resident) }) + '</span>';
       }
-      html += '<br><span class="area-faction">' + KUP.I18N.t('area.faction', { f: KUP.I18N.tv(a.faction) }) + '</span>';
+      /* 势力行：没有对应组织的番街（伍・陸）留空，不显示「势力：—」 */
+      if (a.faction) {
+        html += '<br><span class="area-faction">' + KUP.I18N.t('area.faction', { f: KUP.I18N.tv(a.faction) }) + '</span>';
+      }
       if (a.endless) {
         /* 治安战：明确「没有败北」与成绩归属（玩家可见的规则说明） */
         html += '<br><span class="area-endless">' + KUP.I18N.t('area.endlessNote') + '</span>';
@@ -301,9 +310,13 @@ window.KUP = window.KUP || {};
           ? KUP.I18N.t('area.unlocked', { n: KUP.META.thresholdOf(a.id) })
           : KUP.I18N.t('area.need', { n: KUP.META.thresholdOf(a.id) })) + '</span>';
       }
-      /* 出处标注：官方定位 / NARRATIVE 侧分区 / 本作模式（治安战） */
-      const srcKey = a.src === 'regenerate' ? 'area.src.regen' : (a.src === 'original' ? 'area.src.original' : 'area.src.narrative');
-      html += '<br><span class="area-src">' + KUP.I18N.t(srcKey) + '</span>';
+      /* ★ 2026-10：**番街的出处标注不再显示给玩家**。
+       *   出处等级仍保存在数据层（`a.src`）与 js/config.js 的注释里，
+       *   玩家界面只留「官方定位／势力／解锁条件」这类可玩信息。
+       *   —— 需要恢复时取消下面两行注释即可（i18n 词条也已就地注释保留）：
+       * const srcKey = a.src === 'regenerate' ? 'area.src.regen' : (a.src === 'original' ? 'area.src.original' : 'area.src.narrative');
+       * html += '<br><span class="area-src">' + KUP.I18N.t(srcKey) + '</span>';
+       */
       this.els['area-detail'].innerHTML = html;
     },
 
@@ -387,7 +400,7 @@ window.KUP = window.KUP || {};
           card.innerHTML =
             '<div class="shop-icon">' + ent.name.replace(/\s/g, '').charAt(0) + '</div>' +
             '<div class="shop-name">' + ent.name + '</div>' +
-            '<div class="shop-desc">' + KUP.I18N.t('select.cv', { cv: ent.cv }) +
+            '<div class="shop-desc">' + KUP.I18N.t('select.cv', { cv: KUP.cvOf(ent) }) +
               (ent.rank ? ' · ' + KUP.I18N.tv(ent.rank) : '') + '<br>' +
               KUP.I18N.tv(ent.desc) + '</div>' +
             '<div class="shop-cost">' + (joined
@@ -695,10 +708,11 @@ window.KUP = window.KUP || {};
           /* 主角＝**魔女之子**（森先化歩など）与**可招募角色**（魔女候補）；
            * 「花譜」等只作**声の担当**标注——角色 ≠ 声优 */
           card.innerHTML =
-            '<div class="char-portrait">' + c.name.replace(/\s/g, '').charAt(0) + '</div>' +
-            '<div class="char-name">' + c.name + '</div>' +
-            '<div class="char-reading">' + c.reading + '</div>' +
-            '<div class="char-epithet">' + KUP.I18N.t('select.cv', { cv: c.cv }) + '</div>' +
+            '<div class="char-portrait">' + KUP.nameOf(c).replace(/\s/g, '').charAt(0) + '</div>' +
+            '<div class="char-name">' + KUP.nameOf(c) + '</div>' +
+            /* 读音只在 zh/ja 显示——英文界面用官方罗马字名，标音反而多余 */
+            '<div class="char-reading">' + (KUP.I18N.lang === 'en' ? '' : c.reading) + '</div>' +
+            '<div class="char-epithet">' + KUP.I18N.t('select.cv', { cv: KUP.cvOf(c) }) + '</div>' +
             '<div class="char-weapon">' + KUP.I18N.tv(KUP.WEAPONS[c.weapon].name) + '</div>' +
             (c.recruit ? '<div class="char-lock"></div>' : '');
           card.addEventListener('click', () => this.selectChar(c.id));
@@ -772,7 +786,7 @@ window.KUP = window.KUP || {};
       const comp = KUP.COMPANION(this.selectedCompanion);
       if (this.els['companion-form-title']) {
         this.els['companion-form-title'].textContent =
-          KUP.I18N.t('form.title.companion', { name: comp ? (comp.short || comp.name) : '' });
+          KUP.I18N.t('form.title.companion', { name: comp ? KUP.shortOf(comp) : '' });
       }
       for (const f of KUP.formsFor('companion')) {
         const card = document.createElement('div');
@@ -792,8 +806,8 @@ window.KUP = window.KUP || {};
       const strip = this.els['companion-form-strip'];
       if (strip) for (const card of strip.children) card.classList.toggle('selected', card.dataset.id === this.selectedCompanionForm);
       const f = KUP.FORM(this.selectedCompanionForm);
-      this.els['companion-form-detail'].innerHTML = KUP.I18N.tv(f.desc) +
-        '<br><span class="area-src">' + (f.src ? KUP.I18N.tv(f.src) : '') + '</span>';
+      /* 同伴皮肤的出处行不再显示（同 selectForm，见该处说明） */
+      this.els['companion-form-detail'].innerHTML = KUP.I18N.tv(f.desc);
     },
     /* 皮肤（形態）选择条 —— **同一屏**内按系列切换 + 横向滚动。
      * v0.13.5：全量形态有 45+ 条（花譜 17／狸眼 7／派流 8／世界 5／此処 4／共用 3／自创 1），
@@ -842,7 +856,7 @@ window.KUP = window.KUP || {};
       strip.innerHTML = '';
       if (this.els['form-title']) {
         this.els['form-title'].textContent = c
-          ? KUP.I18N.t(kind === 'recruit' ? 'form.title.recruit' : 'form.title.witch', { name: c.short || c.name })
+          ? KUP.I18N.t(kind === 'recruit' ? 'form.title.recruit' : 'form.title.witch', { name: KUP.shortOf(c) })
           : KUP.I18N.t('form.title');
       }
       /* 通常形態永远在第一格（不属于任何系列） */
@@ -866,8 +880,12 @@ window.KUP = window.KUP || {};
       const strip = this.els['form-strip'];
       if (strip) for (const card of strip.children) card.classList.toggle('selected', card.dataset.id === this.selectedForm);
       const f = KUP.FORM(this.selectedForm);
-      this.els['form-detail'].innerHTML = KUP.I18N.tv(f.desc) +
-        '<br><span class="area-src">' + (f.src ? KUP.I18N.tv(f.src) : '') + '</span>';
+      /* ★ 2026-10：**形態的出处标注不再显示给玩家**（人类要求）。
+       *   出处仍保存在数据层 `f.src`，并被 tools/verify-run.js 校验存在；
+       *   玩家只看到形态名与效果。需要恢复时取消下一行注释即可：
+       * this.els['form-detail'].innerHTML = KUP.I18N.tv(f.desc) + '<br><span class="area-src">' + (f.src ? KUP.I18N.tv(f.src) : '') + '</span>';
+       */
+      this.els['form-detail'].innerHTML = KUP.I18N.tv(f.desc);
     },
     selectChar(id) {
       /* 未招募的角色不可选用 */

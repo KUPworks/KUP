@@ -446,7 +446,7 @@ window.KUP = window.KUP || {};
         .filter(a => before < this.thresholdOf(a.id) && after >= this.thresholdOf(a.id))
         .map(a => (KUP.I18N ? KUP.I18N.tv(a.name) : a.name.zh));
       const got = this.checkRecruits();
-      const newlyRecruitable = got.chars.concat(got.companions).map(c => c.name);
+      const newlyRecruitable = got.chars.concat(got.companions).map(c => KUP.nameOf(c));
       return { gain, total: after, tickets, ticketsTotal: d.tickets, newlyUnlocked, newlyRecruitable };
     },
 

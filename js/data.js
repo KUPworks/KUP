@@ -1,19 +1,32 @@
 window.KUP = window.KUP || {};
 
 /* ================= 数据表（三语；基于官方设定） =================
- * ★ 主角＝，不是声优：
+ * ★ 主角＝角色，不是声优：
  *   森先化歩（モリサキ カフ，声：花譜）／谷置狸眼（タニオキ リメ，声：理芽）／
  *   朝主派流（アサヌシ ハル，声：春猿火）／夜河世界（ヨルカワ セカイ，声：ヰ世界情緒）／
  *   輪廻此処（リンネ ココ，声：幸祜）
- *   ——「花譜」「理芽」等是，游戏中只作为 CAST 标注出现（`cv` 字段）。
+ *   ——「花譜」「理芽」等是声优名，游戏中只作为 CAST 标注出现（`cv` 字段）。
  * 出处：REGENERATE 官方页（番街分区／居住魔女之子／CAST 读音全表）【官方】、
  *       动画《神椿市建設中。》各话副标题与分集剧情、周边设定考据见 docs/lore/related-settings.md。
- *  - 敌人官方称呼：テセラクター／中文＝人之恶意与欲望所生的怪物（具象者＝麦克斯韦，本作不使其登场）
- *  - 「歌は、魔法——」歌即魔法；五人的魔女之子被官方称为「電脳の魔女達」（V.W.P 为现实侧组合）
+ * ★ 术语一律按 docs/lore/worldview.md §0.5「术语统一表」：
+ *   zh 文案固定用 **破维魔／魔女之子／大黒寂／ヰ世界救済教団／麦克斯韦**；
+ *   引用官方原文时才保留官方写法（テセラクター／魔女の娘…），且日文字段里才用日文原词。
+ *   ⚠️ 出处等级（【官方】/【本作自创】…）只写在本注释与 `src` 数据字段里，
+ *      **不再在界面上显示**（见 ui.js 里被注释掉的出处行）。
+ *  - 敌人官方称呼：テセラクター／官方中文＝**破维魔**（动画官网文案：「人の悪意と欲望から生まれる怪物」）。
+ *    ★ 更底层（动画后四集，2026-10 采用）：破维魔＝人类的**恐惧与欲望被麦克斯韦具象化的产物**；
+ *      但**麦克斯韦在本作不做 Boss 实体、不具名登场**（lore §11 行 21／行 30、DESIGN §6.5）。
+ *  - 「歌は、魔法——」歌即魔法；世界观侧五人官方称「**魔女の娘**」／官方英译 Witchlings（本作中文固定「魔女之子」）。
+ *    「**電脳の魔女達**」是 **V.W.P（现实侧组合）** 的官方用语，不是世界观内对五人的称呼。
  *  - 育成系谱：系谱曲（カンザキイオリ）／派生曲／拡声曲 → 用作被动强化命名
- *  - 武器以命名（わたしの声／食虫植物／テラ／the last bullet／キミ消失セカイ）
+ *  - 武器以乐曲命名（わたしの声／食虫植物／テラ／the last bullet／キミ消失セカイ）
  *  - 招募同伴（魔女候補）：天祢亜留（声：存流）／地邑阿栖（声：明透）——ヰ世界救済教団
+ *    ⚠️ 存流／明透 本人出身于平级企划「深脊界」，**不并入本作世界观**；本作只取 REGENERATE
+ *       官方页给出的**神椿市侧既存化身**（天祢亜留／地邑阿栖／彩季詩得）——lore §15.6。
  *  - 皮肤：「（魔女）特殊歌唱用形態 ○○」为官方命名法（花魁鳥／姬連雀）；魔女候補侧暂定「黑」「白」
+ *  - 眷魔（ファミリア）：官方中文对译＝**眷魔**；★ **全体都是「破维魔盟友」**——
+ *    与对应魔女可能有摩擦矛盾，**不存在完全敌对**；且**并非人人一开始就有**（小说里狸眼当时「没有眷魔」）。
+ *    因此本作**不做「先打后收服」的转化叙事**（lore §11 行 22／行 33、§4.2）。
  * 文本字段均为 {zh,en,ja} 三语对象，由 KUP.I18N.tv() 按语言取值。
  * 注：形象色为社区惯用印象色（官方未公开色值）；非官方同人致敬作品。
  */
@@ -22,63 +35,63 @@ window.KUP = window.KUP || {};
 KUP.CHARS = [
   {
     id: 'kaf',
-    name: '森先 化歩', short: '化歩', reading: 'モリサキ カフ', romaji: 'MORISAKI KAFU',
+    name: '森先 化歩', short: '化歩', nameEn: 'Kafu Morisaki', reading: 'モリサキ カフ', romaji: 'MORISAKI KAFU',
     cv: '花譜', cvEn: 'KAF',
     area: 'area0',
     color: '#ff6fb5', color2: '#1f3a5f',
     weapon: 'note',
     desc: {
-      zh: '零番街（下町）的高中一年生。大黑寂中失去双亲，由観統衿架抚养长大；大黑寂七年后被卷入「Q」并遇见らぷらす。<br>持有「能再生毁灭世界的歌声」，开朗活泼——均衡的标准魔女（攻撃 ×1.15）。<br><span class="cv-note">声 — 花譜</span>',
-      en: 'A first-year high schooler of Area 0 (Lower Town). Orphaned by the Great Silence and raised by Erika Kanto; seven years later she is caught in a "Q" and meets Laplace.<br>She carries "the song that can regenerate a ruined world" — bright and lively, the balanced standard witchling (Atk ×1.15).<br><span class="cv-note">CV — KAF</span>',
-      ja: '零番街（下町）の高校一年生。大黒寂で両親を失い、観統衿架に育てられた。七年後、街の「Q」に巻き込まれ、らぷらすと出会う。<br>「滅びた世界を再生させる歌声」を持つ、明快元気な均衡型の魔女の娘（攻撃 ×1.15）。<br><span class="cv-note">声 — 花譜</span>',
+      zh: '零番街（下町）的高中一年生。大黒寂中失去双亲，由姐姐<b>観統衿架</b>抚养长大；七年后被卷入「Q」并遇见らぷらす。<br>持有「能再生毁灭世界的歌声」，开朗活泼——既均衡又标准（攻击 ×1.15）。<br><span class="cv-note">声 — 花譜</span>',
+      en: 'A first-year high schooler of Area 0 (Downtown). She lost both parents in the Great Silence and was raised by her elder sister, <b>Erika Midoh</b>; seven years later she is caught in a "Q" and meets Laplace.<br>She carries "the song that can regenerate a ruined world" — bright and lively, the balanced standard witchling (Atk ×1.15).<br><span class="cv-note">CV — KAF</span>',
+      ja: '零番街（下町）の高校一年生。大黒寂で両親を失い、姉<b>観統衿架</b>に育てられた。七年後、街の「Q」に巻き込まれ、らぷらすと出会う。<br>「滅びた世界を再生させる歌声」を持つ、明快元気な均衡型の魔女の娘（攻撃 ×1.15）。<br><span class="cv-note">声 — 花譜</span>',
     },
     stats: { hp: 100, speed: 150, dmg: 1.15, cd: 1.0, area: 1.0, xp: 1.0 },
   },
   {
     id: 'rim',
-    name: '谷置 狸眼', short: '狸眼', reading: 'タニオキ リメ', romaji: 'TANIOKI RIME',
+    name: '谷置 狸眼', short: '狸眼', nameEn: 'Rime Tanioki', reading: 'タニオキ リメ', romaji: 'TANIOKI RIME',
     cv: '理芽', cvEn: 'RIM',
     area: 'area1',
     color: '#3e78d6', color2: '#c0392b',
     weapon: 'orbit',
     desc: {
-      zh: '壱番街（オフィス地区）的高中三年生，谷置家之女。理知可靠、聪慧努力，近乎完美，却<b>纤细易病</b>，偶因内心的脆弱受伤。<br>「食虫植物」般的音球环绕捕食——拾取 ×1.5、经验 ×1.25，脆皮。<br><span class="cv-note">声 — 理芽</span>',
-      en: 'A third-year of Area 1 (Office District) and daughter of the Tanioki family. Reliable and studious, almost perfect — yet delicate and prone to being wounded by her own fragile heart.<br>Carnivorous orbs orbit and devour: Pickup ×1.5, XP ×1.25, fragile.<br><span class="cv-note">CV — RIM</span>',
-      ja: '壱番街（オフィス地区）の高校三年生、谷置家の娘。理知的で努力家、ほぼ完璧だが<b>繊細で病みやすい</b>。<br>「食虫植物」の如く音球が敵を捕食——取得 ×1.5、経験 ×1.25、紙耐久。<br><span class="cv-note">声 — 理芽</span>',
+      zh: '壱番街（オフィス地区）的高中三年生，谷置家之女。理知可靠、聪慧努力，学习运动歌唱家境几乎完美，唯一的瑕疵是<b>内心的脆弱</b>，偶因它受伤。<br>「食虫植物」般的音球环绕捕食——拾取 ×1.5、经验 ×1.25，脆皮。<br><span class="cv-note">声 — 理芽</span>',
+      en: 'A third-year of Area 1 (Office District) and daughter of the Tanioki family. Reliable and studious — almost perfect in school, sport, song and means — her one flaw is a <b>fragile heart</b>, which sometimes wounds her.<br>Carnivorous orbs orbit and devour: Pickup ×1.5, XP ×1.25, fragile.<br><span class="cv-note">CV — RIM</span>',
+      ja: '壱番街（オフィス地区）の高校三年生、谷置家の娘。理知的で努力家、学業も運動も歌も家柄もほぼ完璧——唯一の瑕は<b>心の弱さ</b>で、時にそれに傷つく。<br>楽曲「食虫植物」の如く音球が敵を捕食——取得 ×1.5、経験 ×1.25、紙耐久。<br><span class="cv-note">声 — 理芽</span>',
     },
     stats: { hp: 85, speed: 150, dmg: 1.0, cd: 1.0, area: 1.0, xp: 1.25, pickup: 1.5 },
   },
   {
     id: 'harusaruhi',
-    name: '朝主 派流', short: '派流', reading: 'アサヌシ ハル', romaji: 'ASANUSHI HARU',
-    cv: '春猿火', cvEn: 'HARUSARUHI',
+    name: '朝主 派流', short: '派流', nameEn: 'Haru Asanushi', reading: 'アサヌシ ハル', romaji: 'ASANUSHI HARU',
+    cv: '春猿火', cvEn: 'Harusaruhi',
     area: 'area2',
     color: '#e03a2f', color2: '#2e9bb6',
     weapon: 'bass',
     desc: {
       zh: '弐番街（歓楽街）的高中二年生，率领不良少年团／黑帮「<b>台風眼</b>」。以歌为支撑坚韧地活；感情丰富、情义深厚，原本内向易受伤，为面对严苛社会而逞强。<br>「テラ」震颤大地的低音冲击波——HP ×1.35、范围 ×1.2，重装。<br><span class="cv-note">声 — 春猿火</span>',
-      en: 'A second-year of Area 2 (Pleasure Quarter) who leads the gang "Taifūgan". She lives stubbornly, propped up by song; rich in feeling and loyalty, once timid and easily hurt, now putting on a brave face for a harsh world.<br>"Terra" — a bass shockwave that quakes the earth: HP ×1.35, Area ×1.2, tanky.<br><span class="cv-note">CV — HARUSARUHI</span>',
+      en: 'A second-year of Area 2 (Entertainment District) who leads the gang "Taifūgan". She lives stubbornly, propped up by song; rich in feeling and loyalty, once timid and easily hurt, now putting on a brave face for a harsh world.<br>"Terra" — a bass shockwave that quakes the earth: HP ×1.35, Area ×1.2, tanky.<br><span class="cv-note">CV — HARUSARUHI</span>',
       ja: '弐番街（歓楽街）の高校二年生。不良集団／組織「<b>台風眼</b>」を率いる。歌を支えに生き、感情豊かで情に厚い。元は内向的で傷つきやすかった。<br>「テラ」が大地を震わせる低音衝撃波——HP ×1.35、範囲 ×1.2、重装。<br><span class="cv-note">声 — 春猿火</span>',
     },
     stats: { hp: 135, speed: 135, dmg: 1.05, cd: 1.1, area: 1.2, xp: 1.0 },
   },
   {
     id: 'isekaijoucho',
-    name: '夜河 世界', short: '世界', reading: 'ヨルカワ セカイ', romaji: 'YORUKAWA SEKAI',
-    cv: 'ヰ世界情緒', cvEn: 'ISEKAI JOUCHO',
+    name: '夜河 世界', short: '世界', nameEn: 'Sekai Yorukawa', reading: 'ヨルカワ セカイ', romaji: 'YORUKAWA SEKAI',
+    cv: 'ヰ世界情緒', cvEn: 'Isekaijoucho',
     area: 'area3',
     color: '#ede6da', color2: '#2038c0',
     weapon: 'laser',
     desc: {
-      zh: '参番街（農園地区）出身，天生拥有<b>预知未来</b>之力、意志坚定。被魔女崇拝教団「<b>ヰ世界救済教団</b>」奉为<b>活神</b>，教団是她必须回去救援的地方。<br>描摹「キミ消失セカイ」的贯穿光束——冷却 ×0.85、攻击 ×1.05。<br><span class="cv-note">声 — ヰ世界情緒</span>',
-      en: 'From Area 3 (Farmlands), born with the power to <b>foresee the future</b> and an unshakable will. The witch-worshipping "Issekai Salvation Order" reveres her as a <b>living god</b> — the order is the home she must return to save.<br>A piercing beam tracing "Kimi Shometsu Sekai": Cooldown ×0.85, Atk ×1.05.<br><span class="cv-note">CV — ISEKAI JOUCHO</span>',
+      zh: '参番街（农园区）出身，天生拥有<b>预知未来</b>之力、意志坚定。被参番街的崇巫教团「<b>ヰ世界救済教団</b>」奉为<b>活神</b>，教団是她必须回去救援的地方。<br>描摹「キミ消失セカイ」的贯穿光束——冷却 ×0.85、攻击 ×1.05。<br><span class="cv-note">声 — ヰ世界情緒</span>',
+      en: 'From Area 3 (Agricultural Area), born with the power to <b>foresee the future</b> and an unshakable will. The witch-worshipping "Isekai Salvation Cult" reveres her as a <b>living deity</b> — the cult is the home she must return to save.<br>A piercing beam tracing "Kimi Shometsu Sekai": Cooldown ×0.85, Atk ×1.05.<br><span class="cv-note">CV — ISEKAI JOUCHO</span>',
       ja: '参番街（農園地区）出身。生まれながら<b>未来を予知</b>する力を持ち、意志は揺るがない。魔女崇拝教団「<b>ヰ世界救済教団</b>」に<b>生き神</b>として奉られる。<br>「キミ消失セカイ」をなぞる貫通光束——クールタイム ×0.85、攻撃 ×1.05。<br><span class="cv-note">声 — ヰ世界情緒</span>',
     },
     stats: { hp: 90, speed: 150, dmg: 1.05, cd: 0.85, area: 1.1, xp: 1.0 },
   },
   {
     id: 'koko',
-    name: '輪廻 此処', short: '此処', reading: 'リンネ ココ', romaji: 'RINNE KOKO',
+    name: '輪廻 此処', short: '此処', nameEn: 'Koko Rinne', reading: 'リンネ ココ', romaji: 'RINNE KOKO',
     cv: '幸祜', cvEn: 'KOKO',
     area: 'area4',
     color: '#b06bff', color2: '#5a1fc0',
@@ -98,14 +111,14 @@ KUP.CHARS = [
   {
     id: 'aru',
     recruit: true,
-    name: '天祢 亜留', short: '亜留', reading: 'アマネ アル', romaji: 'AMANE ARU',
-    cv: '存流', cvEn: 'aru',
+    name: '天祢 亜留', short: '亜留', nameEn: 'Aru Amane', reading: 'アマネ アル', romaji: 'AMANE ARU',
+    cv: '存流', cvEn: 'ARU',
     area: 'area3',
     color: '#8fa8ff', color2: '#2a3a8f',
     weapon: 'prayer',
     desc: {
       zh: '参番街「ヰ世界救済教団」的教徒，被列为<b>魔女候補</b>——阶位低于魔女之子，却已能歌唱。<br>以祈祷为武器：「救済の鐘」化作震颤的钟声冲击环。HP ×1.1、范围 ×1.1。<br><span class="cv-note">声 — 存流</span>',
-      en: 'An acolyte of the Issekai Salvation Order in Area 3, ranked a <b>witch candidate</b> — below the witchlings, yet already able to sing.<br>Her weapon is prayer: "Bell of Salvation" rings out as a quaking shockwave. HP ×1.1, Area ×1.1.<br><span class="cv-note">CV — aru</span>',
+      en: 'A member of the Isekai Salvation Cult in Area 3, ranked a <b>witch candidate</b> — below the witchlings, yet already able to sing.<br>Her weapon is prayer: "Bell of Salvation" rings out as a quaking shockwave. HP ×1.1, Area ×1.1.<br><span class="cv-note">CV — aru</span>',
       ja: '参番街「ヰ世界救済教団」の教徒にして<b>魔女候補</b>——魔女の娘より下の階位だが、すでに歌える。<br>祈りを武器に、「救済の鐘」が衝撃環となって響く。HP ×1.1、範囲 ×1.1。<br><span class="cv-note">声 — 存流</span>',
     },
     stats: { hp: 110, speed: 142, dmg: 1.05, cd: 1.0, area: 1.1, xp: 1.05 },
@@ -115,14 +128,14 @@ KUP.CHARS = [
   {
     id: 'asu',
     recruit: true,
-    name: '地邑 阿栖', short: '阿栖', reading: 'チムラ アス', romaji: 'CHIMURA ASU',
-    cv: '明透', cvEn: 'asu',
+    name: '地邑 阿栖', short: '阿栖', nameEn: 'Asu Chimura', reading: 'チムラ アス', romaji: 'CHIMURA ASU',
+    cv: '明透', cvEn: 'ASU',
     area: 'area3',
     color: '#c47f00', color2: '#005110',
     weapon: 'follow',
     desc: {
-      zh: '教团教徒、<b>亜留的妹分</b>，同为魔女候補。<br>追随的歌声化作「追唱の矢」——贯穿敌列的连射。拾取 ×1.3、攻击 ×1.1。<br><span class="cv-note">声 — 明透</span>',
-      en: 'An acolyte and <b>Aru\'s protégée</b>, likewise a witch candidate.<br>Her following song becomes "Arrows of the Refrain" — piercing volleys. Pickup ×1.3, Atk ×1.1.<br><span class="cv-note">CV — asu</span>',
+      zh: '教团教徒、<b>亜留的妹妹般的存在</b>，同为魔女候補。<br>追随的歌声化作「追唱の矢」——贯穿敌列的连射。拾取 ×1.3、攻击 ×1.1。<br><span class="cv-note">声 — 明透</span>',
+      en: 'A member of the cult and <b>a younger-sister figure to Aru</b>, likewise a witch candidate.<br>Her following song becomes "Arrows of the Refrain" — piercing volleys. Pickup ×1.3, Atk ×1.1.<br><span class="cv-note">CV — asu</span>',
       ja: '教団の教徒で<b>亜留の妹分</b>、同じく魔女候補。<br>追従の歌が「追唱の矢」となり敵列を貫く。取得 ×1.3、攻撃 ×1.1。<br><span class="cv-note">声 — 明透</span>',
     },
     stats: { hp: 95, speed: 152, dmg: 1.1, cd: 0.95, area: 1.0, xp: 1.1, pickup: 1.3 },
@@ -133,6 +146,21 @@ KUP.CHARS = [
 /* 可操作角色（含招募角色）查询 */
 KUP.CHAR = id => KUP.CHARS.find(c => c.id === id) || KUP.CHARS[0];
 KUP.charUnlockText = c => (c.unlock && c.unlock.desc) || null;
+
+/* ---------- ★ 语言相关的显示名／CAST（2026-10 新增） ----------
+ * 背景：角色名在数据里是**日文汉字**（`name: '森先 化歩'`），对 zh/ja 界面直接用没问题；
+ * 但英文界面若照抄汉字，就成了「英文 UI 里夹汉字」。
+ * ★ 官方英文（srd VIRTUAL REALITY EN 页，见 docs/lore/research/official_srd_en_cn.md）用的是
+ *   **Given + Family** 的罗马字：`Kafu Morisaki` / `Rime Tanioki` / … / `Ciel Saiki`，
+ *   CAST 写作 `KAF`／`RIM`／`Harusaruhi`／`Isekaijoucho`／`KOKO`／`ARU`／`ASU`／`CIEL`。
+ * ⇒ 英文界面走 `nameEn`／`cvEn`，**zh/ja 界面仍用日文汉字名**（本作既定方针，与官方中文的简体写法不同）。
+ * ⚠️ **不要**把这套用在**存档里持久化的字段**上（如 `run.witch`＝结算记录里的角色名）——
+ *   存档若存语言相关字符串，切语言后会串味。故 `game.js` 的 `st.witch` 仍用日文名。 */
+KUP.nameOf = c => (!c ? '' : (KUP.I18N.lang === 'en' && c.nameEn ? c.nameEn : c.name));
+/* 英文取 `nameEn` 的第一个词（`Kafu Morisaki` → `Kafu`）作短名 */
+KUP.shortOf = c => (!c ? '' : (KUP.I18N.lang === 'en' && c.nameEn
+  ? c.nameEn.split(' ')[0] : (c.short || c.name)));
+KUP.cvOf = c => (!c ? '' : (KUP.I18N.lang === 'en' && c.cvEn ? c.cvEn : c.cv));
 
 /* ---------- 武器（歌＝魔法） ----------
  * ★ v0.11「武装解锁」：owner ＝ 该武器的持有角色 id（KUP.CHARS）。
@@ -245,9 +273,9 @@ KUP.WEAPONS = {
     id: 'note', icon: '♪', color: '#4ee6ff', behavior: 'note', maxLv: 5, owner: 'kaf',
     name: { zh: '分形音符', en: 'Fractal Note', ja: 'フラクタル・ノート' },
     desc: {
-      zh: '声之代表曲「わたしの声」化作追尾敌人的音符。森先化歩的初期武装。',
-      en: 'The signature song "Watashi no Koe" becomes notes that chase down enemies. MORISAKI KAFU\'s starting weapon.',
-      ja: '声の代表曲「わたしの声」が音符と化して敵を追尾する。森先化歩の初期武装。',
+      zh: '乐曲「わたしの声」化作追尾敌人的音符。森先化歩的初期武装。',
+      en: 'The song "Watashi no Koe" becomes notes that chase down enemies. MORISAKI KAFU\'s starting weapon.',
+      ja: '楽曲「わたしの声」が音符と化して敵を追尾する。森先化歩の初期武装。',
     },
     lvDesc: [
       { zh: '追尾音符 ×2，命中后消失。', en: '2 homing notes; they vanish on hit.', ja: '追尾音符 ×2。命中すると消える。' },
@@ -278,9 +306,9 @@ KUP.WEAPONS = {
     id: 'orbit', icon: '◎', color: '#ff6bb5', behavior: 'orbit', maxLv: 5, owner: 'rim',
     name: { zh: '暴食音球', en: 'Carnivorous Bit', ja: 'カーニヴォラス・ビット' },
     desc: {
-      zh: '声之代表曲「食虫植物」般环绕捕食的音球。谷置狸眼的初期武装。<br><span class="cv-note">体积随「范围」、转速随「冷却」成长</span>',
+      zh: '乐曲「食虫植物」般环绕捕食的音球。谷置狸眼的初期武装。<br><span class="cv-note">体积随「范围」、转速随「冷却」成长</span>',
       en: 'Orbs that orbit and devour like "Shokuchuu Shokubutsu". TANIOKI RIME\'s starting weapon.<br><span class="cv-note">Radius scales with Area, spin with Cooldown</span>',
-      ja: '声の代表曲「食虫植物」の如く敵を捕らえる音球。谷置狸眼の初期武装。<br><span class="cv-note">旋回半径は「範囲」、回転速度は「クールダウン」で伸びる</span>',
+      ja: '楽曲「食虫植物」の如く敵を捕らえる音球。谷置狸眼の初期武装。<br><span class="cv-note">旋回半径は「範囲」、回転速度は「クールダウン」で伸びる</span>',
     },
     lvDesc: [
       { zh: '音球 ×2，接触伤害并击退。', en: '2 orbs; contact damage and knockback.', ja: '音球 ×2、接触ダメージとノックバック。' },
@@ -310,9 +338,9 @@ KUP.WEAPONS = {
     id: 'bass', icon: '低', color: '#ffb25a', behavior: 'bass', maxLv: 5, owner: 'harusaruhi',
     name: { zh: '泰拉坠击', en: 'Terra Drop', ja: 'テラ・ドロップ' },
     desc: {
-      zh: '令大地震颤的低音冲击波，取自声之代表曲「テラ」。朝主派流的初期武装。',
-      en: 'A bass shockwave that quakes the earth, from "Terra". ASANUSHI HARU\'s starting weapon.',
-      ja: '大地を震わせる低音衝撃波、声の代表曲「テラ」より。朝主派流の初期武装。',
+      zh: '令大地震颤的低音冲击波，取自乐曲「テラ」。朝主派流的初期武装。',
+      en: 'A bass shockwave that quakes the earth, from the song "Terra". ASANUSHI HARU\'s starting weapon.',
+      ja: '大地を震わせる低音衝撃波、楽曲「テラ」より。朝主派流の初期武装。',
     },
     lvDesc: [
       { zh: '以自身为中心释放冲击环。', en: 'Releases a shock ring around you.', ja: '自身を中心に衝撃環を放つ。' },
@@ -342,9 +370,9 @@ KUP.WEAPONS = {
     id: 'lance', icon: '槍', color: '#b06bff', behavior: 'lance', maxLv: 5, owner: 'koko',
     name: { zh: '终末枪音', en: 'Last Bullet', ja: 'ラスト・バレット' },
     desc: {
-      zh: '贯穿敌列的音之枪击，取自声之代表曲「the last bullet」。輪廻此処的初期武装。',
-      en: 'Piercing sonic gunfire from "the last bullet". RINNE KOKO\'s starting weapon.',
-      ja: '声の代表曲「the last bullet」より、敵列を貫く音の銃撃。輪廻此処の初期武装。',
+      zh: '贯穿敌列的音之枪击，取自乐曲「the last bullet」。輪廻此処的初期武装。',
+      en: 'Piercing sonic gunfire from the song "the last bullet". RINNE KOKO\'s starting weapon.',
+      ja: '楽曲「the last bullet」より、敵列を貫く音の銃撃。輪廻此処の初期武装。',
     },
     lvDesc: [
       { zh: '朝移动方向射出 2 发贯穿音枪。', en: 'Fires 2 piercing lances toward your movement.', ja: '移動方向へ貫通音槍 ×2 を発射。' },
@@ -374,12 +402,12 @@ KUP.WEAPONS = {
     id: 'laser', icon: '光', color: '#7aa0ff', behavior: 'laser', maxLv: 5, owner: 'isekaijoucho',
     name: { zh: '消失光束', en: 'Vanish Beam', ja: 'ヴァニッシュ・ビーム' },
     desc: {
-      zh: '描摹声之代表曲「キミ消失セカイ」的贯穿光束。夜河世界的初期武装。',
-      en: 'A piercing beam tracing "Kimi Shometsu Sekai". YORUKAWA SEKAI\'s starting weapon.',
-      ja: '声の代表曲「キミ消失セカイ」をなぞる貫通光束。夜河世界の初期武装。',
+      zh: '描摹乐曲「キミ消失セカイ」的贯穿光束。夜河世界的初期武装。',
+      en: 'A piercing beam tracing the song "Kimi Shometsu Sekai". YORUKAWA SEKAI\'s starting weapon.',
+      ja: '楽曲「キミ消失セカイ」をなぞる貫通光束。夜河世界の初期武装。',
     },
     lvDesc: [
-      { zh: '朝最近的怪异发射贯穿光束。', en: 'Fires a piercing beam at the nearest aberration.', ja: '最寄りの異形へ貫通ビームを発射。' },
+      { zh: '朝最近的破维魔发射贯穿光束。', en: 'Fires a piercing beam at the nearest Tesseracter.', ja: '最寄りのテセラクターへ貫通ビームを発射。' },
       { zh: '光束加宽，伤害提升。', en: 'Wider beam, more damage.', ja: 'ビームが太くなり、ダメージアップ。' },
       { zh: '光束延长。', en: 'Longer beam.', ja: 'ビームが長くなる。' },
       { zh: '伤害大幅提升。', en: 'Much more damage.', ja: 'ダメージが大幅アップ。' },
@@ -409,9 +437,9 @@ KUP.WEAPONS = {
     id: 'prayer', icon: '鐘', color: '#8fa8ff', behavior: 'bass', maxLv: 5, owner: 'aru',
     name: { zh: '救済之钟', en: 'Bell of Salvation', ja: '救済の鐘' },
     desc: {
-      zh: '教团的祈祷化作钟声冲击环。天祢亜留的初期武装（本作同人命名）。',
-      en: 'The order\'s prayer becomes a bell-like shockwave. AMANE ARU\'s starting weapon (fan-made naming).',
-      ja: '教団の祈りが鐘の衝撃環となる。天祢亜留の初期武装（本作同人命名）。',
+      zh: '教团的祈祷化作钟声冲击环。天祢亜留的初期武装。',
+      en: 'The order\'s prayer becomes a bell-like shockwave. AMANE ARU\'s starting weapon.',
+      ja: '教団の祈りが鐘の衝撃環となる。天祢亜留の初期武装。',
     },
     lvDesc: [
       { zh: '以自身为中心敲响钟声冲击环。', en: 'Rings a shockwave around you.', ja: '自身を中心に鐘の衝撃環を鳴らす。' },
@@ -441,9 +469,9 @@ KUP.WEAPONS = {
     id: 'follow', icon: '矢', color: '#7de0c8', behavior: 'lance', maxLv: 5, owner: 'asu',
     name: { zh: '追唱之矢', en: 'Arrows of the Refrain', ja: '追唱の矢' },
     desc: {
-      zh: '追随的歌声化作贯穿之矢。地邑阿栖的初期武装（本作同人命名）。',
-      en: 'A following song becomes piercing arrows. CHIMURA ASU\'s starting weapon (fan-made naming).',
-      ja: '追従の歌が貫通の矢となる。地邑阿栖の初期武装（本作同人命名）。',
+      zh: '追随的歌声化作贯穿之矢。地邑阿栖的初期武装。',
+      en: 'A following song becomes piercing arrows. CHIMURA ASU\'s starting weapon.',
+      ja: '追従の歌が貫通の矢となる。地邑阿栖の初期武装。',
     },
     lvDesc: [
       { zh: '朝移动方向射出 2 支贯穿之矢。', en: 'Fires 2 piercing arrows toward your movement.', ja: '移動方向へ貫通の矢 ×2 を発射。' },
@@ -479,9 +507,9 @@ KUP.WEAPONS = {
     id: 'toss', icon: '塊', color: '#ffd25a', behavior: 'toss', maxLv: 5,
     name: { zh: '残留音块', en: 'Lingering Sound Brick', ja: '残響ブロック' },
     desc: {
-      zh: '自动投掷音块到最近的怪异，落点留下<b>滞留音场</b>持续伤害。近距离投掷物（本作同人命名）。',
-      en: 'Auto-throws sound bricks at the nearest aberration; the impact leaves a <b>lingering sound field</b> that keeps damaging. A short-range thrown weapon (fan-made).',
-      ja: '最寄りの異形へ音塊を自動投擲し、着地点に<b>残響音場</b>を残して持続ダメージ。近距離投擲武器（本作同人命名）。',
+      zh: '自动投掷音块到最近的破维魔，落点留下<b>滞留音场</b>持续伤害。近距离投掷物。',
+      en: 'Auto-throws sound bricks at the nearest Tesseracter; the impact leaves a <b>lingering sound field</b> that keeps damaging. A short-range thrown weapon.',
+      ja: '最寄りのテセラクターへ音塊を自動投擲し、着地点に<b>残響音場</b>を残して持続ダメージ。近距離投擲武器。',
     },
     lvDesc: [
       { zh: '投掷 1 块，落点滞留 2.5 秒。', en: 'Throws 1 brick; the field lingers 2.5s.', ja: '投擲 ×1、着地点に 2.5 秒の残響。' },
@@ -511,9 +539,9 @@ KUP.WEAPONS = {
     id: 'bomb', icon: '爆', color: '#ff7a4d', behavior: 'bomb', maxLv: 5,
     name: { zh: '随机空爆', en: 'Random Air Raid', ja: 'ランダム空爆' },
     desc: {
-      zh: '在自身周围<b>随机落点</b>降下音爆，短暂延迟后引爆。范围大、位置不可控（本作同人命名）。',
-      en: 'Drops sound bombs at <b>random spots</b> around you, detonating after a short fuse. Wide area, no aim control (fan-made).',
-      ja: '自身の周囲の<b>無作為な地点</b>へ音爆を落とし、短い信管の後に起爆。広範囲・着弾は運任せ（本作同人命名）。',
+      zh: '在自身周围<b>随机落点</b>降下音爆，短暂延迟后引爆。范围大、位置不可控。',
+      en: 'Drops sound bombs at <b>random spots</b> around you, detonating after a short fuse. Wide area, no aim control.',
+      ja: '自身の周囲の<b>無作為な地点</b>へ音爆を落とし、短い信管の後に起爆。広範囲・着弾は運任せ。',
     },
     lvDesc: [
       { zh: '每轮降下 1 枚音爆（信管 0.8 秒）。', en: 'Drops 1 bomb per cycle (0.8s fuse).', ja: '1 サイクルにつき音爆 ×1（信管 0.8 秒）。' },
@@ -547,9 +575,9 @@ KUP.WEAPONS = {
     vis: 0.5,
     name: { zh: '音之地雷', en: 'Sound Mine', ja: '音の地雷' },
     desc: {
-      zh: '在身后<b>放置</b>滞留音雷，敌人触碰即引爆。适合边退边打（本作同人命名）。',
-      en: 'Plants <b>lingering sound mines</b> behind you; they detonate when enemies touch them. Ideal while retreating (fan-made).',
-      ja: '後方に<b>残響の音雷</b>を設置し、敵が触れると起爆。後退しながら戦うのに向く（本作同人命名）。',
+      zh: '在身后<b>放置</b>滞留音雷，破维魔触碰即引爆。适合边退边打。',
+      en: 'Plants <b>lingering sound mines</b> behind you; they detonate when a Tesseracter touches them. Ideal while retreating.',
+      ja: '後方に<b>残響の音雷</b>を設置し、テセラクターが触れると起爆。後退しながら戦うのに向く。',
     },
     lvDesc: [
       { zh: '每轮放置 1 枚（最多同时 4 枚）。', en: 'Plants 1 mine per cycle (max 4).', ja: '1 サイクルにつき ×1（同時最大 4）。' },
@@ -587,9 +615,9 @@ KUP.WEAPONS = {
     id: 'slash', icon: '斬', color: '#ff8a5a', behavior: 'slash', maxLv: 5,
     name: { zh: '斩音太刀', en: 'Sonic Blade', ja: '斬音の太刀' },
     desc: {
-      zh: '挥出的歌声化作一振太刀——朝瞄准方向挥出<b>扇形斩击</b>，命中即击退。近战武器（本作同人命名）。<br><span class="cv-note">扇形角度与刀长均可在数据表中调整</span>',
-      en: 'Your song sharpens into a single blade — a <b>fan-shaped slash</b> is swung toward your aim, knocking enemies back. A melee weapon (fan-made).<br><span class="cv-note">Fan angle and blade length are data parameters</span>',
-      ja: '歌が一振りの太刀となる——照準方向へ<b>扇形の斬撃</b>を放ち、命中した敵をノックバック。近接武器（本作同人命名）。<br><span class="cv-note">扇形角度と刀長はデータ表で調整可能</span>',
+      zh: '挥出的歌声化作一振太刀——朝瞄准方向挥出<b>扇形斩击</b>，命中即击退。近战武器。',
+      en: 'Your song sharpens into a single blade — a <b>fan-shaped slash</b> is swung toward your aim, knocking enemies back. A melee weapon.',
+      ja: '歌が一振りの太刀となる——照準方向へ<b>扇形の斬撃</b>を放ち、命中した敵をノックバック。近接武器。',
     },
     lvDesc: [
       { zh: '扇形 90°・刀长 110 —— 基础的一闪。', en: '90° fan, 110 blade — a basic flash.', ja: '扇形 90°・刀長 110 —— 基本の一閃。' },
@@ -678,9 +706,9 @@ KUP.PASSIVES = {
     icon: '吸', color: '#ff6bb5', maxLv: 5,
     name: { zh: '吸音', en: 'Sound Drain', ja: '吸音' },
     desc: {
-      zh: '吸走怪异的余音——击破时回复最大生命的 <b>0.6%</b>／级（精英×4、Boss×10）。',
-      en: 'Drink the aberration\'s afterglow — heal <b>0.6%</b> max HP per level on kill (×4 elite, ×10 boss).',
-      ja: '異形の余音を吸う——撃破時、最大生命の <b>0.6%</b>／レベル回復（精英 ×4・Boss ×10）。',
+      zh: '吸走破维魔的余音——击破时回复最大生命的 <b>0.6%</b>／级（精英×4、Boss×10）。',
+      en: 'Drink the Tesseracter\'s afterglow — heal <b>0.6%</b> max HP per level on kill (×4 elite, ×10 boss).',
+      ja: 'テセラクターの余音を吸う——撃破時、最大生命の <b>0.6%</b>／レベル回復（エリート ×4・Boss ×10）。',
     },
   },
   retaliate: {
@@ -781,24 +809,29 @@ KUP.ITEMS = {
     id: 'freeze', icon: '凍', color: '#bff0ff', kind: 'freeze', seconds: 2.6,
     name: { zh: '凍結の符', en: 'Ward of Frost', ja: '凍結の符' },
     desc: {
-      zh: '歌声凝霜——<b>全场怪异 2.6 秒完全僵直（冷冻）</b>：不动、不攻击、无接触伤害。<br><span class="cv-note">Boss 减免为 50%、精英 75%</span>',
-      en: 'Your song frosts over — <b>every aberration is frozen solid for 2.6s</b>: no movement, no attacks, no contact damage.<br><span class="cv-note">Bosses 50%, elites 75% duration</span>',
-      ja: '歌が霜となる——<b>場の異形すべてを 2.6 秒完全に凍結</b>：移動・攻撃・接触ダメージなし。<br><span class="cv-note">Boss は 50%、精英は 75% の時間</span>',
+      zh: '歌声凝霜——<b>全场破维魔 2.6 秒完全僵直（冷冻）</b>：不动、不攻击、无接触伤害。<br><span class="cv-note">Boss 减免为 50%、精英 75%</span>',
+      en: 'Your song frosts over — <b>every Tesseracter is frozen solid for 2.6s</b>: no movement, no attacks, no contact damage.<br><span class="cv-note">Bosses 50%, elites 75% duration</span>',
+      ja: '歌が霜となる——<b>場のテセラクターすべてを 2.6 秒完全に凍結</b>：移動・攻撃・接触ダメージなし。<br><span class="cv-note">Boss は 50%、エリートは 75% の時間</span>',
     },
   },
   bind: {
     id: 'bind', icon: '鈍', color: '#8fd0ff', kind: 'slow', amount: 0.5, seconds: 8,
     name: { zh: '鈍足の符', en: 'Ward of Sloth', ja: '鈍足の符' },
     desc: {
-      zh: '歌声变得黏重——<b>全场怪异 8 秒减速至 50%</b>（可与滞留音场的减速叠加，取最强）。',
-      en: 'Your song turns thick — <b>every aberration is slowed to 50% for 8s</b> (stacks with lingering fields, strongest wins).',
-      ja: '歌が粘る——<b>場の異形すべてを 8 秒間 50% に減速</b>（残響音場の減速と重ねがけ、強い方が適用）。',
+      zh: '歌声变得黏重——<b>全场破维魔 8 秒减速至 50%</b>（可与滞留音场的减速叠加，取最强）。',
+      en: 'Your song turns thick — <b>every Tesseracter is slowed to 50% for 8s</b> (stacks with lingering fields, strongest wins).',
+      ja: '歌が粘る——<b>場のテセラクターすべてを 8 秒間 50% に減速</b>（残響音場の減速と重ねがけ、強い方が適用）。',
     },
   },
 };
 KUP.ITEM = id => KUP.ITEMS[id] || null;
 
-/* ---------- 敌人（テセラクター：人之恶意所生的怪异） ----------
+/* ---------- 敌人＝破维魔（テセラクター）：人的恐惧与欲望被具象化的产物 ----------
+ * 官方文案（动画官网）只写到「人の悪意と欲望から生まれる怪物」；更底层的「具象者＝麦克斯韦」
+ * 出自动画后四集（lore §11 行 21／行 30），**本作不做 Boss 实体、不在文案里点其名**。
+ * ⚠️ 名称纪律：zh 一律「破维魔…」（§0.5 统一表记），日文原词只出现在 ja 字段；
+ *    **「異能テセラクター」在官方指的是眷魔（ファミリア）＝盟友**，故本表不再用它命名杂兵精英
+ *    （lore §4.2：全部眷魔都是破维魔盟友，不存在完全敌对，不能当敌人）。
  * turn ＝ **角速度上限（度/秒）**：敌人朝向以它为上限转向「可走方向」（见
  * js/game.js steerCity 与 js/entities.js Enemy.update）。单位按本仓库数据表
  * 约定用「度」，运行时以 DEG 换算；大体型转得慢 ⇒ tank/elite/Boss 绕圈时更笨重。
@@ -806,41 +839,52 @@ KUP.ITEM = id => KUP.ITEMS[id] || null;
 KUP.ENEMIES = {
   noise: {
     id: 'noise',
-    name: { zh: 'テセラクター（基本型）', en: 'Tesseracter (Basic)', ja: 'テセラクター（基本型）' },
+    name: { zh: '破维魔（基本型）', en: 'Tesseracter (Basic)', ja: 'テセラクター（基本型）' },
     hp: 10, speed: 62, dmg: 8, xp: 1, r: 12, color: '#8d94b8', sides: 7, turn: 600,
   },
   glitch: {
     id: 'glitch',
-    name: { zh: 'テセラクター（高速型）', en: 'Tesseracter (Swift)', ja: 'テセラクター（高速型）' },
+    name: { zh: '破维魔（高速型）', en: 'Tesseracter (Swift)', ja: 'テセラクター（高速型）' },
     hp: 7, speed: 108, dmg: 6, xp: 2, r: 9, color: '#55e0ff', sides: 5, turn: 900,
   },
   tank: {
     id: 'tank',
-    name: { zh: 'テセラクター（巨躯型）', en: 'Tesseracter (Bulwark)', ja: 'テセラクター（巨躯型）' },
+    name: { zh: '破维魔（巨躯型）', en: 'Tesseracter (Bulwark)', ja: 'テセラクター（巨躯型）' },
     hp: 60, speed: 34, dmg: 18, xp: 6, r: 20, color: '#c2507e', sides: 8, turn: 300,
   },
   elite: {
     id: 'elite',
-    name: { zh: '異能テセラクター', en: 'Aberrant Tesseracter', ja: '異能テセラクター' },
+    /* ★ 原名「異能テセラクター」有误——该词官方指眷魔（盟友）。这里改用中性的「強化型」。 */
+    name: { zh: '破维魔（強化型）', en: 'Tesseracter (Elite)', ja: 'テセラクター（強化型）' },
     hp: 260, speed: 74, dmg: 16, xp: 30, r: 26, color: '#ffab5e', sides: 6, elite: true, turn: 450,
   },
   boss: {
     id: 'boss',
-    name: { zh: '大テセラクター〈消音〉', en: 'Grand Tesseracter 〈Mute〉', ja: '大テセラクター〈消音〉' },
+    name: { zh: '大破维魔〈消音〉', en: 'Grand Tesseracter 〈Mute〉', ja: '大テセラクター〈消音〉' },
     hp: 2000, speed: 46, dmg: 24, xp: 0, r: 52, color: '#ff5aa8', sides: 9, boss: true, turn: 380,
   },
 };
 
 /* ---------- 记忆片段（記憶の卵 ★ 动画第6話解锁的记忆图鉴） ----------
- * 拾取記憶の卵 → 按顺序解锁一条；全部世界观依据见 docs/lore/worldview.md。 */
+ * 拾取記憶の卵 → 按顺序解锁一条。
+ * ★ 标题全部取自**动画各话官方副标题**（【官方】）：魔女の娘（第1話）／悪意（第4話）／
+ *   フラグメント -Energy of will-（第3話）／ファミリア -Familiar-（第5話）／
+ *   記憶の卵 -Piece of memory-（第6話）／ブラックアウト＝大黒寂（第8話）／再生 -Regenerate-（第11話）。
+ *   「復興率」取自協奏中官方机制。全部世界观依据见 docs/lore/worldview.md §2.3／§12。
+ * ⚠️ 正文**不得解答官方"待解四问"**（少女们为何歌唱／神椿市为何反复崩坏再生／
+ *    拉普拉斯是敌是友／破维魔的真面目）——官方明言「刻意不去提及」（lore §1、§15.6）。
+ *    唯一的例外是「現象＝索菲娅的时间回溯」，且必须标注为**本作设定解读**。
+ * ⚠️ 敌人根源的完整链条是「麦克斯韦 → 大黒寂（伪装天灾）→ 恐惧与欲望 → 破维魔 → 提取フラグメント」，
+ *    但『malice』一篇沿用**动画官网可见文案「悪意と欲望」**（与该篇的官方副标题同源），
+ *    不点出具象者麦克斯韦——更底层的写法只留在本注释里。 */
 KUP.FRAGMENTS = [
   {
     id: 'witchling',
     title: { zh: '魔女の娘 -Witchling-', en: 'Witchling', ja: '魔女の娘 -Witchling-' },
     text: {
-      zh: '五人的魔女之子住在废墟之中，却仍在歌唱——V.W.P 的歌声，是这座城市最后的照明。',
-      en: 'Five witchlings live among the ruins, yet still sing — the songs of V.W.P are the city\'s last light.',
-      ja: '五人の魔女の娘は廃墟に住み、それでも歌う——V.W.P の歌声は、この街最後の照明だ。',
+      zh: '五名魔女之子住在废墟之中，却仍在歌唱——那歌声，是这座城市最后的照明。',
+      en: 'Five witchlings live among the ruins, yet still sing — that song is the city\'s last light.',
+      ja: '五人の魔女の娘は廃墟に住み、それでも歌う——その歌声は、この街最後の照明だ。',
     },
   },
   {
@@ -864,10 +908,14 @@ KUP.FRAGMENTS = [
   {
     id: 'familiar',
     title: { zh: 'ファミリア -Familiar-', en: 'Familiar', ja: 'ファミリア -Familiar-' },
+    /* ★ 2026-10 定论（本仓库 lore §4.2／§11 行 22）：眷魔**全体是破维魔盟友**——
+     *   与对应魔女可能有摩擦、矛盾、冲突，但**不存在完全敌对**。
+     *   ⚠️ 旧文案「敌与友，一线之隔」属于已被推翻的「敵友两义」说法，不得再出现；
+     *      本作也不做「先当敌人打、再收服」的转化叙事。 */
     text: {
-      zh: '与魔女结盟的使魔「ファミリア」——它们同时仍是異能破维魔。敌与友，一线之隔。',
-      en: 'The familiars allied with witches — yet they remain aberrant Tesseracters. Foe and friend, one line apart.',
-      ja: '魔女と盟した使い魔「ファミリア」——しかし同時に異能テセラクターでもある。敵と味方は紙一重。',
+      zh: '与魔女结盟的使魔「ファミリア（<b>眷魔</b>）」——它们同时仍是异能破维魔，却始终是<b>盟友</b>：会有摩擦与矛盾，但不会真正与你为敌。',
+      en: 'The familiars who covenant with witches — they remain aberrant Tesseracters, yet they are <b>allies</b>: friction and conflict, but never true enmity.',
+      ja: '魔女と盟した使い魔「ファミリア」。同時に異能テセラクターであり、そして<b>盟友</b>だ——摩擦はあれど、真に敵対することはない。',
     },
   },
   {
@@ -909,14 +957,17 @@ KUP.FRAGMENTS = [
 ];
 
 /* ---------- 可招募（同行支援，非可操作角色） ----------
- * ★ 2026-10 修正：（见上方 KUP.CHARS 的 aru／asu），
- *   同行支援层改用——REGENERATE 官方页给出的
- *   「肆番街相遇的少女，復興課课员」【官方】，同样需要（通关肆番街）后才能在选人界面带出。
+ * ★ 2026-10 修正：同行支援层不再是自创角色，改用 **REGENERATE 官方页给出的既存角色**——
+ *   「肆番街相遇的少女，**復興課課員**」**彩季 詩得（サイキ シエル＝CIEL）**【官方】。
+ *   ⚠️ CIEL 本人出自平级企划（深脊界／空爽），**不并入本作世界观**；本作只取她在
+ *      神椿市侧的官方化身（lore §3.5／§13.5／§15.6）。
+ *   与魔女候補（aru／asu，见上方 KUP.CHARS）同属「招募式」——需通关肆番街后、
+ *   并在瓦利斯支付市民票，才能在选人界面带出。
  * perk 为同行效果；皮肤（KUP.FORMS kind='companion'）另加少量修正。 */
 KUP.COMPANIONS = [
   {
     id: 'ciel',
-    name: '彩季 詩得', reading: 'サイキ シエル', romaji: 'SAIKI SHIERU',
+    name: '彩季 詩得', nameEn: 'Ciel Saiki', reading: 'サイキ シエル', romaji: 'SAIKI SHIERU',
     cv: 'CIEL', cvEn: 'CIEL',
     faction: { zh: '復興課', en: 'Reconstruction Division', ja: '復興課' },
     rank: { zh: '復興課課員', en: 'Reconstruction Division staff', ja: '復興課課員' },
@@ -1021,13 +1072,16 @@ KUP.SUPPORTS = [
 KUP.SUPPORT = id => KUP.SUPPORTS.find(s => s.id === id) || null;
 
 /* ---------- 皮肤＝「形態」（★ 官方命名法：「（魔女）特殊歌唱用形態 ○○」） ----------
- * 官方 LIVE 的服装/形态命名实例：「特殊歌唱用形態 星鴉」「魔女特殊歌唱用形態 花魁鳥」（粉丝 wiki 转引官方命名）。
- * ⚠️ 泛称「歌唱形態」；本作一律用「（魔女）特殊歌唱用形態 ○○」。
+ * 官方 LIVE 的服装/形态命名实例：「特殊歌唱用形態 星鴉」「魔女特殊歌唱用形態 花魁鳥」（粉丝 wiki 转引官方命名）
+ *   —— 出处等级【粉丝 wiki 转引】，故 `ouranchou.src` 如实写「粉丝 wiki 转引」。
+ * ⚠️ 泛称「歌唱形態」**不是官方术语**（萌百仅 2 处编者自拟小节标题）；本作一律用「（魔女）特殊歌唱用形態 ○○」。
+ * ⚠️ `src` 字段**只作数据层的出处记录**（verify-run 会校验它存在，见 tools/verify-run.js）；
+ *    **界面不再显示出处行**（ui.js 里对应的渲染已注释掉）。
  * 本批形态（2026-10）：
- *   - 魔女之子（kinds:['witch']）：花魁鳥／姬連雀 —— 本批共用；
- *   - 可招募角色·魔女候補（kinds:['recruit']）：黑／白 —— 暂定名；后续每位分别定制
- *   - 同伴（kinds:['companion']）：黑／白 —— 与候选共用调色板，后续为每位同伴定制
- * 实现方式：。
+ *   - 魔女之子（kinds:['witch']）：花魁鳥／姬連雀 —— 本批共用；★ 姬連雀为**本作同人命名**（官方无此形态名）
+ *   - 可招募角色·魔女候補（kinds:['recruit']）：黑／白 —— 本作暂定名；后续每位分别定制
+ *   - 同伴（kinds:['companion']）：JK 制服（夏／冬）—— 本作设定，后续为每位同伴定制
+ * 实现方式：
  *   accent: plume 羽饰 / crest 冠羽 / veil 面纱 / halo 光晕 / sailor 水手领 / blazer 西装外套
  *          / sparrow_wing 青雀翼羽 / star_ring 银环 / koi_sash 鲤纹带 / flower_crown 花冠 / star_tiara 星冕
  *          / none
@@ -1043,7 +1097,7 @@ KUP.SUPPORT = id => KUP.SUPPORTS.find(s => s.id === id) || null;
  *   - `src` ：出处（**不显示给玩家**，只作记录；形态可覆盖）
  * 依据：docs/lore/research/vwp_forms_and_mascots.md（逐项带出典等级）：
  *   §2.1 官方花譜 WORDS 全表／§2.2 非公式 wiki 衣装节／§2.5 官方 FINDME STORE 全店穷举
- *   （2025–2026 的新衣装只有商品页才有：梟・梟黑・銀兜・金兜・Dr.Futurity）。
+ *   （2025–2026 的新衣装只有商品页才有：梟・銀兜・金兜・Dr.Futurity）。
  * ⚠️ 采集稿的两条纪律照抄：①「命名母题」是**本作观察**、官方从未这样表述；
  *   ②「未找到」不等于不存在（落后来源的否证无效）——故本表只写有出处的名字。 */
 KUP.FORM_SERIES = [
@@ -1153,7 +1207,7 @@ KUP.FORMS = [
   {
     id: 'none', kinds: null, accent: 'none',
     name: { zh: '通常形態', en: 'Standard Form', ja: '通常形態' },
-    label: { zh: '無指定（通常形態）', en: 'Standard (no form)', ja: '指定なし（通常形態）' },
+    label: { zh: '不指定（通常形態）', en: 'Standard (no form)', ja: '指定なし（通常形態）' },
     desc: { zh: '不指定特殊歌唱用形態。', en: 'No special singing form equipped.', ja: '特殊歌唱用形態を指定しない。' },
     mods: {},
   },
@@ -1209,14 +1263,14 @@ KUP.FORMS = [
       ja: '衣装の色は**黄緑↔蔵青**の間で変化する（公式の記載）。',
     },
   },
-  { id: 'aogara_kuro', series: 'kaf_singing', name: { zh: '青雀黑', en: 'Aogara Kuro', ja: '青雀黑（あおがら くろ）' }, accent: 'sparrow_wing', color: '#2f4f6f' },
-  { id: 'kinkei', series: 'kaf_singing', name: { zh: '金鸡', en: 'Kinkei', ja: '金鶏（きんけい）' }, color: '#ffb25a' },
+  // { id: 'aogara_kuro', series: 'kaf_singing', name: { zh: '青雀黑', en: 'Aogara Kuro', ja: '青雀黑（あおがら くろ）' }, accent: 'sparrow_wing', color: '#2f4f6f' },
+  // { id: 'kinkei', series: 'kaf_singing', name: { zh: '金鸡', en: 'Kinkei', ja: '金鶏（きんけい）' }, color: '#ffb25a' },
   { id: 'tsubame', series: 'kaf_singing', name: { zh: '燕', en: 'Tsubame', ja: '燕（つばめ）' }, accent: 'bird_tail', color: '#8fb8ff' },
-  { id: 'shamo', series: 'kaf_singing', name: { zh: '军鸡', en: 'Shamo', ja: '軍鶏（しゃも）' }, color: '#e04a3f' },
+  // { id: 'shamo', series: 'kaf_singing', name: { zh: '军鸡', en: 'Shamo', ja: '軍鶏（しゃも）' }, color: '#e04a3f' },
   { id: 'kiji', series: 'kaf_singing', name: { zh: '雉', en: 'Kiji', ja: '雉（きじ）' }, accent: 'bird_tail', color: '#ff8a4e' },
   { id: 'raichou', series: 'kaf_singing', name: { zh: '雷鸟', en: 'Raichō', ja: '雷鳥（らいちょう）' }, color: '#e8ecf6' },
   { id: 'saichou', series: 'kaf_singing', name: { zh: '犀鸟', en: 'Saichō', ja: '犀鳥（さいちょう）' }, color: '#c9a6ff' },
-  { id: 'ougibato', series: 'kaf_singing', name: { zh: '扇鸠', en: 'Ōgibato', ja: '扇鳩（おうぎばと）' }, color: '#ffd98a' },
+  // { id: 'ougibato', series: 'kaf_singing', name: { zh: '扇鸠', en: 'Ōgibato', ja: '扇鳩（おうぎばと）' }, color: '#ffd98a' },
   {
     id: 'fukurou', series: 'kaf_singing', name: { zh: '枭', en: 'Fukurō', ja: '梟（ふくろう）' }, color: '#b58cff',
     note: {
@@ -1225,7 +1279,6 @@ KUP.FORMS = [
       ja: '公式商品ページは「花譜の**最新衣装**」とする（2026-03 より）。フードデザインの派生グッズもある。',
     },
   },
-  { id: 'fukurou_kuro', series: 'kaf_singing', name: { zh: '枭黑', en: 'Fukurō Kuro', ja: '梟黑（ふくろう くろ）' }, color: '#3a3450' },
   /* 理芽（狸眼）：Metamorphose 系列（官方「歴代衣装」商品名 ＋ UBIK 官方帖） */
   { id: 'nightwings', series: 'rim_meta', name: { zh: 'Nightwings', en: 'Nightwings', ja: '1st Metamorphose「Nightwings」' } },
   {
@@ -1316,16 +1369,16 @@ KUP.FORMS = [
   },
   { id: 'zeta_capricorni', series: 'koko_type', name: { zh: 'type-2nd ζ Capricorni', en: 'type-2nd ζ Capricorni', ja: 'type-2nd ζ Capricorni' }, accent: 'star_orbit', color: '#7fb6ff' },
   { id: 'betelgeuse', series: 'koko_type', name: { zh: 'type-real Betelgeuse', en: 'type-real Betelgeuse', ja: 'type-real Betelgeuse' }, accent: 'star_orbit', color: '#ff9f8a' },
-  /* 五人共用（人类 2026-10-17：花魁鳥・八咫烏算共用） */
-  {
-    id: 'ouranchou_rev', series: 'vwp_shared', name: { zh: '花魁鳥 Revolutions', en: 'Oiran-chō Revolutions', ja: '花魁鳥 Revolutions（えとぴりか れぼりゅーしょんず）' },
-    note: {
-      zh: '五人共用的战斗形态（2022 V.W.P 1st ONE-MAN LIVE「現象」）——花魁鳥的强化版。<br>范围 <b>+18%</b>、冷却 <b>−10%</b>，最大生命 <b>−12%</b>。',
-      en: 'The shared battle form (2022 V.W.P 1st ONE-MAN LIVE "現象") — a reinforced Oiran-chō.<br>Area <b>+18%</b>, cooldown <b>−10%</b>, max HP <b>−12%</b>.',
-      ja: '五人共用の戦闘形態（2022 V.W.P 1st ONE-MAN LIVE「現象」）——花魁鳥の強化版。<br>範囲 <b>+18%</b>、クールタイム <b>−10%</b>、最大生命 <b>−12%</b>。',
-    },
-    mods: { area: 1.18, cd: 0.90, hp: 0.88 },
-  },
+  // /* 五人共用（人类 2026-10-17：花魁鳥・八咫烏算共用） */
+  // {
+  //   id: 'ouranchou_rev', series: 'vwp_shared', name: { zh: '花魁鳥 Revolutions', en: 'Oiran-chō Revolutions', ja: '花魁鳥 Revolutions（えとぴりか れぼりゅーしょんず）' },
+  //   note: {
+  //     zh: '五人共用的战斗形态（2022 V.W.P 1st ONE-MAN LIVE「現象」）——花魁鳥的强化版。<br>范围 <b>+18%</b>、冷却 <b>−10%</b>，最大生命 <b>−12%</b>。',
+  //     en: 'The shared battle form (2022 V.W.P 1st ONE-MAN LIVE "現象") — a reinforced Oiran-chō.<br>Area <b>+18%</b>, cooldown <b>−10%</b>, max HP <b>−12%</b>.',
+  //     ja: '五人共用の戦闘形態（2022 V.W.P 1st ONE-MAN LIVE「現象」）——花魁鳥の強化版。<br>範囲 <b>+18%</b>、クールタイム <b>−10%</b>、最大生命 <b>−12%</b>。',
+  //   },
+  //   mods: { area: 1.18, cd: 0.90, hp: 0.88 },
+  // },
   {
     id: 'yatagarasu', series: 'vwp_shared', name: { zh: '八咫烏', en: 'Yatagarasu', ja: '八咫烏（やたがらす）' }, accent: 'crest', color: '#d94fb0',
     note: {
@@ -1339,7 +1392,7 @@ KUP.FORMS = [
   {
     id: 'kuro', kinds: ['recruit'], accent: 'veil',
     name: { zh: '黑', en: 'Black', ja: '黒' },
-    label: { zh: '皮膚「黑」（暫定）', en: 'Skin "Black" (tentative)', ja: '皮膚「黒」（暫定）' },
+    label: { zh: '皮肤「黑」（暂定）', en: 'Skin "Black" (tentative)', ja: '皮膚「黒」（暫定）' },
     desc: { zh: '夜之装束——歌声更加锐利。<br>攻击 +6%。', en: 'Night vestment — a sharper song.<br>Atk +6%.', ja: '夜の装い——歌はより鋭く。<br>攻撃 +6%。' },
     mods: { playerDmg: 1.06 },
     color: '#4a4a63', color2: '#12121c',
@@ -1348,39 +1401,39 @@ KUP.FORMS = [
   {
     id: 'shiro', kinds: ['recruit'], accent: 'halo',
     name: { zh: '白', en: 'White', ja: '白' },
-    label: { zh: '皮膚「白」（暫定）', en: 'Skin "White" (tentative)', ja: '皮膚「白」（暫定）' },
+    label: { zh: '皮肤「白」（暂定）', en: 'Skin "White" (tentative)', ja: '皮膚「白」（暫定）' },
     desc: { zh: '昼之装束——歌声更易牵引音片。<br>拾取范围 +15%。', en: 'Day vestment — a song that gathers shards.<br>Pickup +15%.', ja: '昼の装い——歌が音片を引き寄せる。<br>取得 +15%。' },
     mods: { pickup: 1.15 },
     color: '#f2f0ff', color2: '#a9b6d8',
     src: { zh: '本作暂定皮肤（黑／白）', en: 'Tentative skin (Black/White) original to this work', ja: '本作の暫定皮膚（黒／白）' },
   },
-  /* ---- 同伴（彩季詩得）：JK 制服（2026-10 改定；后续每位同伴分别定制） ---- */
-  {
-    id: 'jk_summer', kinds: ['companion'], accent: 'sailor',
-    name: { zh: 'JK制服・夏服', en: 'JK Uniform · Summer', ja: 'JK制服・夏服' },
-    label: { zh: 'JK制服（夏服）—— 白襟水手服', en: 'JK uniform (summer) — white sailor collar', ja: 'JK制服（夏服）——白襟セーラー' },
-    desc: {
-      zh: '復興課的夏季制服——白襟水手服。<br>拾取范围 <b>+10%</b>、移动速度 <b>+5%</b>。',
-      en: 'The Division\'s summer uniform — a white sailor collar.<br>Pickup <b>+10%</b>, move speed <b>+5%</b>.',
-      ja: '復興課の夏制服——白襟セーラー。<br>取得 <b>+10%</b>、移動速度 <b>+5%</b>。',
-    },
-    mods: { pickup: 1.1, speed: 1.05 },
-    color: '#eaf4ff', color2: '#2f5fa8',
-    src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
-  },
-  {
-    id: 'jk_winter', kinds: ['companion'], accent: 'blazer',
-    name: { zh: 'JK制服・冬服', en: 'JK Uniform · Winter', ja: 'JK制服・冬服' },
-    label: { zh: 'JK制服（冬服）—— 深蓝西装外套', en: 'JK uniform (winter) — navy blazer', ja: 'JK制服（冬服）——紺ブレザー' },
-    desc: {
-      zh: '復興課的冬季制服——深蓝西装外套。<br>最大生命 <b>+6%</b>、全部冷却 <b>−3%</b>。',
-      en: 'The Division\'s winter uniform — a navy blazer.<br>Max HP <b>+6%</b>, all cooldowns <b>−3%</b>.',
-      ja: '復興課の冬制服——紺ブレザー。<br>最大生命 <b>+6%</b>、全クールダウン <b>−3%</b>。',
-    },
-    mods: { hp: 1.06, cd: 0.97 },
-    color: '#f6f1e6', color2: '#1d2a52',
-    src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
-  },
+  // /* ---- 同伴（彩季詩得）：JK 制服（2026-10 改定；后续每位同伴分别定制） ---- */
+  // {
+  //   id: 'jk_summer', kinds: ['companion'], accent: 'sailor',
+  //   name: { zh: 'JK制服・夏服', en: 'JK Uniform · Summer', ja: 'JK制服・夏服' },
+  //   label: { zh: 'JK制服（夏服）—— 白襟水手服', en: 'JK uniform (summer) — white sailor collar', ja: 'JK制服（夏服）——白襟セーラー' },
+  //   desc: {
+  //     zh: '復興課的夏季制服——白襟水手服。<br>拾取范围 <b>+10%</b>、移动速度 <b>+5%</b>。',
+  //     en: 'The Division\'s summer uniform — a white sailor collar.<br>Pickup <b>+10%</b>, move speed <b>+5%</b>.',
+  //     ja: '復興課の夏制服——白襟セーラー。<br>取得 <b>+10%</b>、移動速度 <b>+5%</b>。',
+  //   },
+  //   mods: { pickup: 1.1, speed: 1.05 },
+  //   color: '#eaf4ff', color2: '#2f5fa8',
+  //   src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
+  // },
+  // {
+  //   id: 'jk_winter', kinds: ['companion'], accent: 'blazer',
+  //   name: { zh: 'JK制服・冬服', en: 'JK Uniform · Winter', ja: 'JK制服・冬服' },
+  //   label: { zh: 'JK制服（冬服）—— 深蓝西装外套', en: 'JK uniform (winter) — navy blazer', ja: 'JK制服（冬服）——紺ブレザー' },
+  //   desc: {
+  //     zh: '復興課的冬季制服——深蓝西装外套。<br>最大生命 <b>+6%</b>、全部冷却 <b>−3%</b>。',
+  //     en: 'The Division\'s winter uniform — a navy blazer.<br>Max HP <b>+6%</b>, all cooldowns <b>−3%</b>.',
+  //     ja: '復興課の冬制服——紺ブレザー。<br>最大生命 <b>+6%</b>、全クールダウン <b>−3%</b>。',
+  //   },
+  //   mods: { hp: 1.06, cd: 0.97 },
+  //   color: '#f6f1e6', color2: '#1d2a52',
+  //   src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
+  // },
 ];
 /* ---------- 形态系列 → 形态：补齐共同字段（v0.13.5） ----------
  * 形态只写自己的差异；label／系列说明／配色／轮廓配件／出处在这里从 KUP.FORM_SERIES 补齐。
@@ -1449,8 +1502,12 @@ KUP.formGroups = (kind, charId) => {
 KUP.charKind = c => (c && c.recruit) ? 'recruit' : 'witch';
 
 /* ========== 关卡 Boss：每番街一体（2026-10 追加） ==========
- * ⚠️ 全部为**本作二创**的大テセラクター名（〈消音〉已是本作自拟；其余同）；
+ * ⚠️ 全部为**本作二创**的大破维魔名（〈消音〉已是本作自拟；其余同）；
  *    命名取自各番街的官方定位/章节副标题的意象，不涉官方未公开设定。
+ *    ★ 引用纪律：官方概念里**没有「消音」这类称号**（lore §12.2「◇ 大テセラクター〈消音〉」，
+ *      标注为本作二创）；因此本表只在注释里保留日文原形，**zh 文案一律写「大破维魔〈…〉」**。
+ *    ★ `chapter` 用的是**动画各话官方副标题**（壱＝悪意／弐＝欲望／参＝ファミリア／
+ *      肆＝現象／伍＝ブラックアウト／陸＝再生），与 Boss 称号是两回事，别混用。
  * pattern 为行为模式 id，由 js/director.js 的 updateBossBehavior 分派：
  *   mute   〈消音〉   ：音波环 + 混合召唤（零番街·基线）
  *   chase  〈緘黙〉   ：沉默地直线冲锋，冲锋沿途留下滞留伤害带（壱番街·办公区）
@@ -1462,42 +1519,42 @@ KUP.charKind = c => (c && c.recruit) ? 'recruit' : 'witch';
 KUP.BOSSES = {
   boss0: {
     id: 'boss0', pattern: 'mute',
-    name: { zh: '大テセラクター〈消音〉', en: 'Grand Tesseracter 〈Mute〉', ja: '大テセラクター〈消音〉' },
+    name: { zh: '大破维魔〈消音〉', en: 'Grand Tesseracter 〈Mute〉', ja: '大テセラクター〈消音〉' },
     hp: 2000, speed: 46, dmg: 24, xp: 0, r: 52, color: '#ff5aa8', sides: 9, boss: true,
   },
   boss1: {
     id: 'boss1', pattern: 'chase',
-    name: { zh: '大テセラクター〈緘黙〉', en: 'Grand Tesseracter 〈Taciturn〉', ja: '大テセラクター〈緘黙〉' },
+    name: { zh: '大破维魔〈緘黙〉', en: 'Grand Tesseracter 〈Taciturn〉', ja: '大テセラクター〈緘黙〉' },
     hp: 2200, speed: 42, dmg: 26, xp: 0, r: 50, color: '#55e0ff', sides: 6, boss: true,
   },
   boss2: {
     id: 'boss2', pattern: 'swarm',
-    name: { zh: '大テセラクター〈誘惑〉', en: 'Grand Tesseracter 〈Temptation〉', ja: '大テセラクター〈誘惑〉' },
+    name: { zh: '大破维魔〈誘惑〉', en: 'Grand Tesseracter 〈Temptation〉', ja: '大テセラクター〈誘惑〉' },
     hp: 2400, speed: 48, dmg: 25, xp: 0, r: 52, color: '#ff7ad9', sides: 7, boss: true,
   },
   boss3: {
     id: 'boss3', pattern: 'blight',
-    name: { zh: '大テセラクター〈枯死〉', en: 'Grand Tesseracter 〈Blight〉', ja: '大テセラクター〈枯死〉' },
+    name: { zh: '大破维魔〈枯死〉', en: 'Grand Tesseracter 〈Blight〉', ja: '大テセラクター〈枯死〉' },
     hp: 2600, speed: 34, dmg: 24, xp: 0, r: 56, color: '#7dff6a', sides: 8, boss: true,
   },
   boss4: {
     id: 'boss4', pattern: 'scan',
-    name: { zh: '大テセラクター〈観測〉', en: 'Grand Tesseracter 〈Observation〉', ja: '大テセラクター〈観測〉' },
+    name: { zh: '大破维魔〈観測〉', en: 'Grand Tesseracter 〈Observation〉', ja: '大テセラクター〈観測〉' },
     hp: 2800, speed: 44, dmg: 26, xp: 0, r: 54, color: '#b58cff', sides: 10, boss: true,
   },
   boss5: {
     id: 'boss5', pattern: 'smog',
-    name: { zh: '大テセラクター〈爆塵〉', en: 'Grand Tesseracter 〈Smog〉', ja: '大テセラクター〈爆塵〉' },
+    name: { zh: '大破维魔〈爆塵〉', en: 'Grand Tesseracter 〈Smog〉', ja: '大テセラクター〈爆塵〉' },
     hp: 3000, speed: 40, dmg: 28, xp: 0, r: 56, color: '#ffb25a', sides: 6, boss: true,
   },
   boss6: {
     id: 'boss6', pattern: 'regen',
-    name: { zh: '大テセラクター〈再生〉', en: 'Grand Tesseracter 〈Regenerate〉', ja: '大テセラクター〈再生〉' },
+    name: { zh: '大破维魔〈再生〉', en: 'Grand Tesseracter 〈Regenerate〉', ja: '大テセラクター〈再生〉' },
     hp: 3600, speed: 48, dmg: 30, xp: 0, r: 60, color: '#8fd0ff', sides: 12, boss: true,
   },
 };
 KUP.BOSS = id => KUP.BOSSES[id] || KUP.BOSSES.boss0;
-/* 7 体 Boss 一律笨重（380°/s，与 ENEMIES.boss 同值）：它们是「大テセラクター」，
+/* 7 体 Boss 一律笨重（380°/s，与 ENEMIES.boss 同值）：它们是「大破维魔」，
  * 转身不该比小怪灵活——逐个手写 7 份没有意义，故在此统一赋值（见顶部 turn 说明）。 */
 for (const k in KUP.BOSSES) if (KUP.BOSSES[k].turn == null) KUP.BOSSES[k].turn = 380;
 /* 把各番街 Boss 并入敌人表（spawnEnemy 统一按 id 生成；boss0 与 KUP.ENEMIES.boss 同源） */
@@ -1506,6 +1563,8 @@ KUP.ENEMIES.boss = KUP.BOSSES.boss0;
 
 /* ========== 瓦利斯（VALIS 的饭店）· 局外强化（2026-10 追加） ==========
  * ★ 出处：REGENERATE 官方页——**弐番街「歌と中華料理の店・瓦利欺」**，VALIS 六人店员（白銀千埜店長 等）【官方】。
+ *   ★ 官方本地化（srd VIRTUAL REALITY 页，见 docs/lore/research/official_srd_en_cn.md）：
+ *     **官方中文＝「歌与中餐店·瓦利斯」／官方英文＝`VALIS, a shop in Area 2 that serves songs and Chinese cuisine`**。
  * ※ 表记约定：**日语原文（ja 文案、官方引述）保留官方当て字「瓦利欺」**；**中文（zh 文案）写作「瓦利斯」**。
  * 本作把它作为**局外强化商店**：用**市民票**（REGENERATE 术语）购买**小幅**永久强化。
  * cost(lv) = base + lv * inc（lv 从 0 起算） */

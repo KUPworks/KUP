@@ -130,6 +130,44 @@ check('章节名对应动画副标题',
   KUP.AREA('area6').chapter.zh === '再生 -Regenerate-');
 check('area1/2/4/5/6 配有章节演出事件', ['area1', 'area2', 'area4', 'area5', 'area6'].every(id => (KUP.AREA(id).events || []).length > 0));
 
+/* ★★ 名称纪律：番街的英文必须用**官方英文**（srd VIRTUAL REALITY EN 页）——
+ *   前五区＝`Area 0`〜`Area 4`；以下三个是**本仓库早先自译、且没有出处**的词，已废，
+ *   若有人再写回来，这里会当场报错。证据见 docs/lore/research/official_srd_en_cn.md。 */
+check('番街英文不得出现非官方的自译词（Lower Town／Pleasure Quarter／Farmlands）',
+  !KUP.AREAS.some(a => {
+    const s = (a.name && a.name.en ? a.name.en : '') + ' ' + (a.role && a.role.en ? a.role.en : '');
+    return /\b(Lower Town|Pleasure Quarter|Farmlands)\b/.test(s);
+  }));
+check('前五区英文＝官方 `Area 0`〜`Area 4` + 官方地区词',
+  KUP.AREA('area0').name.en === 'Area 0' && KUP.AREA('area0').role.en === 'Downtown' &&
+  KUP.AREA('area1').name.en === 'Area 1' && KUP.AREA('area1').role.en === 'Office District' &&
+  KUP.AREA('area2').name.en === 'Area 2' && KUP.AREA('area2').role.en === 'Entertainment District' &&
+  KUP.AREA('area3').name.en === 'Area 3' && KUP.AREA('area3').role.en === 'Agricultural Area' &&
+  KUP.AREA('area4').name.en === 'Area 4' && KUP.AREA('area4').role.en === 'Science Research Zone');
+/* ★ 官方英文的自译禁区：教団英文＝`Isekai Salvation Cult`（`Issekai Salvation Order` 是本仓库早先自造）。
+ *   生き神＝`living deity`（不是 `living god`）。 */
+check('英文文案不得出现自造的 `Issekai Salvation Order`／`living god`',
+  !/Issekai Salvation Order|living god/.test(JSON.stringify([KUP.AREAS, KUP.CHARS, KUP.COMPANIONS, KUP.SHOP])));
+/* ★ 観統衿架 的官方英文＝`Erika Midoh`（旧的 `KANTO` 无任何出处，已废） */
+check('観統衿架英文＝官方 `Erika Midoh`',
+  /Erika Midoh/.test(JSON.stringify(KUP.AREAS)) && !/Erika Kanto|Erika KANTO/.test(JSON.stringify(KUP.AREAS)));
+/* ★ 角色显示名随语言：英文走**官方罗马字**（`Kafu Morisaki`／CAST `KAF`），zh/ja 用日文汉字名。
+ *   存档里持久化的字段（run.witch 等）不参与，避免切语言串味。 */
+check('角色名/CAST 随语言切换（英文＝官方罗马字）', (() => {
+  const old = KUP.I18N.lang;
+  KUP.I18N.lang = 'en';
+  const en = KUP.nameOf(KUP.CHAR('kaf')) === 'Kafu Morisaki' &&
+             KUP.shortOf(KUP.CHAR('kaf')) === 'Kafu' &&
+             KUP.cvOf(KUP.CHAR('kaf')) === 'KAF' &&
+             KUP.nameOf(KUP.COMPANION('ciel')) === 'Ciel Saiki';
+  KUP.I18N.lang = 'zh';
+  const zh = KUP.nameOf(KUP.CHAR('kaf')) === '森先 化歩' && KUP.cvOf(KUP.CHAR('kaf')) === '花譜';
+  KUP.I18N.lang = old;
+  return en && zh;
+})());
+check('英文 CAST 与官方页一致（KAF/RIM/Harusaruhi/Isekaijoucho/KOKO/ARU/ASU/CIEL）',
+  KUP.CHARS.every(c => ['KAF', 'RIM', 'Harusaruhi', 'Isekaijoucho', 'KOKO', 'ARU', 'ASU'].indexOf(c.cvEn) >= 0));
+
 // 9. 復興率：首通 +12 / 重复 +2 / 败北 +1；解锁阈值
 KUP.META.reset();
 const r1 = KUP.META.addRunResult('area0', true);
@@ -201,7 +239,14 @@ check('魔女形态：通用形态仍在（花魁鳥／姬連雀）且全量形�
   KUP.FORM_SERIES.length === 7 && KUP.formsFor('witch', 'kaf').length === 22,
   String(KUP.formsFor('witch', 'kaf').length) + ' 条 / ' + KUP.FORM_SERIES.length + ' 系列');
 check('魔女候補皮肤＝黑／白', KUP.formsFor('recruit').map(f => f.id).join(',') === 'none,kuro,shiro');
-check('形態带官方命名法与出处标注', KUP.FORM('ouranchou').label.zh.indexOf('魔女特殊歌唱用形態') === 0 && !!KUP.FORM('ouranchou').src && !!KUP.FORM('himerenjaku').src);
+/* ★ 出处等级记在**数据层** `src`（界面上已不显示，见 js/ui.js selectForm 的注释）；
+ *   这里断言它存在，是为了守住 docs/lore/README.md 铁律 1「每条设定都要能回答是官方还是自编」。 */
+check('形態带官方命名法与出处标注（数据层 src）', KUP.FORM('ouranchou').label.zh.indexOf('魔女特殊歌唱用形態') === 0 && !!KUP.FORM('ouranchou').src && !!KUP.FORM('himerenjaku').src);
+/* ★ 名称纪律：「異能テセラクター」在官方专指**眷魔（ファミリア）＝盟友**，
+ *   不得用来命名敌人（否则等于"把盟友写成敌人"，违反 lore §4.2／§11 行 22）。 */
+check('敌人不得使用「異能テセラクター」（该词指眷魔/盟友）',
+  ['zh', 'en', 'ja'].every(l => !/異能テセラクター|Aberrant Tesseracter/.test(KUP.ENEMIES.elite.name[l])));
+check('番街出处字段仍在数据层', KUP.AREAS.every(a => a.src === 'regenerate' || a.src === 'narrative' || a.src === 'original'));
 check('形態按角色类型匹配', KUP.formFits(KUP.FORM('ouranchou'), 'witch') && !KUP.formFits(KUP.FORM('ouranchou'), 'recruit') &&
   KUP.formFits(KUP.FORM('kuro'), 'recruit') && !KUP.formFits(KUP.FORM('kuro'), 'companion'));
 check('角色类型判定', KUP.charKind(KUP.CHAR('kaf')) === 'witch' && KUP.charKind(KUP.CHAR('aru')) === 'recruit');

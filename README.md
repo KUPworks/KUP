@@ -2,7 +2,7 @@
 
 > 非官方同人致敬作品 —— 基于 KAMITSUBAKI STUDIO「神椿市」世界观的**吸血鬼幸存者 like** 游戏。
 > 灵感来自《神椿市建設中。》动画与《神椿市協奏中。》音游。**与官方无任何关联。**
-> 当前版本 **v0.13.1-nav** · 零依赖 · 零构建 · 纯 HTML5 Canvas。
+> 当前版本 **v0.13.2-lore** · 零依赖 · 零构建 · 纯 HTML5 Canvas。
 
 ![类型](https://img.shields.io/badge/genre-生存 roguelite-7a4dd8) ![引擎](https://img.shields.io/badge/engine-纯 HTML5 Canvas-4ee6ff) ![依赖](https://img.shields.io/badge/dependencies-零-5ad0a0)
 
@@ -46,7 +46,7 @@ python -m http.server 8080
 |---|---|
 | 0:00 | 横幅「**『Q』発生**」（关卡＝番街，章节名取自动画各话副标题） |
 | 0:00–1:30 | 基本型テセラクター涌来，发育、拾取「音片（フラグメント）」（经验） |
-| 1:30 / 2:30 / 3:30 | **異能テセラクター（精英）** 出现，掉落回复 ♥ 与**記憶の卵**（20%） |
+| 1:30 / 2:30 / 3:30 | **破维魔（強化型）** 出现，掉落回复 ♥ 与**記憶の卵**（20%） |
 | 4:00 | **大テセラクター**（Boss）接近（陸番街提前至 3:30） |
 | 5:00 | Boss 暴走（移速 ×1.8）—— **暴走后才击破 → 惨胜结局分歧** |
 
@@ -263,15 +263,16 @@ python -m http.server 8080
 
 | 番街 | 官方定位 | 魔女之子 | 势力 | Boss（★本作二创名） |
 |---|---|---|---|---|
-| 零番街 | **下町** | 森先 化歩 | 観統衿架（化歩的养育者） | 〈消音〉 |
-| 壱番街 | **办公区** | 谷置 狸眼 | 谷置家／谷置室長（課長） | 〈緘黙〉 |
+| 零番街 | **下町** | 森先 化歩 | 観統衿架（化歩的姐姐／養育者） | 〈消音〉 |
+| 壱番街 | **办公区** | 谷置 狸眼 | 谷置家／谷置 制磁（室長） | 〈緘黙〉 |
 | 弐番街 | **欢乐街** | 朝主 派流 | **台風眼** | 〈誘惑〉 |
-| 参番街 | **农园地区** | 夜河 世界 | **ヰ世界救済教団** | 〈枯死〉 |
+| 参番街 | **农园区** | 夜河 世界 | **ヰ世界救済教団**（崇巫教团） | 〈枯死〉 |
 | 肆番街 | **科学研究特区** | 輪廻 此処 | 復興課 | 〈観測〉 |
 | 伍番街 | ※官方网页未给（沿用 **NARRATIVE 侧**＝**工业／工场地区**，旧・眼裏町） | — | — | 〈爆塵〉 |
 | 陸番街 | ※官方网页未给（沿用 **NARRATIVE 侧**＝**立入禁止区画**） | — | — | 〈再生〉 |
 
-> ⚠️ **伍・陸番街的定位不是本作自创**：它们来自 **NARRATIVE（TRPG）的 CITYGUIDE**，代码里以 `AREAS[].src` 标注出处。**Boss 名〈消音〉〈再生〉等 7 体才是本作二创**（见 [DESIGN.md](DESIGN.md) §6.4）。
+> ⚠️ **伍・陸番街的定位不是本作自创**：它们来自 **NARRATIVE（TRPG）的 CITYGUIDE**，出处记在代码的 `AREAS[].src` 与注释里（**界面上不显示**）。**Boss 名〈消音〉〈再生〉等 7 体才是本作二创**（见 [DESIGN.md](DESIGN.md) §6.4）。
+> ★ **英文界面沿用官方英文**：前五区＝**`Area 0`〜`Area 4`**＋`Downtown／Office District／Entertainment District／Agricultural Area／Science Research Zone`（官方 VIRTUAL REALITY EN 页）；中文界面与官方中文一致，**区名保留「○番街」不译**。
 
 - **每区独立**波次表、章节演出事件与地图主题：
   壱「悪意」增援潮／弐「欲望」増殖／参「ファミリア」巨躯群／肆「現象」高速群／伍「ブラックアウト」视野遮蔽／陸「再生」终盘。
@@ -395,7 +396,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 游戏里用到的官方设定、术语统一表、以及「哪些是官方 / 哪些是本作自创」，**全部整理在 [docs/lore/](docs/lore/README.md)**：
 
 - **[docs/lore/README.md](docs/lore/README.md)** —— **一页总览**：三条铁律、世界观骨架 10 条、用了/没用什么、查询速查表
-- [docs/lore/worldview.md](docs/lore/worldview.md) —— 主世界观详录（术语统一表、世界线总图、13 话副标题表、REGENERATE CAST、交叉核对 40 行、玩法映射、二创合规）
+- [docs/lore/worldview.md](docs/lore/worldview.md) —— 主世界观详录（术语统一表、世界线总图、13 话副标题表、REGENERATE CAST、交叉核对 42 行、玩法映射、二创合规）
 - [docs/lore/related-settings.md](docs/lore/related-settings.md) —— 周边考据（官方年表、角色读音全表、术语词典、官方小说章目）
 - [docs/lore/legacy-research-2025.md](docs/lore/legacy-research-2025.md) —— ⚠️ 2025 年早期调研，**多处结论已被推翻，勿当依据**
 

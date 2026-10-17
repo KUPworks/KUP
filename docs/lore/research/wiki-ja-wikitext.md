@@ -2,7 +2,7 @@
 
 > **性质：【非官方】来源的逐字节转录。** ja.wikipedia 是**非官方**百科，**不得当官方正典引用**；
 > 但作为「维基条目究竟写了什么」的**证据**，本文件比 OCR 印刷版可靠，故入库保存。
-> 引用纪律见 [`docs/lore/README.md`](../../docs/lore/README.md) 的三条铁律。
+> 引用纪律见 [`docs/lore/README.md`](../README.md) 的三条铁律。
 
 - 条目：神椿市建設中。（ja.wikipedia.org，pageid=5061159）
 - 抓取时间：2026-10-15T00:22:00+08:00（Asia/Shanghai）
