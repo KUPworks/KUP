@@ -331,7 +331,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 
 | 我想改… | 动这个文件 | 说明 |
 |---|---|---|
-| **数值平衡**（角色/武器/被动/敌人/Boss 血量） | `js/data.js` | 纯数据表，全部三语 `{zh,en,ja}`。改完跑 `node .chatecnu-work/inventory.js` 看计数 |
+| **数值平衡**（角色/武器/被动/敌人/Boss 血量） | `js/data.js` | 纯数据表，全部三语 `{zh,en,ja}`。改完跑 `node tools/inventory.js` 看计数 |
 | **难度曲线、波次表、番街配置、规则修正** | `js/config.js` | `KUP.CONFIG` / `KUP.AREAS`（七区的定位·势力·Boss·waves·events·theme）/ `KUP.MODIFIERS` |
 | **加角色 / 加武器 / 加被动** | `js/data.js` → `js/entities.js` → `js/game.js` | 数据表加条目，实体加行为，主循环加接线。加武器要向 `game.js` 的武器分派注册 |
 | **武器形状参数（扇形角度 / 刀长 / 圆形波角度）** | `js/data.js` | 等级表里 `arc`＝扇形角度（**度**）、`len`＝刀长（px）——见 `slash`（近战挥刀）与 `bass`（圆形波，`arc`<360 即定向扇形冲击波） |
@@ -341,7 +341,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 | **视觉（配色 / 霓虹 / 字体栈）** | `css/style.css` | 只改样式别动结构 |
 | **画法 / 背景 / 特效** | `js/render.js` | ⚠️ **渲染路径禁止调用随机数**（否则同 seed 不可复现） |
 | **敌人 AI / 敌袭模式** | `js/director.js` | 按 `pattern` 分派；生成逻辑须走同一随机流 |
-| **敌人绕楼寻路 / 楼体碰撞与空间索引** | `js/game.js` + `js/config.js` | `steerCity`（局部避障转向）＋ `cityIndex`／`_near`（分桶查询）；可调参数在 `C.NAV`。⚠️ 改完建议跑 `.chatecnu-work/tmp/path-cmp.cjs` 对比绕楼质量 |
+| **敌人绕楼寻路 / 楼体碰撞与空间索引** | `js/game.js` + `js/config.js` | `steerCity`（局部避障转向）＋ `cityIndex`／`_near`（分桶查询）；可调参数在 `C.NAV`。⚠️ 改完建议跑 `tmp/path-cmp.cjs` 对比绕楼质量 |
 | **手感（移动 / 冲刺 / 碰撞 / 大招）** | `js/entities.js` + `js/game.js` | 改完务必实机验证 |
 | **存档结构** | `js/store.js` + `js/meta.js` | ⚠️ **改它必须跑 `node tests/save.test.cjs`**，并考虑 schema 迁移 |
 | **加 URL 调试参数** | `js/main.js` | 记得同步更新本文件第八节 |
@@ -352,7 +352,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 2. **不要把官方素材（图片/音频）放进仓库** —— 官方 GUIDELINES 禁止直接使用官方素材；本项目的程序化绘制/合成是刻意为之（见 [docs/lore/worldview.md](docs/lore/worldview.md) §13）。
 3. **不要引入 npm / 打包器 / 框架** —— 零依赖是项目核心约束。新增**运行时依赖**属于破坏性设计决定，必须先确认。
 
-> 改完提交前跑一遍：`node .chatecnu-work/verify-run.js`（玩法）＋ `node tests/save.test.cjs`（存档）＋ `node .chatecnu-work/check-html.js`（HTML 结构）。完整清单见 [AGENTS.md](AGENTS.md) §4。
+> 改完提交前跑一遍：`node tools/verify-run.js`（玩法）＋ `node tests/save.test.cjs`（存档）＋ `node tools/check-html.js`（HTML 结构）。完整清单见 [AGENTS.md](AGENTS.md) §4。
 
 ---
 

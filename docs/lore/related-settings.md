@@ -944,12 +944,12 @@
 ### 本项目的中间采集稿（可追溯）
 | 文件 | 内容 |
 |---|---|
-| `.chatecnu-work/research/official_regenerate_cast.md` | REGENERATE 官方页全文摘录（番街分区／CAST 读音全表／ヰ世界救済教団一手定义） |
-| `.chatecnu-work/research/official_anime_baike.md` | 动画百度百科全文摘录 |
-| `.chatecnu-work/research/official_findings_main.md` | 官方艺人页／少女革命計画／御伽噺／V.W.P 采集 |
-| `.chatecnu-work/research/sinsekai.md` | 深脊界・存流・明透・Albemuth・琶舞・Sooda 查证 |
-| `.chatecnu-work/research/core_terms.md` | 現象／不可解空間／歌唱形態／谷置室長／衿架／ソフィア／かるら 查证 |
-| `.chatecnu-work/research/novel_tieba.md`（＋ `_p2-5` / `_p6-9`） | 官方小说《神椿市建设中。》中译的章目与内容采集 |
+| `docs/lore/research/official_regenerate_cast.md` | REGENERATE 官方页全文摘录（番街分区／CAST 读音全表／ヰ世界救済教団一手定义） |
+| `docs/lore/research/official_anime_baike.md` | 动画百度百科全文摘录 |
+| `docs/lore/research/official_findings_main.md` | 官方艺人页／少女革命計画／御伽噺／V.W.P 采集 |
+| `docs/lore/research/sinsekai.md` | 深脊界・存流・明透・Albemuth・琶舞・Sooda 查证 |
+| `docs/lore/research/core_terms.md` | 現象／不可解空間／歌唱形態／谷置室長／衿架／ソフィア／かるら 查证 |
+| `docs/lore/research/novel_tieba.md`（＋ `_p2-5` / `_p6-9`） | 官方小说《神椿市建设中。》中译的章目与内容采集 |
 
 ---
 
@@ -1000,7 +1000,7 @@
 - 昏迷边缘**有人呼唤她**：「化步！化步！」
 ⇒ 与官方角色页「喜欢唱歌的程度远超其他」吻合，并解释了**她为何唱歌**：**歌是灾后唯一的自我维持手段**。
 
-> 其余章（壹〜伍 与 epilogue&prologue）的采集见 `.chatecnu-work/research/novel_tieba_p2-5.md` 与 `_p6-9.md`。
+> 其余章（壹〜伍 与 epilogue&prologue）的采集见 `docs/lore/research/novel_tieba_p2-5.md` 与 `_p6-9.md`。
 
 ### 17.3b 零『化步之章』【2 尾】／【3】（第 21、23 楼，2026-10 补）
 

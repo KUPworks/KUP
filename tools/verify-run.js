@@ -2,7 +2,7 @@
  * v0.4–v0.6 新系统（復興率 / 番街解锁 / 覚醒 / 浄化の歌 / 記憶の卵 / 每区波次与事件 /
  *   角色≠声优 / 招募 / 皮肤 / **市民票与瓦利斯商店** / **新武器组** / **每关卡 Boss**）。
  * v0.7：加载顺序对齐 index.html（含 js/store.js）；持久化断言改为槽位存档 kup.save.<id>。
- * 用法：node .chatecnu-work/verify-run.js  （从仓库根运行） */
+ * 用法：node tools/verify-run.js  （从仓库根运行） */
 const fs = require('fs'), vm = require('vm'), path = require('path');
 
 const ctx = { console, Math, JSON, performance: { now: () => 0 }, clearTimeout, setTimeout,

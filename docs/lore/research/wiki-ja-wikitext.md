@@ -16,7 +16,7 @@
 - 正文格式：**MediaWiki wikitext 原文**（未做任何改写/翻译/摘要）。
   二级标题在正文中写作 `== 見出し ==`。正文起始分隔线以下为逐字节保真原文（UTF-8 无 BOM、LF）。
 
-> **同源的印刷版 PDF 已删除**（曾位于 `.chatecnu-work/research/Wikipedia.pdf`，为无文字层的图像版）。
+> **同源的印刷版 PDF 已删除**（曾位于 `docs/lore/research/Wikipedia.pdf`，为无文字层的图像版）。
 > 本 wikitext 文件与它内容同源且可直接检索，故 PDF 与转出的页面图不再保留。
 
 ===== 以下为 wikitext 原文 =====

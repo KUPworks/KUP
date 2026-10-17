@@ -47,6 +47,5 @@
 *.orig -diff
 *.rej  -diff
 
-# --- 语言统计：不要把研究笔记算成"源代码"，以免误判项目构成 ---
-.chatecnu-work/**/*.md linguist-documentation
+# --- 语言统计：文档不计入「源代码」，以免误判项目构成 ---
 *.md linguist-documentation
