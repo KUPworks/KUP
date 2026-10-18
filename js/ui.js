@@ -1166,11 +1166,10 @@ window.KUP = window.KUP || {};
         const rb = $('btn-retry');
         if (rb) rb.textContent = KUP.I18N.t('end.order.retry');
       }
-      // 胜利副标题：暴走后击破 → 惨胜分歧（REGENERATE「戦闘結果也会改变故事」）
+      /* 胜利副标题（v0.15.2：**取消胜利／惨胜的区分**——Boss 暴走后击破也按普通胜利结算，
+       * 副标题固定为 end.win.sub；`end.win.sub.pyrrhic` 词条保留未删，便于随时恢复） */
       if (this.els['win-sub'] && win) {
-        this.els['win-sub'].textContent = st.bossEnraged
-          ? KUP.I18N.t('end.win.sub.pyrrhic')
-          : KUP.I18N.t('end.win.sub');
+        this.els['win-sub'].textContent = KUP.I18N.t('end.win.sub');
       }
       const meta = this.game.metaResult;
       let html =
@@ -1230,11 +1229,7 @@ window.KUP = window.KUP || {};
         holder.innerHTML += line;
         this.updateMetaUI();
       }
-      // 最佳记录：交给存档层判定与写入（随当前槽位走，数字已归一化）
-      const isRecord = KUP.META.submitBest({
-        win: win, time: st.time, kills: st.kills, level: st.level, witch: st.witch, area: st.area,
-      });
-      if (isRecord) holder.innerHTML += '<div class="new-record">★ NEW RECORD</div>';
+      // 最佳记录：v0.15.2 起**不再写入番街战绩**（主菜单只显示治安战记录），因此这里不再提交
       // 解锁的记忆片段提示
       const frag = this.game.fragUnlocked;
       if (frag) {
@@ -1243,15 +1238,11 @@ window.KUP = window.KUP || {};
       this.updateSaveHealth();     // 若结算落盘失败（配额/privacy），立刻让玩家看到
     },
     showBest() {
-      const rec = KUP.META.best();
-      this.els['best-line'].textContent = rec
-        ? KUP.I18N.t('menu.best', {
-            result: rec.win ? KUP.I18N.t('win.word') : KUP.I18N.t('alive.word'),
-            time: U.formatTime(rec.time || 0),
-            kills: rec.kills || 0,
-            witch: rec.witch ? ' · ' + rec.witch : '' })
-        : KUP.I18N.t('menu.best.none');
-      /* v0.13 治安战最高记录：与番街 best 分开显示（最高成绩只记治安战自己的） */
+      /* v0.15.2（人类 2026-10-18「最佳成绩只显示治安战」）：
+       * 主菜单只保留**治安战的最高记录**；番街（主线）的「最佳记录」整行隐藏，
+       * 且 showEnd 已不再提交（见上方的 submitBest 注释）。旧档里的数据原样保留、不删除。 */
+      if (this.els['best-line']) this.els['best-line'].classList.add('hidden');
+      /* 治安战最高记录：与番街 best 分开显示（最高成绩只记治安战自己的） */
       if (this.els['order-best-line']) {
         const ob = KUP.META.orderBest();
         this.els['order-best-line'].textContent = ob

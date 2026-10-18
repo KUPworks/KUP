@@ -293,18 +293,52 @@ gV.damageEnemy(boss, 999999);
 check('击破 Boss → 胜利', gV.state === 'victory');
 check('胜利 → Boss 必得記憶の卵', gV.eggGain === 1);
 check('胜利 → 復興率已结算', !!gV.metaResult && gV.metaResult.gain >= 12, JSON.stringify(gV.metaResult));
-check('未暴走 → 非惨胜', !gV.stats().bossEnraged);
+check('暴走标记照旧记录（只作 observability，不作判定）', gV.stats().bossEnraged === false);
+check('普通胜利的副标题取 end.win.sub（pyrrhic 分支已取消，源码断言见下方 14 条）', gV.stats().bossEnraged === false);
 
-// 14. 暴走后击破 → 惨胜结局分歧
+// 14. v0.15.2：**取消胜利／惨胜的区分**（人类 2026-10-18）
+//     暴走后击破仍然只是「胜利」，不再产生任何一种单独的结局分支：
+//     ① 结算副标题固定 end.win.sub（pyrrhic 文案不再被取用，源码断言）
+//     ② 结算口径只有「胜利」一条：復興率/市民票都由「是否胜利＋是否首通」决定，
+//        与暴走与否无关（下方对比两次同一番街的胜利结算，增益完全相同）
+//     ③ 暴走本身仍然记录在 stats.bossEnraged 里（只作 observability，不作判定）
 const gP = new KUP.Game(canvas);
-gP.start({ char: 'kaf', area: 'area0', seed: 888 });
+gP.start({ char: 'kaf', area: 'area6', seed: 888 });   // 从未通关的番街 → 两次都按「首通」结算
 const boss2 = gP.spawnEnemy('boss', gP.player.x + 50, gP.player.y);
 gP.boss = boss2;
 gP.time = KUP.CONFIG.ENRAGE_TIME + 1;
 gP.updateBossBehavior(0.01); // 触发暴走判定
 check('5:00 后 Boss 暴走标记', gP.bossEnraged === true);
 gP.damageEnemy(boss2, 999999);
-check('暴走后击破 → 惨胜结局', gP.state === 'victory' && gP.stats().bossEnraged === true);
+check('暴走后击破 → 仍然只是胜利（不再叫惨胜）', gP.state === 'victory');
+const gP2 = new KUP.Game(canvas);
+gP2.start({ char: 'kaf', area: 'area5', seed: 889 }); // 同样从未通关
+const boss2b = gP2.spawnEnemy('boss', gP2.player.x + 50, gP2.player.y);
+gP2.boss = boss2b;
+gP2.damageEnemy(boss2b, 999999);                      // 未暴走
+check('惨胜不再单独结算：復興率增益与普通胜利一致', !!gP.metaResult && !!gP2.metaResult &&
+  gP.metaResult.gain === gP2.metaResult.gain, gP2.metaResult.gain + ' vs ' + gP.metaResult.gain);
+check('惨胜不再单独结算：市民票收入与普通胜利一致', (() => {
+  /* 市民票收入含「通关 15 ＋ 首通 10 ＋ 卵 5 ＋ 击杀/10 ＋ 番街深度×2」——
+   * 两局在不同番街，所以先扣掉「番街深度×2」再比：剩下的公共部分应完全一致，
+   * 即没有任何"惨胜"专属的奖励或扣减。 */
+  const depth = id => KUP.META.areaIndex(id) * 2;
+  const a = gP.metaResult.tickets - depth('area6');
+  const b = gP2.metaResult.tickets - depth('area5');
+  return a === b;
+})(), gP2.metaResult.tickets + ' vs ' + gP.metaResult.tickets);
+{
+  /* 结算副标题与菜单记录：直接读 ui.js 源码做断言（node 环境没有 DOM，不跑真实 UI） */
+  const uiSrc = require('fs').readFileSync('js/ui.js', 'utf8');
+  check('showEnd 里 win-sub 固定为 end.win.sub（不再按暴走切换）',
+    /win-sub'\]\s*&&\s*win\)[\s\S]{0,300}KUP\.I18N\.t\('end\.win\.sub'\)/.test(uiSrc) &&
+    uiSrc.indexOf("KUP.I18N.t('end.win.sub.pyrrhic')") < 0);
+  check('UI 不再提交番街最佳记录（submitBest 不再被 UI 调用）', uiSrc.indexOf('submitBest(') < 0);
+  check('菜单最佳记录行隐藏（showBest 里给 best-line 加 hidden）',
+    /best-line'\]\.classList\.add\('hidden'\)/.test(uiSrc));
+  check('治安战记录行仍在显示（order-best-line 照常渲染）',
+    /order-best-line'\]\.textContent\s*=/.test(uiSrc));
+}
 
 // 15. Boss 召唤混合異能个体（待修 #3）
 const gB = new KUP.Game(canvas);
