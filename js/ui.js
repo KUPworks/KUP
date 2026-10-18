@@ -26,7 +26,7 @@ window.KUP = window.KUP || {};
       const ids = ['hud', 'banner', 'char-cards', 'char-detail', 'lu-cards', 'lu-lv', 'best-line',
         'reroll-n', 'btn-reroll', 'btn-banmode', 'lu-hint',
         'over-stats', 'win-stats', 'danger', 'hp-bar', 'hp-text', 'lv-num', 'timer', 'kills',
-        'weapon-row', 'xp-bar-fill', 'boss-wrap', 'boss-name', 'boss-bar', 'vol-slider',
+        'weapon-row', 'xp-bar-fill', 'boss-wrap', 'boss-rows', 'vol-slider',
         'shield-row', 'shield-orb', 'shield-num', 'shield-tag', 'dash-pips', 'danger-warn', 'btn-dash', 'buff-row', 'btn-aim',
         'area-cards', 'area-detail', 'fukkou-fill', 'fukkou-label', 'memory-list', 'memory-count',
         'ult-wrap', 'ult-fill', 'ult-label', 'win-sub', 'fukkou-menu-line',
@@ -1011,15 +1011,61 @@ window.KUP = window.KUP || {};
       this._bannerT = setTimeout(() => b.classList.add('hidden'), (dur || 2) * 1000);
     },
 
-    /* ---------- Boss 条 ---------- */
+    /* ---------- Boss 条（v0.15.3：支持**多体 Boss 并存**） ----------
+     * 旧版只有一条 #boss-bar：只显示 game.boss 那**一体**，而治安战里前一体没打完就会
+     * 再排新的一体 ⇒ 血条要么对不上号（显示的是最新一体），要么在击破某一体时被
+     * showBoss(false) 整块藏掉（其它 Boss 的血条跟着"退场"）。
+     * 现在改成列表：`syncBosses(list)` 每帧调用，`bossHudRows()`（纯函数、可单测）
+     * 决定「显示哪几条 + 折叠几条」，DOM 只在**行集合变化**时重建，其余帧只改宽度。 */
     showBoss(on, def) {
       const b = def || (KUP.game && KUP.game.boss ? KUP.game.boss.def : KUP.ENEMIES.boss);
       this.els['boss-wrap'].classList.toggle('hidden', !on);
-      if (on) this.els['boss-name'].textContent = KUP.I18N.tv(b.name);
+      if (!on) { this._bossSig = null; if (this.els['boss-rows']) this.els['boss-rows'].innerHTML = ''; }
+      void b;
     },
+    /* 兼容旧调用：单条更新（内部转成一次 syncBosses） */
     updateBoss(boss) {
-      if (!boss || boss.dead) return;
-      this.els['boss-bar'].style.width = Math.max(0, boss.hp / boss.maxhp * 100).toFixed(1) + '%';
+      if (!boss) return;
+      this.syncBosses([boss]);
+    },
+    /* 多体 Boss 的血条同步（game.update 每帧调用，参数＝存活 Boss 数组，按出现顺序） */
+    syncBosses(bosses) {
+      const wrap = this.els['boss-wrap'], host = this.els['boss-rows'];
+      if (!wrap || !host) return;
+      const { rows, more } = KUP.bossHudRows(bosses);
+      wrap.classList.toggle('hidden', rows.length === 0);
+      const sig = rows.map(r => r.id).join(',') + '|' + more;
+      if (sig !== this._bossSig) {
+        this._bossSig = sig;
+        host.innerHTML = '';
+        this._bossEls = rows.map(r => {
+          const row = document.createElement('div');
+          row.className = 'boss-row';
+          const nm = document.createElement('div');
+          nm.className = 'boss-name';
+          nm.textContent = r.name;
+          const bw = document.createElement('div');
+          bw.className = 'boss-bar-wrap';
+          const bar = document.createElement('div');
+          bar.className = 'boss-bar';
+          bw.appendChild(bar);
+          row.appendChild(nm); row.appendChild(bw);
+          host.appendChild(row);
+          return { row: row, bar: bar };
+        });
+        if (more > 0) {
+          const m = document.createElement('div');
+          m.className = 'boss-more';
+          m.textContent = KUP.I18N.t('hud.bossMore', { n: more });
+          host.appendChild(m);
+        }
+      }
+      if (!this._bossEls) return;
+      for (let i = 0; i < rows.length && i < this._bossEls.length; i++) {
+        const el = this._bossEls[i], r = rows[i];
+        el.bar.style.width = (r.ratio * 100).toFixed(1) + '%';
+        el.row.classList.toggle('enraged', r.enraged);
+      }
     },
 
     /* ---------- HUD ---------- */
@@ -1253,6 +1299,33 @@ window.KUP = window.KUP || {};
       }
       this.updateMetaUI();
     },
+  };
+
+  /* ---------- 多体 Boss 的血条行模型（纯函数，可单测） ----------
+   * 输入：存活 Boss 数组（按**出现顺序**）；输出：要显示的行 + 被折叠的数量。
+   * 规则（v0.15.3）：
+   *   · `dead` 的 Boss 一律不进列表 —— 击破一体不会影响其它 Boss 的血条；
+   *   · 按出现顺序**依次**排列（先来的在上），名字用三语表；
+   *   · 最多显示 `cap`（4）行，超出的折叠成 `more`（「+N」），避免把 HUD 顶出屏幕；
+   *   · `ratio` 已归一化到 0–1（maxhp 缺失/为 0 时按 0 处理，绝不出 NaN%）。
+   */
+  KUP.bossHudRows = (bosses, cap) => {
+    const limit = cap || 4;
+    const live = [];
+    for (const b of (bosses || [])) {
+      if (!b || b.dead || !b.def) continue;
+      live.push(b);
+    }
+    const rows = live.slice(0, limit).map(b => {
+      const max = b.maxhp > 0 ? b.maxhp : 1;
+      return {
+        id: b.def.id,
+        name: KUP.I18N.tv(b.def.name),
+        ratio: Math.max(0, Math.min(1, (b.hp || 0) / max)),
+        enraged: !!b.enraged,
+      };
+    });
+    return { rows, more: Math.max(0, live.length - rows.length), total: live.length };
   };
 
   KUP.UI = UI;

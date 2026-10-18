@@ -606,9 +606,14 @@ window.KUP = window.KUP || {};
       if (this.dashT > 0) { // 冲锋系 Boss（壱番街〈緘黙〉）
         this.dashT -= dt;
         this.x += this.dashX * dt; this.y += this.dashY * dt;
-        this.x = U.clamp(this.x, this.r, C.ARENA - this.r);
-        this.y = U.clamp(this.y, this.r, C.ARENA - this.r);
       }
+      /* v0.15.3：**所有敌人**都被夹在竞技场内（含 Boss）。
+       * 旧版只有冲锋位移那一段做了 clamp，普通移动与**击退**（kx/ky）不受约束——
+       * 治安战里多体 Boss 会被浄化の歌/冲击环的击退一路推出场外（相机贴着竞技场边界，
+       * 于是 Boss 跑到画面外、玩家打不到），这就是「会被击退出场」。
+       * 与玩家的处理一致：位置夹在 [r, ARENA-r]，击退仍然生效（只是不会再出界）。 */
+      this.x = U.clamp(this.x, this.r, C.ARENA - this.r);
+      this.y = U.clamp(this.y, this.r, C.ARENA - this.r);
     }
     /* 施加减速（取最强来源：倍率更低者胜出；时间取较长者）。
      * 返回是否生效（同类更弱的效果不会覆盖更强的）。 */

@@ -908,7 +908,10 @@ window.KUP = window.KUP || {};
       /* 大招冷却（充能满后仍要等的秒数；与充能互不影响） */
       if (this.ult.cdT > 0) this.ult.cdT = Math.max(0, this.ult.cdT - dt);
 
-      if (this.boss) KUP.UI.updateBoss(this.boss);
+      /* v0.15.3：Boss 血条改成**列表**——每帧把「所有存活 Boss」交给 UI 依次排列，
+       * 多体并存时各自一行；击破其中一体只是少一行，其它血条不会跟着消失。 */
+      if (KUP.UI.syncBosses) KUP.UI.syncBosses(this._liveBoss || []);
+      else if (this.boss) KUP.UI.updateBoss(this.boss);
     }
 
     /* 敌人空间索引（v0.13.6）——每帧重建一次，供弹幕碰撞与「最近敌人」查询用。
@@ -1035,7 +1038,8 @@ window.KUP = window.KUP || {};
            * ⚠️ 只清「被击破的这一体」：可能同时存在多体 Boss（前一体没打完又来了一体），
            * 无条件 this.boss = null 会把还活着的那一体的行为/暴走/HUD 一起清掉。 */
           if (this.boss === e) this.boss = null;
-          KUP.UI.showBoss(false);
+          /* v0.15.3：**不再**整块 showBoss(false)——多体 Boss 并存时那会把其它 Boss 的
+           * 血条一起抹掉（"被击退出场"）。血条由 game.update 的 syncBosses 每帧按存活列表维护。 */
           this.ult.charge = Math.min(100, this.ult.charge + 40);
           this.addText(p.x, p.y - 32, KUP.I18N.t('order.bossDown'), '#ffe08a', 16);
           KUP.UI.banner(KUP.I18N.t('banner.order.next'), 2);

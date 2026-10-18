@@ -19,8 +19,11 @@ ctx.localStorage = {                    // 内存版 localStorage（js/store.js 
   get length() { return Object.keys(this._s).length; },
 };
 vm.createContext(ctx);
+/* ui.js 也要加载：`KUP.bossHudRows`（多体 Boss 血条的**纯函数**行模型）在那里定义，
+ * 需要在 node 里直接单测。它顶层只做定义、不碰 DOM（DOM 只在 UI.init 里用），
+ * 因此加载后仍然用下面的 KUP.UI 桩替换掉真实 UI。 */
 for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', 'js/data.js', 'js/meta.js',
-  'js/entities.js', 'js/game.js', 'js/director.js', 'js/render.js']) {
+  'js/entities.js', 'js/game.js', 'js/director.js', 'js/render.js', 'js/ui.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), ctx, { filename: f });
 }
 const KUP = ctx.KUP;
@@ -28,7 +31,7 @@ const KUP = ctx.KUP;
 /* 音频/UI 桩（node 环境无 DOM/WebAudio；game.start 会调用） */
 KUP.Audio = { init() {}, resume() {}, startBGM() {}, stopBGM() {}, sfx() {} };
 KUP.UI = {
-  banner() {}, showScreen() {}, showHUD() {}, showBoss() {}, updateBoss() {},
+  banner() {}, showScreen() {}, showHUD() {}, showBoss() {}, updateBoss() {}, syncBosses() {},
   showLevelUp() {}, showEnd() {}, updateHUD() {}, onLangChange() {},
 };
 /* 输入桩（Player.update 读 KUP.Input） */
@@ -1747,6 +1750,92 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   b2.minionT = 5;
   gB2.updateBossBehavior(0.02);
   check('击破旧 Boss 后，剩余 Boss 仍在行动', b2.minionT < 5);
+}
+
+// 25n-2. v0.15.3：多体 Boss 的血条（逐行依次显示 + 击破一体只减一行 + 不溢出屏幕）
+{
+  /* KUP.bossHudRows 是纯函数（不碰 DOM），直接在 node 里测它的语义 */
+  const mk = (id, name, hp, maxhp, enraged, dead) => ({
+    def: { id: id, name: { zh: name, en: name, ja: name } }, hp: hp, maxhp: maxhp, enraged: enraged, dead: !!dead,
+  });
+  const live3 = [
+    mk('boss0', '消音', 2000, 2000),
+    mk('boss1', '緘黙', 500, 1000, true),
+    mk('boss2', '誘惑', 0, 800, false, true),      // 已击破
+    mk('boss3', '枯死', 300, 1200),
+  ];
+  const r3 = KUP.bossHudRows(live3);
+  check('Boss 血条：每个**存活** Boss 一行，已击破的不出现',
+    r3.rows.length === 3 && r3.total === 3 && r3.rows.every(r => r.id !== 'boss2'),
+    r3.rows.map(r => r.id).join(','));
+  check('Boss 血条：按出现顺序依次排列（先出现的在上）',
+    r3.rows[0].id === 'boss0' && r3.rows[1].id === 'boss1' && r3.rows[2].id === 'boss3');
+  check('Boss 血条：血量比例归一化（含暴走标记）',
+    Math.abs(r3.rows[0].ratio - 1) < 1e-9 && Math.abs(r3.rows[1].ratio - 0.5) < 1e-9 &&
+    r3.rows[1].enraged === true && r3.rows[0].enraged === false,
+    r3.rows.map(r => r.ratio.toFixed(2)).join('/'));
+  check('Boss 血条：名字取三语表', r3.rows[0].name === '消音', r3.rows[0].name);
+  /* 击破一体只减一行（旧版 showBoss(false) 会把整块面板藏掉 = "被击退出场"） */
+  const afterOneDead = live3.slice();
+  afterOneDead[0] = mk('boss0', '消音', 2000, 2000, false, true);
+  const rAfter = KUP.bossHudRows(afterOneDead);
+  check('击破一体后其它 Boss 的血条仍在（不再整块消失）',
+    rAfter.rows.length === 2 && rAfter.rows[0].id === 'boss1' && rAfter.rows[1].id === 'boss3',
+    rAfter.rows.map(r => r.id).join(','));
+  /* 超过上限 → 折叠，保证不会把 HUD 顶出屏幕 */
+  const many = [];
+  for (let i = 0; i < 7; i++) many.push(mk('boss' + (i % 7), 'B' + i, 100, 100));
+  const rMany = KUP.bossHudRows(many);
+  check('Boss 血条：最多显示 4 行，其余折叠成「+N」',
+    rMany.rows.length === 4 && rMany.more === 3 && rMany.total === 7, 'rows=' + rMany.rows.length + ' more=' + rMany.more);
+  check('Boss 血条：没有 Boss 时返回空（面板隐藏）', KUP.bossHudRows([]).rows.length === 0);
+  /* 结构性守卫：syncBosses 必须调用**同一个**纯函数（别又写成 KUP.UI.bossHudRows ——
+   * 浏览器实测踩过：函数挂在 KUP 上，写错位置会让 HUD 整块静默失效） */
+  check('UI.syncBosses 调用的是 KUP.bossHudRows（不是 KUP.UI.bossHudRows）',
+    /const \{ rows, more \} = KUP\.bossHudRows\(bosses\);/.test(
+      String(KUP.UI && KUP.UI.syncBosses)) || /KUP\.bossHudRows\(bosses\)/.test(
+      require('fs').readFileSync('js/ui.js', 'utf8')),
+    '');
+  check('Boss 血条：血量异常不会产生 NaN/越界',
+    KUP.bossHudRows([mk('x', 'X', 10, 0)]).rows[0].ratio <= 1 &&
+    KUP.bossHudRows([mk('x', 'X', -5, 100)]).rows[0].ratio === 0);
+  /* game.update 真的会把「存活 Boss 列表」交给 UI（不是只交 this.boss 那一体） */
+  const seen = [];
+  const origSync = KUP.UI.syncBosses;
+  KUP.UI.syncBosses = list => { seen.push((list || []).map(b => b.def.id).join(',')); };
+  const gHud = new KUP.Game(canvas);
+  gHud.start({ char: 'kaf', area: 'order', seed: 602 });
+  gHud.director = () => {};
+  gHud.player.invuln = true;
+  gHud.enemies.length = 0;
+  const h1 = gHud.spawnEnemy('boss0', 1500, 1400);
+  const h2 = gHud.spawnEnemy('boss1', 1600, 1500);
+  gHud.update(0.016);
+  gHud.killEnemy(h1);
+  gHud.update(0.016);
+  KUP.UI.syncBosses = origSync;
+  check('game.update 每帧把全部存活 Boss 交给 HUD（多体并列）',
+    seen[0] === 'boss0,boss1' && seen[1] === 'boss1', seen.join(' → '));
+  void h2;
+
+  /* 出界保护：击退不再能把敌人/Boss 推出竞技场（"被击退出场"） */
+  const gOut = new KUP.Game(canvas);
+  gOut.start({ char: 'kaf', area: 'order', seed: 603 });
+  gOut.director = () => {};
+  gOut.player.invuln = true;
+  gOut.enemies.length = 0;
+  const edge = gOut.spawnEnemy('boss0', KUP.CONFIG.ARENA - 60, 1500);
+  edge.kx = 4000; edge.ky = 0;                       // 模拟被强力击退推向边界外
+  for (let i = 0; i < 120; i++) { edge.x = Math.min(KUP.CONFIG.ARENA + 200, edge.x); gOut.update(0.016); }
+  check('Boss 不会被击退出竞技场（位置被夹在场地内）',
+    edge.x <= KUP.CONFIG.ARENA - edge.r + 1e-6 && edge.x >= edge.r - 1e-6,
+    'x=' + edge.x.toFixed(1) + ' r=' + edge.r + ' arena=' + KUP.CONFIG.ARENA);
+  const small = gOut.spawnEnemy('noise', 1500, 1500);
+  small.kx = -9000; small.ky = -9000;
+  for (let i = 0; i < 60; i++) gOut.update(0.016);
+  check('普通怪异同样被夹在场地内（不会飞出地图）',
+    small.x >= small.r - 1e-6 && small.y >= small.r - 1e-6,
+    small.x.toFixed(1) + ',' + small.y.toFixed(1));
 }
 
 // 25o. 显示缩放：地雷只缩画面、不缩判定（v0.15.1：更小 + 触发/爆炸半径分离）；太刀不再画扇形范围框

@@ -49,7 +49,8 @@ window.KUP = window.KUP || {};
         this.boss = this.spawnEnemy(area.boss || 'boss0');
         KUP.UI.banner(KUP.I18N.t('banner.boss', { name: KUP.I18N.tv(this.boss.def.name) }), 2.6, 'warn');
         KUP.Audio.sfx('boss');
-        KUP.UI.showBoss(true, this.boss.def);
+        /* v0.15.3：血条不再在这里手动 showBoss —— 统一由 game.update 的 syncBosses
+         * 按「存活 Boss 列表」每帧维护（多体并存时逐行显示、击破一体只减一行）。 */
       }
     },
 
@@ -120,7 +121,6 @@ window.KUP = window.KUP || {};
           b.bornAt = this.time;              // 暴走计时以「出生」为基准（无尽模式）
           this.boss = b;
           KUP.UI.banner(KUP.I18N.t('banner.order.boss', { name: KUP.I18N.tv(b.def.name), n: this.orderBossIdx }), 2.4, 'warn');
-          KUP.UI.showBoss(true, b.def);
           KUP.Audio.sfx('boss');
         }
       }

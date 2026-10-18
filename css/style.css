@@ -168,10 +168,39 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
   color: #ffd25a; text-shadow: 0 0 12px rgba(255,210,90,.7);
 }
 #hud-wave.hidden { display: none; }
+/* ---------- Boss 血条（v0.15.3：多体 Boss 依次纵排） ----------
+ * 治安战里会出现多体 Boss 并存；旧版只有一条 #boss-bar，只显示 this.boss 那一体，
+ * 击破其中一体还会把整块面板 showBoss(false) 掉 —— 其它 Boss 的血条跟着"被击退出场"。
+ * 现在：`#boss-rows` 里每个存活 Boss 一行（名字 + 血条），由 UI.syncBosses 维护；
+ * 行数上限 4，多出来的折叠成「+N」提示，保证永远不会把 HUD 顶出屏幕。 */
 #boss-wrap { margin-top: 6px; width: min(460px, 60vw); }
-#boss-name { font-size: 12px; letter-spacing: .2em; color: #ff7ad9; text-shadow: 0 0 8px rgba(255,80,180,.8); margin-bottom: 3px; }
-#boss-bar-wrap { height: 12px; background: rgba(10,6,24,.8); border: 1px solid rgba(255,110,200,.6); border-radius: 3px; overflow: hidden; }
-#boss-bar { height: 100%; width: 100%; background: linear-gradient(90deg, #ff2e88, #b026ff); box-shadow: 0 0 10px rgba(255,46,136,.8); }
+#boss-wrap.hidden { display: none; }
+#boss-rows {
+  display: flex; flex-direction: column; gap: 3px;
+  max-height: 44vh; overflow: hidden;          /* 兜底：任何情况下都不撑出屏幕 */
+}
+.boss-row { text-align: left; }
+.boss-name {
+  font-size: 11.5px; letter-spacing: .16em; color: #ff7ad9; margin-bottom: 2px;
+  text-shadow: 0 0 8px rgba(255,80,180,.8);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.boss-row.enraged .boss-name { color: #ff9a5a; text-shadow: 0 0 8px rgba(255,140,60,.9); }
+.boss-bar-wrap {
+  height: 9px; background: rgba(10,6,24,.8);
+  border: 1px solid rgba(255,110,200,.6); border-radius: 3px; overflow: hidden;
+}
+.boss-row.enraged .boss-bar-wrap { border-color: rgba(255,140,60,.75); }
+.boss-bar {
+  height: 100%; width: 100%;
+  background: linear-gradient(90deg, #ff2e88, #b026ff);
+  box-shadow: 0 0 10px rgba(255,46,136,.8);
+  transition: width .08s linear;
+}
+.boss-row.enraged .boss-bar { background: linear-gradient(90deg, #ff8a3c, #ff2e88); }
+.boss-more {
+  font-size: 10.5px; color: #ffb9e4; letter-spacing: .12em; text-align: left; opacity: .9;
+}
 
 #hud-topright { position: absolute; top: 16px; right: 16px; display: flex; align-items: center; gap: 10px; pointer-events: auto; }
 #kills { font-size: 15px; font-weight: 700; color: #cfc8f5; text-shadow: 0 0 8px rgba(0,0,0,.8); }

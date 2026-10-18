@@ -42,9 +42,9 @@
         <div id="ult-label">♪ 浄化の歌</div>
         <div id="ult-bar-wrap"><div id="ult-fill"></div></div>
       </div>
+      <!-- v0.15.3：多体 Boss —— 每个存活 Boss 一行（依次纵向排列），由 UI.syncBosses 重建 -->
       <div id="boss-wrap" class="hidden">
-        <div id="boss-name">大破维魔〈消音〉</div>
-        <div id="boss-bar-wrap"><div id="boss-bar"></div></div>
+        <div id="boss-rows"></div>
       </div>
       <div id="danger-warn" class="hidden" data-i18n="hud.danger">⚠ 危険 —— 回避せよ（Shift 冲刺）</div>
       <button id="btn-dash" class="hud-btn" data-i18n-title="hud.dashBtn" title="冲刺 (Shift)">»</button>
@@ -254,19 +254,19 @@
   </div>
 </div>
 
-<script src="js/config.js?v=0.15.2-ending"></script>
-<script src="js/utils.js?v=0.15.2-ending"></script>
+<script src="js/config.js?v=0.15.3-boss"></script>
+<script src="js/utils.js?v=0.15.3-boss"></script>
 <!-- 存档层：必须在 i18n/audio/meta 之前（它们都经由 KUP.STORE 读写持久化数据） -->
-<script src="js/store.js?v=0.15.2-ending"></script>
-<script src="js/i18n.js?v=0.15.2-ending"></script>
-<script src="js/audio.js?v=0.15.2-ending"></script>
-<script src="js/data.js?v=0.15.2-ending"></script>
-<script src="js/meta.js?v=0.15.2-ending"></script>
-<script src="js/entities.js?v=0.15.2-ending"></script>
-<script src="js/game.js?v=0.15.2-ending"></script>
-<script src="js/director.js?v=0.15.2-ending"></script>
-<script src="js/render.js?v=0.15.2-ending"></script>
-<script src="js/ui.js?v=0.15.2-ending"></script>
-<script src="js/main.js?v=0.15.2-ending"></script>
+<script src="js/store.js?v=0.15.3-boss"></script>
+<script src="js/i18n.js?v=0.15.3-boss"></script>
+<script src="js/audio.js?v=0.15.3-boss"></script>
+<script src="js/data.js?v=0.15.3-boss"></script>
+<script src="js/meta.js?v=0.15.3-boss"></script>
+<script src="js/entities.js?v=0.15.3-boss"></script>
+<script src="js/game.js?v=0.15.3-boss"></script>
+<script src="js/director.js?v=0.15.3-boss"></script>
+<script src="js/render.js?v=0.15.3-boss"></script>
+<script src="js/ui.js?v=0.15.3-boss"></script>
+<script src="js/main.js?v=0.15.3-boss"></script>
 </body>
 </html>
