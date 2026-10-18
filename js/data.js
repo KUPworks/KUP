@@ -200,9 +200,16 @@ KUP.WEAPON_MODULES = {
   orbit: {
     id: 'orbit', entity: 'WeaponRuntime.orbs',
     name: { zh: '环绕音球', en: 'Resonant Orbs', ja: 'レゾナンス・オーブ' },
-    desc: { zh: '音球绕玩家旋转，扫掠臂即判定；环绕半径与**球体体积**都随「范围」放大。', en: 'Orbs circle you, damaging along the sweep; both orbit radius and orb size scale with Area.', ja: '音球が周回し、掃引腕が判定。周回半径と**球体の大きさ**が「範囲」で拡大。' },
-    params: ['dmg', 'count', 'r', 'spin'],
-    base: { r: 88, spin: 2.6, orbR: 11 },
+    desc: {
+      zh: '音球绕玩家旋转，**只有球体本身**接触才算命中；球会沿半径往复呼吸，内圈也能扫到。环绕半径、球体体积都随「范围」放大，转速随「冷却」提升。',
+      en: 'Orbs circle you and only the **orb body itself** deals contact damage; each orb breathes inward and outward so the inner ring is covered too. Orbit radius and orb size scale with Area, spin with Cooldown.',
+      ja: '音球が周回し、**球体そのもの**の接触のみが命中。球は半径方向に往復するので内側もカバー。周回半径と球体サイズは「範囲」、回転速度は「クールダウン」で伸びる。',
+    },
+    /* v0.15：判定改回「旋转物本身」——为了让覆盖不吃亏，参数与伤害同时上调
+     *   orbR 11→20（球体更大）、spin 2.6→3.4（转得更快）、hitCd 0.45→0.3（同一目标更快再命中）
+     *   新增 osc/oscK：球体沿半径往复（内圈 = 环绕半径 × osc），补上"内圈打不到"的洞。 */
+    params: ['dmg', 'count', 'r', 'spin', 'orbR', 'osc', 'oscK', 'hitCd'],
+    base: { r: 88, spin: 3.4, orbR: 20, osc: 0.42, oscK: 0.6, hitCd: 0.3 },
     area: ['r', 'orbR'],
   },
   bass: {
@@ -312,23 +319,30 @@ KUP.WEAPONS = {
     id: 'orbit', icon: '◎', color: '#ff6bb5', behavior: 'orbit', maxLv: 5, owner: 'rim',
     name: { zh: '暴食音球', en: 'Carnivorous Bit', ja: 'カーニヴォラス・ビット' },
     desc: {
-      zh: '乐曲「食虫植物」般环绕捕食的音球。谷置狸眼的初期武装。<br><span class="cv-note">体积随「范围」、转速随「冷却」成长</span>',
-      en: 'Orbs that orbit and devour like "Shokuchuu Shokubutsu". TANIOKI RIME\'s starting weapon.<br><span class="cv-note">Radius scales with Area, spin with Cooldown</span>',
-      ja: '楽曲「食虫植物」の如く敵を捕らえる音球。谷置狸眼の初期武装。<br><span class="cv-note">旋回半径は「範囲」、回転速度は「クールダウン」で伸びる</span>',
+      zh: '乐曲「食虫植物」般环绕捕食的音球。谷置狸眼的初期武装。<br><span class="cv-note">球体接触判定 · 体积随「范围」、转速随「冷却」成长</span>',
+      en: 'Orbs that orbit and devour like "Shokuchuu Shokubutsu". TANIOKI RIME\'s starting weapon.<br><span class="cv-note">Orb-body contact · radius & size scale with Area, spin with Cooldown</span>',
+      ja: '楽曲「食虫植物」の如く敵を捕らえる音球。谷置狸眼の初期武装。<br><span class="cv-note">球体接触判定 · 旋回半径と大きさは「範囲」、回転速度は「クールダウン」で伸びる</span>',
     },
     lvDesc: [
       { zh: '音球 ×2，接触伤害并击退。', en: '2 orbs; contact damage and knockback.', ja: '音球 ×2、接触ダメージとノックバック。' },
-      { zh: '音球 ×3。', en: '3 orbs.', ja: '音球 ×3。' },
+      { zh: '音球 ×3，球体变大。', en: '3 orbs, bigger bodies.', ja: '音球 ×3、球体が大きくなる。' },
       { zh: '音球 ×3，旋转范围与转速提升。', en: '3 orbs, wider and faster orbit.', ja: '音球 ×3、旋回範囲と回転速度アップ。' },
-      { zh: '音球 ×4，伤害提升。', en: '4 orbs, more damage.', ja: '音球 ×4、ダメージアップ。' },
+      { zh: '音球 ×4，伤害与体积提升。', en: '4 orbs, more damage and size.', ja: '音球 ×4、ダメージと体積アップ。' },
       { zh: '音球 ×6 —— 捕食领域全面展开。', en: '6 orbs — the predatory field unfolds.', ja: '音球 ×6 —— 捕食領域が全面展開。' },
     ],
+    /* v0.15：判定从"扫掠臂"改回"球体本身"后，用**实测标定**把强度拉回旧版水平
+     * （`tools/verify-run.js` 里有「orbit 强度」一组断言守住这个预算）：
+     *   · 单发伤害：Lv1 9→16（+78%）／Lv5 17→22（+29%）／覚醒 20→28（+40%）
+     *   · 球体体积：11→19（Lv1）…24（覚醒），再吃「范围」
+     *   · 转速：2.4→3.5（Lv1）…5.0（覚醒）
+     * 标定口径：60 只静止靶 ＋ 60 只走位靶各 30 秒的「命中×伤害」，两种场景的几何平均
+     * 与旧版（扫掠臂）相差 ≤10%（旧版基准：Lv1 197／Lv3 396／Lv5 826／覚醒 1198）。 */
     levels: [
-      { dmg: 9, count: 2, r: 84, spin: 2.4 },
-      { dmg: 10, count: 3, r: 84, spin: 2.5 },
-      { dmg: 11, count: 3, r: 100, spin: 3.0 },
-      { dmg: 14, count: 4, r: 104, spin: 3.3 },
-      { dmg: 17, count: 6, r: 112, spin: 3.7 },
+      { dmg: 16, count: 2, r: 84, spin: 3.5, orbR: 19 },
+      { dmg: 17, count: 3, r: 84, spin: 3.7, orbR: 20 },
+      { dmg: 19, count: 3, r: 100, spin: 4.0, orbR: 21 },
+      { dmg: 20, count: 4, r: 104, spin: 4.3, orbR: 22 },
+      { dmg: 22, count: 6, r: 112, spin: 4.8, orbR: 23 },
     ],
     evolved: {
       name: { zh: '食虫植物 -devour-', en: 'Shokuchuu Shokubutsu -Devour-', ja: '食虫植物 -devour-' },
@@ -337,7 +351,7 @@ KUP.WEAPONS = {
         en: 'Awakened — the carnivorous field unfolds; eight orbs devour all.',
         ja: '覚醒——「食虫植物」の捕食領域が全面展開、八つの音球が环噬する。',
       },
-      stats: { dmg: 20, count: 8, r: 128, spin: 4.2 },
+      stats: { dmg: 28, count: 8, r: 128, spin: 5.0, orbR: 24 },
     },
   },
   bass: {

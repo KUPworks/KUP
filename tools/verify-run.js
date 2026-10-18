@@ -782,14 +782,102 @@ gO.update(0.5);
 const spinFast = wO.angle - ang2;
 check('orbit：转速随冷却缩短而提升（冷却是有效属性）', spinFast > spinBase * 1.15, spinBase.toFixed(3) + '→' + spinFast.toFixed(3));
 check('orbit：等级表带 spin 字段', KUP.WEAPONS.orbit.levels.every(l => l.spin > 0) && KUP.WEAPONS.orbit.evolved.stats.spin > 0);
-/* 扫掠臂判定：贴到玩家身上的敌人也必须能被环噬（旧版圆判定打不到 → 初始武器形同虚设） */
+/* v0.15：判定改回**旋转物本身**（球心圆），并靠「径向呼吸」补上内圈
+ * ⚠ 断言分三层：① 判定只认球体（连线不再算）② 内圈也能被打到 ③ 强度预算不退化 */
 const gOs = new KUP.Game(canvas);
 gOs.start({ char: 'rim', area: 'area0', seed: 108 });
 gOs.player.invuln = true;
 let osKills0 = gOs.kills;
 for (let i = 0; i < 40 / 0.02; i++) { if (gOs.state === 'levelup') { gOs.state = 'playing'; gOs.pendingLevels = 0; } gOs.update(0.02); }
-check('orbit：40 秒内确实能击杀（扫掠臂判定修复）', gOs.kills > 5, 'kills=' + gOs.kills);
-check('Utils.segDist2：点到线段距离', Math.abs(ctx.KUP.U.segDist2(5, 3, 0, 0, 10, 0) - 9) < 1e-9 && Math.abs(ctx.KUP.U.segDist2(-4, 0, 0, 0, 10, 0) - 16) < 1e-9);
+check('orbit：40 秒内确实能击杀（改成球体判定后仍可自理）', gOs.kills > 5, 'kills=' + gOs.kills);
+check('Utils.segDist2：点到线段距离（工具函数仍在，orbit 已不再用它）',
+  Math.abs(ctx.KUP.U.segDist2(5, 3, 0, 0, 10, 0) - 9) < 1e-9 && Math.abs(ctx.KUP.U.segDist2(-4, 0, 0, 0, 10, 0) - 16) < 1e-9);
+
+/* ①②：判定几何——把敌人钉在"玩家与音球之间"（旧的扫掠臂会命中，新的球体判定不该命中），
+ * 再把敌人放在球心附近（必须命中）；同时验证内圈（很靠近玩家）会在径向呼吸后被打到。 */
+{
+  const gGeom = new KUP.Game(canvas);
+  gGeom.start({ char: 'rim', area: 'area0', seed: 109 });
+  gGeom.director = () => {};
+  gGeom.player.invuln = true;
+  const wG = new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 5);
+  gGeom.player.weapons = [wG];
+  gGeom.enemies.length = 0;
+  const px = gGeom.player.x, py = gGeom.player.y;
+  /* 先跑一帧让 orb 定位 */
+  gGeom.update(0.016);
+  const orb = wG.orbs[0];
+  const R0 = Math.hypot(orb.x - px, orb.y - py);
+  /* ⚠ spawnEnemy 会带 ±80px 落点抖动，几何测试必须**直接写坐标** */
+  const ux = (orb.x - px) / (R0 || 1), uy = (orb.y - py) / (R0 || 1);
+  /* A：放在玩家与球心连线的 **35% 处**（距球心 0.65R ≈ 73px，远大于 hitR≈35）→ 不应命中 */
+  const mid = gGeom.spawnEnemy('noise', px, py);
+  mid.x = px + ux * R0 * 0.35; mid.y = py + uy * R0 * 0.35;
+  mid.hp = mid.maxhp = 1e6; mid.speed = 0;
+  const midHp0 = mid.hp;
+  /* B：放在球心（命中半径内）→ 应命中 */
+  const onBall = gGeom.spawnEnemy('noise', px, py);
+  onBall.x = orb.x; onBall.y = orb.y;
+  onBall.hp = onBall.maxhp = 1e6; onBall.speed = 0;
+  const ballHp0 = onBall.hp;
+  /* 只走 1 帧：球体位移约 8px，仍够不到 73px 处的 mid */
+  gGeom.update(0.016);
+  check('orbit：判定只认球体本身（连线中途不再被判定命中）', mid.hp === midHp0,
+    'mid 掉血 ' + (midHp0 - mid.hp).toFixed(1) + '（距球心 ' + (R0 * 0.65).toFixed(0) + 'px，hitR≈' + (wG.orbR + mid.r).toFixed(0) + '）');
+  check('orbit：球体本身的接触照常命中', onBall.hp < ballHp0, 'onBall 掉血 ' + (ballHp0 - onBall.hp).toFixed(1));
+  /* ③ 内圈：敌人钉在离玩家 25px 处（环绕半径以内）。旧版"球体判定"的洞就在这里。 */
+  const gIn = new KUP.Game(canvas);
+  gIn.start({ char: 'rim', area: 'area0', seed: 110 });
+  gIn.director = () => {};
+  gIn.player.invuln = true;
+  gIn.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 5)];
+  gIn.enemies.length = 0;
+  const inner = gIn.spawnEnemy('noise', gIn.player.x + 25, gIn.player.y);
+  inner.hp = inner.maxhp = 1e6; inner.speed = 0;
+  const innerX = inner.x, innerY = inner.y;
+  for (let i = 0; i < 8 / 0.016; i++) {
+    gIn.update(0.016);
+    inner.x = innerX; inner.y = innerY; inner.kx = 0; inner.ky = 0;   // 钉住
+  }
+  check('orbit：内圈（贴脸 25px）也能被打到（径向呼吸补上旧版的"洞"）', inner.hp < 1e6 - 1,
+    '8 秒掉血 ' + (1e6 - inner.hp).toFixed(0));
+}
+
+/* 强度预算：60 只静止靶 + 60 只走位靶各 20 秒，取「命中×名义伤害」的几何平均。
+ * 数字来自 v0.15 的标定（旧版扫掠臂为基准，容差 ±25%）；改判定/改数值若让它掉下去，
+ * 这条会立刻红 —— 防止"改完判定顺手把这把武器改废了"。 */
+{
+  const measure = (moving) => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'rim', area: 'area0', seed: 777 });
+    g.director = () => {};
+    g.player.invuln = true;
+    g.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 5)];
+    g.enemies.length = 0;
+    let hits = 0, nominal = 0;
+    const orig = g.damageEnemy.bind(g);
+    g.damageEnemy = (e, dmg, kx, ky) => { hits++; nominal += dmg; return orig(e, dmg, kx, ky); };
+    const px = g.player.x, py = g.player.y, rng = KUP.U.mulberry32(4242), pins = [];
+    for (let i = 0; i < 60; i++) {
+      const a = rng() * KUP.U.TAU, d = 20 + Math.sqrt(rng()) * 260;
+      const e = g.spawnEnemy('noise', px + Math.cos(a) * d, py + Math.sin(a) * d);
+      e.hp = e.maxhp = 4000; e.xp = 0;
+      pins.push({ e, x: e.x, y: e.y });
+    }
+    const T = 20;
+    for (let i = 0; i < T / 0.016; i++) {
+      if (g.state === 'levelup') { g.state = 'playing'; g.pendingLevels = 0; }
+      g.update(0.016);
+      if (!moving) for (const p of pins) { if (!p.e.dead) { p.e.x = p.x; p.e.y = p.y; p.e.kx = 0; p.e.ky = 0; } }
+    }
+    return { hits, dps: nominal / T };
+  };
+  const st = measure(false), mv = measure(true);
+  const score = Math.sqrt(st.dps * mv.dps);
+  /* 旧版（扫掠臂，v0.14）同口径基准：静止 332 / 移动 2056 → 几何平均 826 */
+  check('orbit 强度预算：Lv5 综合吞吐 ≈ 旧版（826±25%）', score > 620 && score < 1035,
+    '静止 ' + st.dps.toFixed(0) + ' × 移动 ' + mv.dps.toFixed(0) + ' → ' + score.toFixed(0));
+}
 /* 瞄准：auto 对最近敌人 / move 对移动方向 / mouse 对指针 */
 const gAim = new KUP.Game(canvas);
 gAim.start({ char: 'kaf', area: 'area0', seed: 106 });

@@ -80,37 +80,48 @@ window.KUP = window.KUP || {};
           }
           break;
         }
-        case 'orbit': { // レゾナンス・オーブ：环绕音球（**体积与转速可调**）
-          /* v0.8：音球**体积与转速可调**——
-           *   环绕半径 r ← 「范围」(areaMult)（含被动 電脳領域／皮肤／規則修正）
-           *   球体半径 orbR ← **同样随「范围」成比例放大**（v0.13.1 修正：旧版只
-           *                     0.72+0.28×areaMult，范围翻倍时体积才 +28%，等于半个废属性）
-           *   转速 ← 基础 spin ÷ 冷却乘数（**冷却提升对 orbit 不再是废属性**）
-           * v0.9 修正：判定改为**沿「玩家→音球」扫掠臂**（点到线段距离）。
-           *   旧版只判定球心附近的圆，敌人贴到玩家身上（停在环内）后永远打不到，
-           *   导致这把初始武器几乎无法击杀——这是"碰撞检测考验操作"的根源。 */
-          while (this.orbs.length < s.count) this.orbs.push({ x: p.x, y: p.y, r: V('orbR', 11) });
-          while (this.orbs.length > s.count) this.orbs.pop();
+        case 'orbit': { // レゾナンス・オーブ：环绕音球（**体积／转速／伤害可调**）
+          /* v0.15（人类 2026-10-18）：**碰撞检测回到旋转物本身**——只看球心圆
+           * （`U.dist2(e, orb) < (e.r + orbR)²`），不再判定「玩家→音球」的扫掠臂。
+           * 为什么当初改成扫掠臂：旧版球判定下，贴到玩家身上（落在环绕半径以内）的敌人
+           * 永远碰不到球 ⇒ 初始武器形同虚设。现在改用**径向呼吸**解决同一个问题：
+           *   每颗球沿半径在 Rbase×osc ～ Rbase 之间往返（各球相位错开），
+           *   于是球体本身会周期性扫过内侧，内圈不再有打不到的"洞"，
+           *   而判定依旧是"球 vs 怪"的圆碰撞（不连线、不判扇形）。
+           * 强度补偿（因为覆盖面积比扫掠臂小）：
+           *   · `spin` 提高（扫过更快 → 同一目标被扫次数更多）
+           *   · `orbR` 提高（球更大 → 接触窗口更长，环带更宽）
+           *   · `dmg` 提高（单次命中更痛）
+           * 口径说明：`r`＝环绕半径（吃「范围」）、`orbR`＝球体半径（吃「范围」）、
+           *   `spin`＝角速度（吃「冷却」，冷却是有效属性）、`osc`＝内半径比例、
+           *   `oscK`＝径向呼吸速度（相对角速度）、`hitCd`＝同一目标的再命中间隔。 */
+          const n = Math.max(1, s.count | 0);
+          while (this.orbs.length < n) this.orbs.push({ x: p.x, y: p.y, r: V('orbR', 20) });
+          while (this.orbs.length > n) this.orbs.pop();
           const Rbase = V('r', 88);
-          const spin = V('spin', 2.6) / Math.max(0.35, p.cdMult);
-          const orbR = V('orbR', 11);
+          const orbR = V('orbR', 20);
+          const spin = V('spin', 3.4) / Math.max(0.35, p.cdMult);
+          const osc = U.clamp(V('osc', 0.42), 0.05, 0.95);      // 内半径比例（0.42＝内圈到 42% 处）
+          const oscK = V('oscK', 0.6);                          // 径向呼吸速度（相对角速度）
+          const hitCd = V('hitCd', 0.3) * Math.max(0.45, p.cdMult);
           this.angle += spin * dt;
           this.orbR = orbR;
-          /* 半径轻微「呼吸」（0.86〜1.0），让扫掠更有实感（不影响判定逻辑） */
-          const R = Rbase * (0.86 + 0.14 * (0.5 + 0.5 * Math.sin(this.angle * 0.9)));
           this.orbitR = Rbase;
-          for (let i = 0; i < this.orbs.length; i++) {
+          for (let i = 0; i < n; i++) {
             const orb = this.orbs[i];
-            const a = this.angle + (U.TAU * i) / this.orbs.length;
-            orb.x = p.x + Math.cos(a) * R;
-            orb.y = p.y + Math.sin(a) * R;
+            const a = this.angle + (U.TAU * i) / n;
+            /* 径向呼吸：每颗球相位错开（i/n 圈），同一时刻有内有外 ⇒ 内圈也被球体扫到 */
+            const ph = this.angle * oscK + (U.TAU * i) / n;
+            const rr = Rbase * (osc + (1 - osc) * (0.5 + 0.5 * Math.sin(ph)));
+            orb.x = p.x + Math.cos(a) * rr;
+            orb.y = p.y + Math.sin(a) * rr;
             orb.r = orbR;
+            /* ★ 判定：**只有球体本身**（圆 vs 圆），不再沿连线做线段判定 */
             for (const e of game.enemies) {
               if (e.dead || e.orbitT > 0) continue;
-              /* 扫掠臂判定：玩家→音球的线段（球体积决定臂的粗细） */
-              if (U.segDist2(e.x, e.y, p.x, p.y, orb.x, orb.y) < Math.pow(e.r + orbR, 2)) {
-                /* 转速越高，同一敌人被再次扫到的间隔越短（与冷却挂钩） */
-                e.orbitT = 0.45 * Math.max(0.45, p.cdMult);
+              const rr2 = e.r + orbR;
+              if (U.dist2(e.x, e.y, orb.x, orb.y) < rr2 * rr2) {
+                e.orbitT = hitCd;
                 game.damageEnemy(e, s.dmg * p.dmgMult, Math.cos(a) * 140, Math.sin(a) * 140);
               }
             }
