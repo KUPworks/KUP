@@ -1233,6 +1233,50 @@ window.KUP = window.KUP || {};
     }
   }
 
+  /* ---------- 冲击波（**纯表现**：不结算伤害） ----------
+   * v0.15.1：地雷起爆时用它把"真实作用范围"推给玩家看——地雷平时画得很小（vis），
+   * 玩家看不出它到底覆盖多大；起爆瞬间两道圆向外推到
+   *   ① 触发半径（triggerR，敌人踩进哪一圈就会引爆）
+   *   ② 击杀半径（r，真正吃伤害的范围）
+   * 于是"看起来小、实际很大"这件事被可视化，而不是靠玩家记忆。
+   * 与 KUP.Ring 的区别：Ring 会走判定（damageEnemy），本类**只画不做任何结算**。 */
+  class Shockwave {
+    constructor(x, y, opt) {
+      opt = opt || {};
+      this.x = x; this.y = y;
+      this.r0 = opt.r0 !== undefined ? opt.r0 : 0;
+      this.r1 = opt.r1 !== undefined ? opt.r1 : 60;
+      this.dur = opt.dur || 0.28;
+      this.t = 0;
+      this.color = opt.color || '#7de0c8';
+      this.width = opt.width || 3;
+      this.fill = !!opt.fill;          // 是否填一层淡色（近距离的"爆开"感）
+      this.dash = !!opt.dash;
+      this.dead = false;
+    }
+    update(dt) { this.t += dt; if (this.t >= this.dur) this.dead = true; }
+    draw(ctx) {
+      const k = Math.min(1, this.t / this.dur);
+      const r = this.r0 + (this.r1 - this.r0) * (1 - Math.pow(1 - k, 2));   // 先快后慢
+      const a = 1 - k;
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.globalAlpha = a * 0.9;
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = this.width * (0.5 + a * 0.8);
+      ctx.shadowColor = this.color; ctx.shadowBlur = 14;
+      if (this.dash) ctx.setLineDash([9, 7]);
+      ctx.beginPath(); ctx.arc(0, 0, Math.max(1, r), 0, U.TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      if (this.fill) {
+        ctx.globalAlpha = a * 0.16;
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(0, 0, Math.max(1, r), 0, U.TAU); ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
   /* ---------- 滞留区域（**玩家武器专用**：音场・空爆・地雷） ----------
    * ⚠️ 敌方的毒区/轰炸一律走 KUP.Danger（见上），本类不再承担敌对分支。 */
   class Zone {
@@ -1240,6 +1284,9 @@ window.KUP = window.KUP || {};
       opt = opt || {};
       this.x = x; this.y = y;
       this.r = opt.r || 60;
+      /* v0.15.1：地雷的**触发半径**与**爆炸半径**分开（缺省相同＝旧行为）。
+       * 触发只看 triggerR，伤害只看 r；起爆时用 Shockwave 把两个半径都推一遍。 */
+      this.triggerR = opt.triggerR || this.r;
       this.dmg = opt.dmg || 0;
       this.color = opt.color || '#8fd0ff';
       this.kind = opt.kind || 'field';       // field 滞留音场 | bomb 空爆 | mine 地雷
@@ -1261,6 +1308,20 @@ window.KUP = window.KUP || {};
       }
       game.shake(this.kind === 'bomb' ? 5 : 3);
       const col = this.color;
+      /* v0.15.1：地雷起爆＝**两道向外推的圆**（纯表现，不结算）：
+       *   ① 触发半径：敌人踏进哪一圈就引爆（虚线、快、亮）
+       *   ② 击杀半径：真正吃伤害的范围（实线、稍慢、带淡填充）
+       * 让"HUD 画得很小、实际范围不小"在起爆瞬间被看见。 */
+      if (this.kind === 'mine' && game.fx) {
+        game.fx.push(new Shockwave(this.x, this.y, {
+          r0: this.triggerR * 0.25, r1: this.triggerR, dur: 0.22, color: '#ffffff', width: 2.4, dash: true,
+        }));
+        game.fx.push(new Shockwave(this.x, this.y, {
+          r0: this.triggerR, r1: this.r, dur: 0.45, color: col, width: 4, fill: true,
+        }));
+        /* 起爆闪光（一圈很短的亮环，读感上是"啪"） */
+        game.fx.push(new Shockwave(this.x, this.y, { r0: 2, r1: this.r * 0.45, dur: 0.16, color: '#ffffff', width: 6, fill: true }));
+      }
       for (let i = 0; i < 14; i++) {
         const a = U.rng() * U.TAU;
         game.parts.push(new KUP.Particle(this.x, this.y, Math.cos(a) * U.rand(60, 200), Math.sin(a) * U.rand(60, 200), 0.5, col, 2.6));
@@ -1269,11 +1330,11 @@ window.KUP = window.KUP || {};
     }
     update(dt, game) {
       this.age += dt;
-      /* 地雷：待机 → 敌人触碰即引爆 → 消失 */
+      /* 地雷：待机 → 敌人踏进**触发半径**即引爆（伤害按**爆炸半径**结算）→ 消失 */
       if (this.kind === 'mine') {
         for (const e of game.enemies) {
           if (e.dead) continue;
-          if (U.dist2(e.x, e.y, this.x, this.y) < Math.pow(this.r + e.r, 2)) {
+          if (U.dist2(e.x, e.y, this.x, this.y) < Math.pow(this.triggerR + e.r, 2)) {
             this.detonate(game);
             this.dead = true;
             return;
@@ -1311,6 +1372,30 @@ window.KUP = window.KUP || {};
       const vr = this.r * this.vis;
       ctx.save();
       ctx.translate(this.x, this.y);
+      /* v0.15.1：地雷——画得**更小**（vis 0.32），并只保留一枚小核心 + 一圈很淡的
+       * 触发圈提示（triggerR × vis，虚线、呼吸），真实爆炸范围不常驻显示，
+       * 改由起爆瞬间的两道 Shockwave 揭示（见 Zone.detonate）。 */
+      if (this.kind === 'mine') {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 5);
+        const tr = this.triggerR * this.vis;
+        ctx.globalAlpha = 0.16 + 0.14 * pulse;
+        ctx.strokeStyle = this.color; ctx.lineWidth = 1.2;
+        ctx.setLineDash([4, 5]);
+        ctx.beginPath(); ctx.arc(0, 0, tr, 0, U.TAU); ctx.stroke();
+        ctx.setLineDash([]);
+        /* 核心：小三角钉（比纯圆更像"埋着的东西"） */
+        ctx.globalAlpha = 0.9;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        const s = Math.max(3, 4 * this.vis * 2.2);
+        ctx.moveTo(0, -s); ctx.lineTo(s * 0.9, s * 0.7); ctx.lineTo(-s * 0.9, s * 0.7);
+        ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 0.55 + 0.45 * pulse;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath(); ctx.arc(0, 0, Math.max(1.4, s * 0.34), 0, U.TAU); ctx.fill();
+        ctx.restore();
+        return;
+      }
       if (!this.armed) {                       // 起爆前摇：警示圈收缩
         const k = Math.max(0, this.age / this.arm);
         ctx.strokeStyle = '#ff8a5a';
@@ -1429,6 +1514,7 @@ window.KUP = window.KUP || {};
   KUP.Beam = Beam;
   KUP.Danger = Danger;
   KUP.Zone = Zone;
+  KUP.Shockwave = Shockwave;
   KUP.Toss = Toss;
   KUP.Particle = Particle;
   KUP.FloatText = FloatText;

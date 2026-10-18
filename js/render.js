@@ -37,6 +37,8 @@ window.KUP = window.KUP || {};
       for (const g of this.gems) g.draw(ctx, t);
       for (const z of this.zones) z.draw(ctx, t);
       for (const ts of this.tosses) ts.draw(ctx, t);
+      /* 纯表现层（冲击波等）：画在滞留区之上、弹幕之下 */
+      for (const f of this.fx) f.draw(ctx, t);
       for (const r of this.rings) r.draw(ctx, t);
       for (const sl of this.slashes) sl.draw(ctx, t);
       for (const b of this.beams) b.draw(ctx, t);

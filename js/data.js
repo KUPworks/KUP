@@ -201,15 +201,18 @@ KUP.WEAPON_MODULES = {
     id: 'orbit', entity: 'WeaponRuntime.orbs',
     name: { zh: '环绕音球', en: 'Resonant Orbs', ja: 'レゾナンス・オーブ' },
     desc: {
-      zh: '音球绕玩家旋转，**只有球体本身**接触才算命中；球会沿半径往复呼吸，内圈也能扫到。环绕半径、球体体积都随「范围」放大，转速随「冷却」提升。',
-      en: 'Orbs circle you and only the **orb body itself** deals contact damage; each orb breathes inward and outward so the inner ring is covered too. Orbit radius and orb size scale with Area, spin with Cooldown.',
-      ja: '音球が周回し、**球体そのもの**の接触のみが命中。球は半径方向に往復するので内側もカバー。周回半径と球体サイズは「範囲」、回転速度は「クールダウン」で伸びる。',
+      zh: '音球**紧贴玩家**绕转，只有球体本身接触才算命中；环绕半径与球体体积随「范围」放大，转速随「冷却」提升。',
+      en: 'Orbs circle **close to you**; only the orb body itself deals contact damage. Orbit radius and orb size scale with Area, spin with Cooldown.',
+      ja: '音球は**自機のすぐ周り**を周回し、球体そのものの接触のみが命中。周回半径と球体サイズは「範囲」、回転速度は「クールダウン」で伸びる。',
     },
-    /* v0.15：判定改回「旋转物本身」——为了让覆盖不吃亏，参数与伤害同时上调
-     *   orbR 11→20（球体更大）、spin 2.6→3.4（转得更快）、hitCd 0.45→0.3（同一目标更快再命中）
-     *   新增 osc/oscK：球体沿半径往复（内圈 = 环绕半径 × osc），补上"内圈打不到"的洞。 */
-    params: ['dmg', 'count', 'r', 'spin', 'orbR', 'osc', 'oscK', 'hitCd'],
-    base: { r: 88, spin: 3.4, orbR: 20, osc: 0.42, oscK: 0.6, hitCd: 0.3 },
+    /* v0.15.1：**取消径向呼吸**，改为把球拉近玩家（半径 88→50 起）。
+     * 设计口径（半圈律）：普通破维魔 noise（移速 62）走过球体直径 2×orbR 的时间
+     * t＝2·orbR/62，武器在这段时间里恰好转半圈 ⇒ spin ≈ 97.4/orbR。
+     * 球体逐级变大，所以角速度逐级略降（线速度基本不变）；「冷却」仍按比例放大转速。
+     * orbR 11→20（球体更大）、hitCd 0.45→0.30（同一目标更快再命中）——这两项是判定
+     * 改回"球体本身"后的强度补偿（口径见 verify-run 的 orbit 强度预算断言）。 */
+    params: ['dmg', 'count', 'r', 'spin', 'orbR', 'hitCd'],
+    base: { r: 50, spin: 4.8, orbR: 20, hitCd: 0.3 },
     area: ['r', 'orbR'],
   },
   bass: {
@@ -269,9 +272,15 @@ KUP.WEAPON_MODULES = {
   mine: {
     id: 'mine', entity: 'Zone（mine）',
     name: { zh: '放置・音之地雷', en: 'Placed Mine', ja: '設置・音の地雷' },
-    desc: { zh: '在身后放置滞留雷，触碰即引爆；**作用半径**随「范围」放大（显示缩放由武器表 vis 指定）。', en: 'Plants a lingering mine behind you that detonates on touch; **radius** scales with Area (display scale comes from the weapon\'s vis).', ja: '背後に残響地雷を設置、接触で起爆。**半径**は「範囲」で拡大（表示倍率は武器表の vis）。' },
-    params: ['cd', 'dmg', 'count', 'r', 'life', 'max'],
-    base: { dropBack: 22, dropJitter: 26 },
+    desc: {
+      zh: '在身后放置滞留雷：敌人踏进**触发半径**即引爆，爆炸覆盖更大的**击杀半径**；起爆瞬间会画出向外推的两道圆。作用半径随「范围」放大。',
+      en: 'Plants a lingering mine: a foe entering the **trigger radius** sets it off, and the blast covers the larger **kill radius** — two rings push outward on detonation. Radius scales with Area.',
+      ja: '背後に残響地雷を設置：敵が**起爆半径**に入ると炸裂し、爆発はより広い**撃破半径**を覆う。起爆時に外向きの二重の輪が走る。半径は「範囲」で拡大。',
+    },
+    /* v0.15.1：触发半径 = r × triggerMul（缺省 0.6）——"踩到"与"被炸到"不再是同一件事；
+     * 真正的爆炸范围由起爆瞬间的 Shockwave 推出来（地雷本体按武器表 vis 画得很小）。 */
+    params: ['cd', 'dmg', 'count', 'r', 'life', 'max', 'triggerMul'],
+    base: { dropBack: 22, dropJitter: 26, triggerMul: 0.6 },
     area: ['r'],
   },
 };
@@ -330,19 +339,16 @@ KUP.WEAPONS = {
       { zh: '音球 ×4，伤害与体积提升。', en: '4 orbs, more damage and size.', ja: '音球 ×4、ダメージと体積アップ。' },
       { zh: '音球 ×6 —— 捕食领域全面展开。', en: '6 orbs — the predatory field unfolds.', ja: '音球 ×6 —— 捕食領域が全面展開。' },
     ],
-    /* v0.15：判定从"扫掠臂"改回"球体本身"后，用**实测标定**把强度拉回旧版水平
-     * （`tools/verify-run.js` 里有「orbit 强度」一组断言守住这个预算）：
-     *   · 单发伤害：Lv1 9→16（+78%）／Lv5 17→22（+29%）／覚醒 20→28（+40%）
-     *   · 球体体积：11→19（Lv1）…24（覚醒），再吃「范围」
-     *   · 转速：2.4→3.5（Lv1）…5.0（覚醒）
-     * 标定口径：60 只静止靶 ＋ 60 只走位靶各 30 秒的「命中×伤害」，两种场景的几何平均
-     * 与旧版（扫掠臂）相差 ≤10%（旧版基准：Lv1 197／Lv3 396／Lv5 826／覚醒 1198）。 */
+    /* v0.15.1：球体贴着玩家转（半径 46–58），转速按**半圈律**标定：
+     *   `spin ≈ π×62／(2×orbR) ＝ 97.4／orbR`  —— 普通破维魔走过球体直径的这点时间里，
+     *   武器恰好转半圈；它会在接触窗口内吃到 2–3 次命中，因此**能被打死**。
+     * 球体逐级变大所以角速度逐级略降（19→24 对应 5.13→4.06），线速度基本不变。 */
     levels: [
-      { dmg: 16, count: 2, r: 84, spin: 3.5, orbR: 19 },
-      { dmg: 17, count: 3, r: 84, spin: 3.7, orbR: 20 },
-      { dmg: 19, count: 3, r: 100, spin: 4.0, orbR: 21 },
-      { dmg: 20, count: 4, r: 104, spin: 4.3, orbR: 22 },
-      { dmg: 22, count: 6, r: 112, spin: 4.8, orbR: 23 },
+      { dmg: 16, count: 2, r: 46, spin: 5.13, orbR: 19 },
+      { dmg: 17, count: 3, r: 48, spin: 4.87, orbR: 20 },
+      { dmg: 19, count: 3, r: 50, spin: 4.64, orbR: 21 },
+      { dmg: 20, count: 4, r: 52, spin: 4.43, orbR: 22 },
+      { dmg: 22, count: 6, r: 54, spin: 4.24, orbR: 23 },
     ],
     evolved: {
       name: { zh: '食虫植物 -devour-', en: 'Shokuchuu Shokubutsu -Devour-', ja: '食虫植物 -devour-' },
@@ -351,7 +357,7 @@ KUP.WEAPONS = {
         en: 'Awakened — the carnivorous field unfolds; eight orbs devour all.',
         ja: '覚醒——「食虫植物」の捕食領域が全面展開、八つの音球が环噬する。',
       },
-      stats: { dmg: 28, count: 8, r: 128, spin: 5.0, orbR: 24 },
+      stats: { dmg: 28, count: 8, r: 58, spin: 4.06, orbR: 24 },
     },
   },
   bass: {
@@ -589,10 +595,11 @@ KUP.WEAPONS = {
   },
   mine: {
     id: 'mine', icon: '雷', color: '#7de0c8', behavior: 'mine', maxLv: 5,
-    /* vis ＝ **显示缩放**（判定与作用范围不受影响）：地雷画得小一圈，
-     * 免得整片雷区看起来像一堆大音场盖住地图（人类 2026-10-16 反馈「显示改为四分之一大」）。
-     * 0.5 线性 ＝ 面积 1/4。 */
-    vis: 0.5,
+    /* vis ＝ **显示缩放**（判定与作用范围不受影响）：地雷只画一枚很小的核心 + 一圈淡虚线
+     * （触发半径），免得整片雷区看起来像一堆大音场盖住地图。
+     * v0.15.1：0.5 → **0.32**（面积约 1/10，人类 2026-10-18「地雷的 UI 做得更小」）；
+     * 真实范围改由起爆瞬间的**向外推的圆**（触发半径 → 击杀半径）揭示。 */
+    vis: 0.32,
     name: { zh: '音之地雷', en: 'Sound Mine', ja: '音の地雷' },
     desc: {
       zh: '在身后<b>放置</b>滞留音雷，破维魔触碰即引爆。适合边退边打。',

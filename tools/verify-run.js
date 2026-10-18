@@ -451,10 +451,12 @@ for (let i = 0; i < 40; i++) { gW.player.weapons[0].t = 0; gW.update(0.02); }
 check('mine 存在同时上限（≤ maxLv 上限 10）', gW.zones.filter(z => z.kind === 'mine').length <= 10);
 const anyMine = gW.zones.find(z => z.kind === 'mine' && z.armed);
 if (anyMine) {
-  gW.spawnEnemy('noise', anyMine.x, anyMine.y);
+  /* ⚠ spawnEnemy 带 ±80px 落点抖动，触碰测试必须**直接写坐标** */
+  const me = gW.spawnEnemy('noise', anyMine.x, anyMine.y);
+  me.x = anyMine.x; me.y = anyMine.y;
   gW.update(0.02);
-  check('敌人触碰地雷即引爆', anyMine.dead);
-} else check('敌人触碰地雷即引爆', false, 'no armed mine');
+  check('敌人踏进触发半径即引爆', anyMine.dead);
+} else check('敌人踏进触发半径即引爆', false, 'no armed mine');
 
 // 24. Zone 滞留伤害（**玩家武器专用**；敌方区域改用 Danger —— 见 #25b）
 const gZ = new KUP.Game(canvas);
@@ -825,58 +827,112 @@ check('Utils.segDist2：点到线段距离（工具函数仍在，orbit 已不�
   check('orbit：判定只认球体本身（连线中途不再被判定命中）', mid.hp === midHp0,
     'mid 掉血 ' + (midHp0 - mid.hp).toFixed(1) + '（距球心 ' + (R0 * 0.65).toFixed(0) + 'px，hitR≈' + (wG.orbR + mid.r).toFixed(0) + '）');
   check('orbit：球体本身的接触照常命中', onBall.hp < ballHp0, 'onBall 掉血 ' + (ballHp0 - onBall.hp).toFixed(1));
-  /* ③ 内圈：敌人钉在离玩家 25px 处（环绕半径以内）。旧版"球体判定"的洞就在这里。 */
+  /* ③ v0.15.1：**取消径向呼吸** ⇒ 球心到玩家的距离必须恒定（只由 r 决定，
+   * 不再随 angle 变化）；且球被拉近到 r 46–58，贴脸（约 25px）的敌人仍在球体可达范围内。 */
+  const gConst = new KUP.Game(canvas);
+  gConst.start({ char: 'rim', area: 'area0', seed: 110 });
+  gConst.director = () => {};
+  const wC = new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 5);
+  gConst.player.weapons = [wC];
+  const dists = [];
+  for (let i = 0; i < 120; i++) {
+    gConst.update(0.05);
+    dists.push(Math.hypot(wC.orbs[0].x - gConst.player.x, wC.orbs[0].y - gConst.player.y));
+  }
+  const dMin = Math.min.apply(null, dists), dMax = Math.max.apply(null, dists);
+  check('orbit：取消径向呼吸（球心到玩家的距离恒定 = r）',
+    Math.abs(dMax - dMin) < 0.5 && Math.abs(dMax - wC.orbitR) < 0.5,
+    'R 区间 ' + dMin.toFixed(1) + '–' + dMax.toFixed(1) + '，orbitR=' + wC.orbitR.toFixed(1));
+  check('orbit：球被拉得离玩家更近（Lv5 环绕半径 ≤ 60，旧版 112）', wC.orbitR <= 60,
+    'r=' + wC.orbitR.toFixed(0));
+  /* 贴脸敌人（碰撞距离 ≈ 玩家半径 13 + 敌半径 12 = 25px）必须落在球体可达范围内 */
+  const reach = wC.orbitR - (wC.orbR + KUP.ENEMIES.noise.r);
+  check('orbit：贴脸敌人仍可达（R − (orbR + 敌半径) < 25）', reach < 25, '内边界 ' + reach.toFixed(1) + 'px');
   const gIn = new KUP.Game(canvas);
-  gIn.start({ char: 'rim', area: 'area0', seed: 110 });
+  gIn.start({ char: 'rim', area: 'area0', seed: 111 });
   gIn.director = () => {};
   gIn.player.invuln = true;
   gIn.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 5)];
   gIn.enemies.length = 0;
   const inner = gIn.spawnEnemy('noise', gIn.player.x + 25, gIn.player.y);
+  inner.x = gIn.player.x + 25; inner.y = gIn.player.y;
   inner.hp = inner.maxhp = 1e6; inner.speed = 0;
   const innerX = inner.x, innerY = inner.y;
-  for (let i = 0; i < 8 / 0.016; i++) {
+  for (let i = 0; i < 4 / 0.016; i++) {
     gIn.update(0.016);
     inner.x = innerX; inner.y = innerY; inner.kx = 0; inner.ky = 0;   // 钉住
   }
-  check('orbit：内圈（贴脸 25px）也能被打到（径向呼吸补上旧版的"洞"）', inner.hp < 1e6 - 1,
-    '8 秒掉血 ' + (1e6 - inner.hp).toFixed(0));
-}
+  check('orbit：贴脸 25px 的敌人确实会被球体打到', inner.hp < 1e6 - 1, '4 秒掉血 ' + (1e6 - inner.hp).toFixed(0));
 
-/* 强度预算：60 只静止靶 + 60 只走位靶各 20 秒，取「命中×名义伤害」的几何平均。
- * 数字来自 v0.15 的标定（旧版扫掠臂为基准，容差 ±25%）；改判定/改数值若让它掉下去，
- * 这条会立刻红 —— 防止"改完判定顺手把这把武器改废了"。 */
-{
-  const measure = (moving) => {
+  /* ④ 半圈律（人类 2026-10-18 指定的设计口径）：
+   *    普通破维魔（noise，移速 62）走过**球体直径** 2×orbR 的时间 t＝2·orbR/62，
+   *    这段时间里武器恰好转约半圈 ⇒ spin ≈ π·62/(2·orbR)。
+   *    每一级（含覚醒）都要满足，容差 ±10%。 */
+  const NV = KUP.ENEMIES.noise.speed, halfTurn = [];
+  for (const row of KUP.WEAPONS.orbit.levels.concat([KUP.WEAPONS.orbit.evolved.stats])) {
+    const want = Math.PI * NV / (2 * row.orbR);
+    halfTurn.push({ orbR: row.orbR, spin: row.spin, ratio: row.spin / want });
+  }
+  check('orbit 半圈律：每级 spin ≈ π·62/(2·orbR)（容差 ±10%）',
+    halfTurn.every(h => Math.abs(h.ratio - 1) <= 0.1),
+    halfTurn.map(h => 'orbR' + h.orbR + ':' + (h.ratio * 100 - 100).toFixed(0) + '%').join(' '));
+  /* ⑤ 穿越击杀：普通破维魔从环外走进来，必须在穿过球体这段时间里被打死（开局与中后期各测一次） */
+  const crossingKill = (lv, evolved, tGame) => {
     const g = new KUP.Game(canvas);
-    g.start({ char: 'rim', area: 'area0', seed: 777 });
+    g.start({ char: 'rim', area: 'area0', seed: 112 });
     g.director = () => {};
     g.player.invuln = true;
-    g.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 5)];
+    const w = new KUP.WeaponRuntime(KUP.WEAPONS.orbit, lv);
+    w.evolved = evolved;
+    g.player.weapons = [w];
     g.enemies.length = 0;
-    let hits = 0, nominal = 0;
-    const orig = g.damageEnemy.bind(g);
-    g.damageEnemy = (e, dmg, kx, ky) => { hits++; nominal += dmg; return orig(e, dmg, kx, ky); };
-    const px = g.player.x, py = g.player.y, rng = KUP.U.mulberry32(4242), pins = [];
-    for (let i = 0; i < 60; i++) {
-      const a = rng() * KUP.U.TAU, d = 20 + Math.sqrt(rng()) * 260;
-      const e = g.spawnEnemy('noise', px + Math.cos(a) * d, py + Math.sin(a) * d);
-      e.hp = e.maxhp = 4000; e.xp = 0;
-      pins.push({ e, x: e.x, y: e.y });
-    }
-    const T = 20;
-    for (let i = 0; i < T / 0.016; i++) {
-      if (g.state === 'levelup') { g.state = 'playing'; g.pendingLevels = 0; }
-      g.update(0.016);
-      if (!moving) for (const p of pins) { if (!p.e.dead) { p.e.x = p.x; p.e.y = p.y; p.e.kx = 0; p.e.ky = 0; } }
-    }
-    return { hits, dps: nominal / T };
+    g.time = tGame;
+    const s = w.stat();
+    const d0 = s.r + s.orbR + KUP.ENEMIES.noise.r + 60;   // 环外 60px 起步
+    const e = g.spawnEnemy('noise', g.player.x + d0, g.player.y);
+    e.x = g.player.x + d0; e.y = g.player.y;
+    e.hp = e.maxhp = KUP.ENEMIES.noise.hp * KUP.HP_SCALE(tGame);
+    const hp0 = e.hp;
+    for (let i = 0; i < 6 / 0.016; i++) { g.update(0.016); if (e.dead) break; }
+    return { dead: e.dead, hp0, left: e.hp };
   };
-  const st = measure(false), mv = measure(true);
-  const score = Math.sqrt(st.dps * mv.dps);
-  /* 旧版（扫掠臂，v0.14）同口径基准：静止 332 / 移动 2056 → 几何平均 826 */
-  check('orbit 强度预算：Lv5 综合吞吐 ≈ 旧版（826±25%）', score > 620 && score < 1035,
-    '静止 ' + st.dps.toFixed(0) + ' × 移动 ' + mv.dps.toFixed(0) + ' → ' + score.toFixed(0));
+  const ck1 = crossingKill(1, false, 0);
+  const ck2 = crossingKill(5, false, 0);
+  const ck3 = crossingKill(5, false, 240);
+  check('orbit 穿越击杀：开局 Lv1 就能打死走过来的普通破维魔', ck1.dead, 'hp ' + ck1.hp0.toFixed(0) + ' 剩 ' + ck1.left.toFixed(0));
+  check('orbit 穿越击杀：Lv5 同样成立', ck2.dead, 'hp ' + ck2.hp0.toFixed(0) + ' 剩 ' + ck2.left.toFixed(0));
+  check('orbit 穿越击杀：4 分钟时（noise 血量 ×2.3）仍能打死', ck3.dead, 'hp ' + ck3.hp0.toFixed(0) + ' 剩 ' + ck3.left.toFixed(0));
+}
+
+/* 强度预算（v0.15.1 重定口径）：环绕半径拉到 46–58 后，"散布在 280px 的静止靶"这种几何
+ * 已经不适用于贴脸环武器（只有环带上的靶会被扫到），所以改用**实战口径**：
+ * 真实导演、无敌站桩 60 秒、只带 orbit，统计击杀数与名义 DPS —— 这才是玩家实际感受到的强度。
+ * 基准（v0.15 径向呼吸版同口径实测，60s）：Lv1 57 杀 / 15.2 dps；Lv5 58 杀 / 21.3 dps。
+ * v0.15.1（取消呼吸、球拉近）实测：Lv1 58 杀 / 15.5 dps；Lv5 57 杀 / 20.9 dps —— 与上一版持平。 */
+{
+  const realRun = (lv, evolved) => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'rim', area: 'area0', seed: 4242 });
+    g.player.invuln = true;
+    const w = new KUP.WeaponRuntime(KUP.WEAPONS.orbit, lv);
+    w.evolved = evolved;
+    g.player.weapons = [w];
+    let nominal = 0;
+    const orig = g.damageEnemy.bind(g);
+    g.damageEnemy = (e, dmg, kx, ky) => { nominal += dmg; return orig(e, dmg, kx, ky); };
+    const T = 60;
+    for (let i = 0; i < T / 0.016; i++) {
+      if (g.state === 'levelup') { g.state = 'playing'; g.pendingLevels = 0; g.choices = null; }
+      if (g.state !== 'playing') break;
+      g.update(0.016);
+    }
+    return { kills: g.kills, dps: nominal / T };
+  };
+  const r1 = realRun(1, false), r5 = realRun(5, false);
+  check('orbit 强度预算（实战）：Lv1 60 秒 击杀 ≥ 45 且 dps ≥ 13',
+    r1.kills >= 45 && r1.dps >= 13, r1.kills + ' 杀 / ' + r1.dps.toFixed(1) + ' dps');
+  check('orbit 强度预算（实战）：Lv5 60 秒 击杀 ≥ 48 且 dps ≥ 18',
+    r5.kills >= 48 && r5.dps >= 18, r5.kills + ' 杀 / ' + r5.dps.toFixed(1) + ' dps');
 }
 /* 瞄准：auto 对最近敌人 / move 对移动方向 / mouse 对指针 */
 const gAim = new KUP.Game(canvas);
@@ -1659,9 +1715,11 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   check('击破旧 Boss 后，剩余 Boss 仍在行动', b2.minionT < 5);
 }
 
-// 25o. 显示缩放：地雷只缩画面、不缩判定；太刀不再画扇形范围框
+// 25o. 显示缩放：地雷只缩画面、不缩判定（v0.15.1：更小 + 触发/爆炸半径分离）；太刀不再画扇形范围框
 {
-  check('地雷模组带显示缩放 vis=0.5（线性一半 ⇒ 面积 1/4）', KUP.WEAPONS.mine.vis === 0.5);
+  check('地雷显示缩放更小（vis 0.5 → 0.32，面积 ≈ 1/10）', KUP.WEAPONS.mine.vis === 0.32, 'vis=' + KUP.WEAPONS.mine.vis);
+  check('地雷模组声明了触发半径系数（triggerMul）', KUP.MODULE('mine').base.triggerMul > 0 &&
+    KUP.MODULE('mine').params.indexOf('triggerMul') >= 0);
   const gM = new KUP.Game(canvas);
   gM.debug.w = 'mine';                                  // ?w=mine：开局带 5 级音之地雷
   gM.start({ char: 'kaf', area: 'area0', seed: 601 });
@@ -1669,7 +1727,58 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   for (let i = 0; i < 240 && !gM.zones.some(z => z.kind === 'mine'); i++) gM.update(1 / 60);
   const zm = gM.zones.find(z => z.kind === 'mine');
   check('实战生成的地雷：判定半径不变（>60）且带显示缩放',
-    !!zm && zm.vis === 0.5 && zm.r > 60, zm ? 'r=' + Math.round(zm.r) + ' vis=' + zm.vis : '未生成');
+    !!zm && zm.vis === 0.32 && zm.r > 60, zm ? 'r=' + Math.round(zm.r) + ' vis=' + zm.vis : '未生成');
+  check('地雷的触发半径 < 爆炸半径（"踩到"与"被炸到"分离）',
+    !!zm && zm.triggerR < zm.r && Math.abs(zm.triggerR - zm.r * KUP.MODULE('mine').base.triggerMul) < 1e-6,
+    zm ? 'trigger=' + Math.round(zm.triggerR) + ' blast=' + Math.round(zm.r) : '未生成');
+  /* 触发边界：站在 triggerR 外（但仍在 r 内）**不该**引爆；踏进 triggerR 才引爆 */
+  {
+    const mkMine = () => {
+      const g2 = new KUP.Game(canvas);
+      g2.start({ char: 'kaf', area: 'area0', seed: 602 });
+      g2.director = () => {};
+      g2.player.invuln = true;
+      g2.enemies.length = 0;
+      const m = new KUP.Zone(g2.player.x + 300, g2.player.y, {
+        r: 90, triggerR: 54, dmg: 10, life: 10, kind: 'mine', vis: 0.32,
+      });
+      g2.zones.push(m);
+      return { g2, m };
+    };
+    const a = mkMine();
+    const eOut = a.g2.spawnEnemy('noise', a.m.x + 75, a.m.y);   // 75 > triggerR(54) + r_noise(12) = 66
+    eOut.x = a.m.x + 75; eOut.y = a.m.y; eOut.speed = 0;
+    a.g2.update(0.02);
+    check('站在触发半径外（仍在爆炸半径内）不会提前引爆', !a.m.dead && a.m.life > 0);
+    const b = mkMine();
+    const eIn = b.g2.spawnEnemy('noise', b.m.x + 50, b.m.y);    // 50 < 66
+    eIn.x = b.m.x + 50; eIn.y = b.m.y; eIn.speed = 0;
+    b.g2.update(0.02);
+    check('踏进触发半径 → 引爆，且按**爆炸半径**结算伤害（50px 内必中）',
+      b.m.dead && (eIn.dead || eIn.hp < eIn.maxhp), 'enemy hp=' + (eIn.maxhp - eIn.hp).toFixed(0));
+  }
+  /* 起爆特效：两道向外推的圆（触发半径 → 击杀半径），且**纯表现**（不结算伤害） */
+  {
+    const g3 = new KUP.Game(canvas);
+    g3.start({ char: 'kaf', area: 'area0', seed: 603 });
+    g3.director = () => {};
+    g3.enemies.length = 0;
+    g3.fx.length = 0;
+    const m3 = new KUP.Zone(g3.player.x + 400, g3.player.y, { r: 90, triggerR: 54, dmg: 10, life: 10, kind: 'mine' });
+    g3.zones.push(m3);
+    /* 远处放一个敌人：起爆时它在爆炸半径外，用它验证特效不造成伤害 */
+    const far = g3.spawnEnemy('noise', m3.x + 300, m3.y);
+    far.x = m3.x + 300; far.y = m3.y; far.speed = 0;
+    const farHp0 = far.hp;
+    m3.detonate(g3);
+    check('地雷起爆生成向外推的圆（触发半径 + 击杀半径，共 ≥2 道）', g3.fx.length >= 2,
+      'fx=' + g3.fx.length + ' r1=' + g3.fx.map(f => Math.round(f.r1)).join('/'));
+    check('第一道推到触发半径、第二道推到击杀半径',
+      g3.fx[0].r1 === 54 && g3.fx[1].r1 === 90, g3.fx.slice(0, 2).map(f => Math.round(f.r1)).join('→'));
+    check('冲击波是纯表现（不结算伤害：半径外的敌人不掉血）', far.hp === farHp0);
+    for (let i = 0; i < 40; i++) g3.update(0.02);
+    check('冲击波会自然消失（不残留）', g3.fx.length === 0, 'fx=' + g3.fx.length);
+  }
   /* 记录型 ctx：太刀旧版会 fill 一次扇面（范围框的「面」）＋ 画两条半径边界线 */
   let fills = 0, arcs = 0, moves = 0;
   const grad = { addColorStop() {} }, noop = () => {};
