@@ -5,6 +5,29 @@ window.KUP = window.KUP || {};
   const U = KUP.U, C = KUP.CONFIG;
   const DEG = Math.PI / 180;   // 数据表的角速度以**度/秒**书写（与武器 arc 同约定）
 
+  /* 护盾对某类伤害的**减伤百分比**（只读计算，不触发任何副作用）——
+   * HUD 显示与回归测试共用同一口径，避免"显示 95% 实际不是 95%"。
+   * 口径（与 Player.applyShield 一字不差）：
+   *   强度系数 k   ＝ 总强度 / 满值，钳到 [0,1]（22 护盾＝0.22，+60 膜＝0.82，满值＝1）
+   *   查表基础值 b ＝ C.SHIELD.REDUCE[类型]
+   *   减伤        ＝ 1 - (1-b) × 0.15 × (0.3 + 0.7k)       （满值 k=1 时精确等于 b；HARD_CAP 封顶）
+   *   贴靠特例：被光束/轰炸打穿（taint）或**持续贴靠已失效**（touchT≤0 且 touchUsed）
+   *            或总强度 < 满值 × TOUCH_UNIT ⇒ 0%。
+   * p 可为玩家实例；缺 shieldTotal 时返回 0。 */
+  KUP.shieldReducePct = (p, kind) => {
+    const S = C.SHIELD, RU = S.REDUCE || {};
+    const total = p && p.shieldTotal ? p.shieldTotal() : 0;
+    if (total <= 0) return 0;
+    if (kind === 'contact') {
+      if (p.shieldTaintT > 0 || p.shieldTouchUsed || total < S.AURA_MAX * S.TOUCH_UNIT) return 0;
+    }
+    const base = RU[kind] !== undefined ? RU[kind] : RU.contact;
+    const k = U.clamp(total / S.AURA_MAX, 0, 1);
+    /* 强度曲线：满值＝基础值 base，强度低时按 SCALE_MUL/SCALE_OFF 打折、且不超过 base */
+    const exp = base * (S.SCALE_OFF + S.SCALE_MUL * k);
+    return Math.round(U.clamp(Math.min(exp, base), 0, S.HARD_CAP) * 100);
+  };
+
   /* ---------- 玩家（主角＝魔女之子；带特殊歌唱用形態与同行同伴） ---------- */
   class Player {
     constructor(def, mods, opt) {
@@ -24,8 +47,20 @@ window.KUP = window.KUP || {};
       this.base = Object.assign({}, def.stats);
       this.passives = {};
       this.weapons = []; // WeaponRuntime 由 game 填充
-      /* v0.8 生存机制状态：护盾 / 回避 / 吸血 / 反響 / 冲刺 */
-      this.shield = 0; this.shieldMax = 0; this.noHitT = 0;
+      /* v0.8 生存机制状态：回避 / 吸血 / 反響 / 冲刺 */
+      this.noHitT = 0;
+      /* v0.14 护盾＝**减伤膜**（不是第二管血）：
+       *   shield    ＝ 被动「防音护盾」的护盾值（0～C.SHIELD.AURA_MAX）
+       *   shieldMax ＝ 该被动的上限（22/级，显示总强度用）
+       *   shieldTmp ＝ 「防音の符」追加的膜层（+60，只减伤、到期消失）
+       *   charge    ＝ **显示用**能量：记下最近一次被挡下的伤害量，随后衰减 ≠ 血量
+       *   touchT/taintT ＝ 贴靠膜的持续判定与被光束/轰炸干扰的禁令
+       * 总强度 shieldTotal() = 护盾值 + 膜层，减伤按**伤害类型**查表（C.SHIELD.REDUCE），
+       * 上限 C.SHIELD.HARD_CAP。结算只改生命，护盾值**从不被扣光**。 */
+      this.shield = 0; this.shieldMax = 0; this.shieldTmp = 0;
+      this.shieldTmpT = 0;   // 膜层剩余秒数（到期归零 → 护盾回到被动给的那一层）
+      this.shieldCharge = 0; this.shieldHitFx = 0;
+      this.shieldTouchT = 0; this.shieldTaintT = 0; this.shieldTouchUsed = false;
       this.dodgeChance = 0; this.drainPct = 0; this.retaliateDmg = 0;
       this.regenRate = 0; this.missHeal = 0;   // 持续回血 / 回避成功回血
       /* 局内道具的限时 BUFF（v0.8）：MISS/回血加成；v0.11 追加磁石の符（经验磁铁） */
@@ -60,10 +95,13 @@ window.KUP = window.KUP || {};
       this.pickup = C.PICKUP_BASE * (1 + 0.3 * lv('mic')) * m('pickup') * fm('pickup') * gatherPickup * sm('pickup');
       this.xpMult = b.xp * (1 + 0.15 * lv('stream')) * fm('xp') * gatherXp * sm('xp'); // 经验另由 mods.xpGain 在 addXP 结算
       /* ---- 机制型被动（v0.8） ---- */
+      /* v0.14 护盾＝减伤强度：升级时把**新增的护盾值**直接加到当前护盾上（旧版是"回满"），
+       * 因为护盾已不是一条会被扣空的血条，不存在"补满"的概念；上限＝C.SHIELD.AURA_MAX。 */
       const prevShieldMax = this.shieldMax || 0;
-      this.shieldMax = Math.round(22 * lv('shield'));
+      this.shieldMax = Math.min(C.SHIELD.AURA_MAX, Math.round(C.SHIELD.AURA_LEVEL * lv('shield')));
       if (this.shieldMax > prevShieldMax) this.shield = Math.min(this.shieldMax, (this.shield || 0) + (this.shieldMax - prevShieldMax));
-      if (this.shieldMax < (this.shield || 0)) this.shield = this.shieldMax;
+      if (this.shield > this.shieldMax) this.shield = this.shieldMax;
+      this.shieldTmp = Math.min(C.SHIELD.TEMP_MAX, this.shieldTmp || 0);
       /* 回避率 = 被动「残响回避」7%/级 ＋ 瓦利斯「常連の勘」3%/级，上限 60% */
       this.dodgeChance = Math.min(0.6, 0.07 * lv('dodge') + (this.shopMods && this.shopMods.dodgeAdd ? this.shopMods.dodgeAdd : 0));
       this.drainPct = 0.006 * lv('drain');
@@ -79,7 +117,40 @@ window.KUP = window.KUP || {};
     }
     addPassive(id) { this.passives[id] = (this.passives[id] || 0) + 1; this.recompute(); }
     /* ---------- 局内道具（护盾 / MISS / 回血）---------- */
-    addShield(n) { this.shield = Math.max(0, this.shield + n); return this.shield; }   // 可暂时超过 shieldMax
+    /* v0.14：「防音の符」＝在现有护盾之上**追加膜层**（上限 C.SHIELD.TEMP_MAX，存活
+     * C.SHIELD.TEMP_SECONDS）。没有护盾时也照样生效——所以"无护盾直接 +60"一定有
+     * 可见来源（膜层 60）。返回 { shieldTmp, shield, seconds }，供 HUD/漂浮字显示。 */
+    addShield(n) {
+      this.shieldTmp = Math.min(C.SHIELD.TEMP_MAX, (this.shieldTmp || 0) + n);
+      this.shieldTmpT = C.SHIELD.TEMP_SECONDS;
+      return { shieldTmp: this.shieldTmp, shield: this.shield || 0, seconds: this.shieldTmpT };
+    }
+    /* 护盾总强度（护盾值＋膜层）——只决定**减伤比例**，不是血量 */
+    shieldTotal() { return (this.shield || 0) + (this.shieldTmp || 0); }
+    /* ---------- 护盾减伤结算（v0.14）----------
+     * kind：contact／ring／field／bomb／beam（未知名按 contact 处理）
+     * 返回实际扣到生命的伤害；**不修改护盾值本身**，只记「能量」用于显示。
+     * 贴靠膜：挡下第一击后 TOUCH_ARM 秒内失效（要持续贴靠才算"挡开"），
+     * 被光束/轰炸打穿后 TAINT_T 秒内也失效 —— 被围住时不是无敌，而是争取脱身时间。 */
+    applyShield(dmg, kind) {
+      const S = C.SHIELD;
+      const total = this.shieldTotal();
+      if (total <= 0 || dmg <= 0) return dmg;
+      if (kind === 'contact' &&
+          (this.shieldTaintT > 0 || this.shieldTouchUsed || total < S.AURA_MAX * S.TOUCH_UNIT)) return dmg;
+      const pct = KUP.shieldReducePct(this, kind) / 100;
+      const blocked = dmg * pct;
+      if (kind === 'contact') { this.shieldTouchT = S.TOUCH_ARM; this.shieldTouchUsed = true; }
+      /* 光束/轰炸**打穿**膜层：贴靠膜失灵 TAINT_T 秒（其它类型的减伤照旧） */
+      if (kind === 'beam' || kind === 'bomb') this.shieldTaintT = S.TAINT_T;
+      this.shieldCharge = U.clamp(this.shieldCharge + blocked, 0, 100);
+      this.shieldHitFx = 0.35;
+      return dmg - blocked;
+    }
+    /* 护盾对某类伤害的减伤百分比（0～95）——HUD 与测试共用 KUP.shieldReducePct 的同一算法 */
+    reducePct(kind) { return KUP.shieldReducePct(this, kind); }
+    /* 被光束/轰炸**打穿**：贴靠膜失灵 TAINT_T 秒（护盾仍有其它类型的减伤） */
+    shieldTaint() { this.shieldTaintT = C.SHIELD.TAINT_T; }
     addBuff(kind, seconds, amount) {
       const b = this.buffs;
       if (kind === 'miss') { b.miss = Math.max(b.miss, 0) + seconds; b.missAmt = Math.max(b.missAmt, amount); }
@@ -159,11 +230,17 @@ window.KUP = window.KUP || {};
       /* 残影寿命 */
       for (const gh of this.ghosts) gh.age += dt;
       this.ghosts = this.ghosts.filter(gh => gh.age < 0.3).slice(-10);
-      /* 护盾：一段时间未受伤后自动回复 */
+      /* 护盾（v0.14）：减伤膜的计时——贴靠膜的持续判定、被打穿的失灵时间、
+       * 显示用能量的衰减。护盾值/膜层**不会**随时间"回复"或"被扣"（不是血条）。 */
       this.noHitT += dt;
-      if (this.shieldMax > 0 && this.noHitT > C.SHIELD_REGEN_DELAY && this.shield < this.shieldMax) {
-        this.shield = Math.min(this.shieldMax, this.shield + this.shieldMax * C.SHIELD_REGEN_RATE * dt);
+      if (this.shieldTouchT > 0) {
+        this.shieldTouchT -= dt;
+        if (this.shieldTouchT <= 0) { this.shieldTouchT = 0; this.shieldTouchUsed = false; }  // 脱离接触 → 贴靠膜重新可用
       }
+      if (this.shieldTaintT > 0) this.shieldTaintT -= dt;
+      if (this.shieldTmpT > 0) { this.shieldTmpT -= dt; if (this.shieldTmpT <= 0) { this.shieldTmpT = 0; this.shieldTmp = 0; } }
+      if (this.shieldCharge > 0) this.shieldCharge = Math.max(0, this.shieldCharge - 100 * dt / C.SHIELD.DECAY_T);
+      if (this.shieldHitFx > 0) this.shieldHitFx -= dt;
       // 移动拖尾
       if (this.moving && U.rng() < dt * 22) {
         game.parts.push(new KUP.Particle(this.x - mx * 8, this.y - my * 8 + 4, U.rand(-12, 12), U.rand(-20, -4), 0.4, this.color, 2.2));
@@ -380,18 +457,34 @@ window.KUP = window.KUP || {};
       if (this.hitT > 0) {
         ctx.globalAlpha = 0.45 + 0.35 * Math.abs(Math.sin(t * 30));
       }
-      /* 护盾：外圈薄膜（有护盾时明显可见，受损后变薄） */
-      if (this.shieldMax > 0 && this.shield > 0) {
-        const sk = this.shield / this.shieldMax;
+      /* 护盾（v0.14 减伤膜）：**厚度＝总强度**（护盾＋膜层），不是"血量比例"。
+       *   颜色＝淡蓝（只有护盾）／青绿（含膜层）；被挡下的瞬间闪亮；
+       *   被光束/轰炸打穿后 3 秒呈破碎虚线（贴靠膜失灵）；
+       *   膜层即将过期（<1.5s）时收缩闪烁 —— 一眼能看出"还剩多少保护"。 */
+      const shTotal = this.shieldTotal();
+      if (shTotal > 0) {
+        const k = U.clamp(shTotal / C.SHIELD.AURA_MAX, 0.15, 1.4);
+        const hasTmp = (this.shieldTmp || 0) > 0;
+        const shColor = hasTmp ? '#7dffe0' : '#8fd0ff';
+        const tainted = this.shieldTaintT > 0;
+        const pulse = this.shieldHitFx > 0 ? 0.35 + this.shieldHitFx : 0;
         ctx.save();
-        ctx.globalAlpha = 0.35 + 0.35 * sk;
-        ctx.strokeStyle = '#8fd0ff';
-        ctx.lineWidth = 2 + 2 * sk;
-        ctx.shadowColor = '#8fd0ff'; ctx.shadowBlur = 14;
-        ctx.beginPath(); ctx.arc(0, bob, 16 + 2 * sk, 0, U.TAU); ctx.stroke();
-        ctx.globalAlpha = 0.10 + 0.12 * sk;
-        ctx.fillStyle = '#8fd0ff';
-        ctx.beginPath(); ctx.arc(0, bob, 16 + 2 * sk, 0, U.TAU); ctx.fill();
+        ctx.globalAlpha = 0.30 + 0.35 * Math.min(1, k) + pulse;
+        ctx.strokeStyle = tainted ? '#ff8a5a' : shColor;
+        ctx.lineWidth = 1.5 + 2.6 * Math.min(1, k);
+        ctx.shadowColor = tainted ? '#ff8a5a' : shColor; ctx.shadowBlur = 12 + 10 * Math.min(1, k) + pulse * 20;
+        if (tainted) ctx.setLineDash([5, 5]);
+        ctx.beginPath(); ctx.arc(0, bob, 13 + 5 * Math.min(1, k), 0, U.TAU); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 0.07 + 0.10 * Math.min(1, k) + pulse * 0.5;
+        ctx.fillStyle = shColor;
+        ctx.beginPath(); ctx.arc(0, bob, 13 + 5 * Math.min(1, k), 0, U.TAU); ctx.fill();
+        /* 膜层标记：外圈一道细环（有「防音の符」的膜层时才出现） */
+        if (hasTmp) {
+          ctx.globalAlpha = 0.5 + 0.3 * Math.abs(Math.sin(t * 6));
+          ctx.strokeStyle = '#bff7ff'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.arc(0, bob, 20 + 3 * Math.min(1, (this.shieldTmp || 0) / C.SHIELD.TEMP_MAX), 0, U.TAU); ctx.stroke();
+        }
         ctx.restore();
       }
       ctx.shadowColor = c; ctx.shadowBlur = 16;
@@ -937,6 +1030,8 @@ window.KUP = window.KUP || {};
       opt = opt || {};
       this.x = x; this.y = y;
       this.kind = opt.kind || 'field';
+      /* v0.14：kind 同时就是**伤害类型**（contact 由接触伤害另行传入），
+       * 玩家护盾按它查减伤表（C.SHIELD.REDUCE）：beam 50%／bomb 70%／field 75%／ring 85%。 */
       this.r = opt.r || 60;
       this.dmg = opt.dmg || 10;
       this.color = opt.color || '#ff4d8d';
@@ -958,7 +1053,22 @@ window.KUP = window.KUP || {};
       this.maxR = opt.maxR || 220;
       this.speed = opt.speed || 300;
       this.cur = this.r0;
+      /* v0.14：**指向型光束的中段预瞄**（人类 2026-10-17：「激光角度不能太死」）。
+       * follow>0 时，预警期内光路的前 len*aimF 段会持续转向玩家（角速度 turn rad/s），
+       * 但**远端（len*aimF 之后）保持"发射瞬间"的方向**——即打提前量的位置。
+       * 于是站在预警线里不动会被命中，**横向移动/冲刺**就能走出光路：可躲避，但不呆板。 */
+      this.aimAt = opt.aimAt || null;          // 预瞄起点（Boss 坐标）；缺省＝x,y
+      this.aimF = opt.aimF !== undefined ? opt.aimF : 0.6;
+      this.aimTurn = opt.aimTurn !== undefined ? opt.aimTurn : 1.5;   // rad/s
       if (this.kind === 'beam' && this.armed) this.strikeBeam();
+    }
+    /* 预警期的预瞄（由 update 每帧调用）：只转**近段**，远端不动 =>
+     * 近处贴着玩家、远处是提前量 → 光束看起来"会追人"，但仍然躲得开。 */
+    aimStep(dt, game) {
+      if (!this.aimAt || !game || !game.player || this.armed) return;
+      const p = game.player, o = this.aimAt;
+      const want = Math.atan2(p.y - o.y, p.x - o.x);
+      this.dir = U.aimAngle(this.dir, want, this.aimTurn, dt);
     }
     strikeBeam(game) {
       if (this.hitPlayer) return;
@@ -969,11 +1079,16 @@ window.KUP = window.KUP || {};
       const cs = Math.cos(this.dir), sn = Math.sin(this.dir);
       const tt = U.clamp((p.x - this.x) * cs + (p.y - this.y) * sn, 0, this.len);
       const px = this.x + cs * tt, py = this.y + sn * tt;
-      if (U.dist2(p.x, p.y, px, py) < Math.pow(this.w / 2 + p.r, 2)) g.hurtPlayer(this.dmg);
+      if (U.dist2(p.x, p.y, px, py) < Math.pow(this.w / 2 + p.r, 2)) {
+        g.hurtPlayer(this.dmg, 'beam');
+        /* 光束打穿：贴靠膜失灵（其它类型的减伤照旧） */
+        if (p.shieldTaint) p.shieldTaint();
+      }
     }
     detonate(game) {
       if (!this.hitPlayer && U.dist2(game.player.x, game.player.y, this.x, this.y) < Math.pow(this.r + game.player.r, 2)) {
-        game.hurtPlayer(this.dmg);
+        game.hurtPlayer(this.dmg, this.kind === 'bomb' ? 'bomb' : 'field');
+        if (this.kind === 'bomb' && game.player.shieldTaint) game.player.shieldTaint();
       }
       this.hitPlayer = true;
       game.shake(4);
@@ -987,6 +1102,7 @@ window.KUP = window.KUP || {};
       this.age += dt;
       /* 预警阶段：只示警，不伤害（这就是"可躲避"的窗口） */
       if (!this.armed) {
+        this.aimStep(dt, game);                 // v0.14：指向型光束的近段预瞄
         if (this.age >= this.arm) {
           this.armed = true;
           if (this.kind === 'bomb' || this.kind === 'field') this.detonate(game);
@@ -1002,7 +1118,7 @@ window.KUP = window.KUP || {};
         if (!this.hitPlayer) {
           const p = game.player;
           const d = Math.hypot(p.x - this.x, p.y - this.y);
-          if (Math.abs(d - this.cur) < p.r + 9) { this.hitPlayer = true; game.hurtPlayer(this.dmg); }
+          if (Math.abs(d - this.cur) < p.r + 9) { this.hitPlayer = true; game.hurtPlayer(this.dmg, 'ring'); }
         }
         if (this.cur >= this.maxR) this.dead = true;
         return;
@@ -1012,7 +1128,7 @@ window.KUP = window.KUP || {};
       if (this.tick <= 0) {
         this.tick = this.tickRate;
         const p = game.player;
-        if (U.dist2(p.x, p.y, this.x, this.y) < Math.pow(this.r, 2)) game.hurtPlayer(this.dmg);
+        if (U.dist2(p.x, p.y, this.x, this.y) < Math.pow(this.r, 2)) game.hurtPlayer(this.dmg, 'field');
       }
       if (this.life && this.age >= this.life) this.dead = true;
     }
@@ -1032,6 +1148,19 @@ window.KUP = window.KUP || {};
           ctx.setLineDash([14, 9]);
           ctx.strokeRect(0, -this.w / 2, this.len, this.w);
           ctx.setLineDash([]);
+          /* v0.14 预瞄显示：近段（会追人）用实心亮条，远端（提前量）用淡色 —— 玩家一眼
+           * 知道「贴着我的这一段在动，远处那段不动」，于是知道往哪边挪能走出光路。 */
+          if (this.aimAt) {
+            const f = U.clamp(this.aimF, 0.2, 1) * this.len;
+            ctx.globalAlpha = 0.55;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, -this.w * 0.22, f, this.w * 0.44);
+            ctx.globalAlpha = 0.5;
+            ctx.strokeStyle = '#ffd25a'; ctx.lineWidth = 1.5;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath(); ctx.moveTo(f, -this.w / 2); ctx.lineTo(f, this.w / 2); ctx.stroke();
+            ctx.setLineDash([]);
+          }
           ctx.restore();
         } else {
           ctx.globalAlpha = 0.22 + 0.3 * Math.abs(Math.sin(t * 14));
@@ -1212,15 +1341,17 @@ window.KUP = window.KUP || {};
   class Toss {
     constructor(x, y, tx, ty, opt) {
       opt = opt || {};
-      this.x0 = x; this.y0 = y; this.tx = tx; this.ty = ty;
-      this.x = x; this.y = y;
+      this.x0 = x; this.y0 = y; this.tx = tx; this.ty = ty; this.x = x; this.y = y;
       this.dur = opt.fly || 0.4; this.t = 0;
-      this.zone = opt.zone || null;            // 落地后生成的区域参数
+      this.zone = opt.zone || null;
       this.color = opt.color || '#ffd25a';
+      this.target = opt.homing || null;
       this.dead = false;
     }
     update(dt, game) {
       this.t += dt;
+      if (this.target && this.target.dead) this.target = null;
+      if (this.target && game && game.player) { this.tx = this.target.x; this.ty = this.target.y; }
       const k = Math.min(1, this.t / this.dur);
       this.x = this.x0 + (this.tx - this.x0) * k;
       this.y = this.y0 + (this.ty - this.y0) * k;

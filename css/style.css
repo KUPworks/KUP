@@ -407,12 +407,23 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .ticket-gain { margin-top: 8px; font-size: 13px; color: #ffe08a; letter-spacing: .08em; }
 
 /* ============ v0.8 生存机制：护盾 / 冲刺 / 敌袭警告 ============ */
-#shield-bar {
-  position: absolute; left: 0; top: 0; height: 100%; width: 0;
-  background: linear-gradient(90deg, rgba(143,208,255,.55), rgba(143,208,255,.95));
-  box-shadow: 0 0 12px rgba(143,208,255,.9);
-  transition: width .12s linear;
+/* v0.14：护盾＝**减伤膜**，独立一行；**不再覆盖在血条上**（旧的 #shield-bar 已删除）。
+ * 显示：盾标 + 总强度 + 对贴靠的减伤百分比（+ 膜层剩余秒数）。 */
+#shield-row {
+  display: flex; align-items: center; gap: 6px; margin-top: 5px;
+  font-size: 12px; font-weight: 700; color: #bff7ff; letter-spacing: .04em;
+  text-shadow: 0 0 8px rgba(143,208,255,.75);
 }
+#shield-row.hidden { display: none; }
+#shield-row.tainted { color: #ffb25a; text-shadow: 0 0 8px rgba(255,140,90,.8); }
+#shield-orb {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%; font-size: 10px; color: #0a0618;
+  background: radial-gradient(circle at 35% 30%, #eaffff, #7dffe0 60%, #3aa8ff);
+  box-shadow: 0 0 10px rgba(125,255,224,.85);
+}
+#shield-num { font-variant-numeric: tabular-nums; }
+#shield-tag { font-size: 11px; color: #9fe8ff; font-weight: 600; }
 #survive-row { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
 #dash-pips { display: flex; align-items: center; gap: 3px; font-size: 11px; }
 #dash-pips .dl { color: #bfefff; font-weight: 800; margin-right: 2px; text-shadow: 0 0 8px rgba(160,240,255,.9); }
@@ -421,7 +432,6 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
   border: 1px solid rgba(160,240,255,.35);
 }
 #dash-pips i.on { background: #a0f0ff; box-shadow: 0 0 9px rgba(160,240,255,.95); }
-#shield-num { font-size: 11.5px; font-weight: 700; color: #8fd0ff; letter-spacing: .04em; text-shadow: 0 0 8px rgba(143,208,255,.8); }
 #danger-warn {
   margin-top: 6px; padding: 4px 14px; font-size: 13px; font-weight: 800; letter-spacing: .1em;
   color: #ffd9e6; background: linear-gradient(90deg, rgba(255,45,110,.9), rgba(255,120,60,.9));

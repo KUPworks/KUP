@@ -209,7 +209,7 @@ KUP.WEAPON_MODULES = {
     id: 'bass', entity: 'Ring',
     name: { zh: '圆形波', en: 'Shock Ring', ja: '衝撃リング' },
     desc: { zh: '以玩家为中心扩散的冲击环（可定向成扇形）；扩散半径随「范围」放大。', en: 'A ring expanding from you (can be a sector); radius scales with Area.', ja: '自機中心に広がる衝撃環（扇形化も可）。半径は「範囲」で拡大。' },
-    params: ['cd', 'dmg', 'r', 'double'],
+    params: ['cd', 'dmg', 'r', 'double', 'arc'],
     base: { speed: 300, kb: 170, arc: 360, doubleSpeed: 220, doubleKb: 140, doubleDmgMul: 0.7 },
     area: ['r'],
   },
@@ -225,24 +225,30 @@ KUP.WEAPON_MODULES = {
     id: 'laser', entity: 'Beam',
     name: { zh: '贯穿光束', en: 'Piercing Beam', ja: '貫通ビーム' },
     desc: { zh: '瞬间贯穿的定向光束；**长度**随「范围」放大，宽度不随范围变化。', en: 'An instant piercing beam; **length** scales with Area, width does not.', ja: '瞬時に貫くビーム。**長さ**は「範囲」で拡大、太さは変わらない。' },
-    params: ['cd', 'dmg', 'len', 'w', 'double'],
-    base: { doubleAngle: 0.3, doubleDmgMul: 0.7 },
+    params: ['cd', 'dmg', 'len', 'w', 'double', 'targets'],
+    /* v0.14：double（第二条光束）改向**第二个不同的敌人**发射；只有一个目标时改发**对向**
+     * （dir+π，即"前后"）。不再用 doubleAngle 张开 0.3rad 的夹角——那会让两条光束都打不中。 */
+    base: { doubleAngle: 0, doubleDmgMul: 0.7, targets: 2, arc: { k: 0.5 } },
     area: ['len'],
   },
   lance: {
     id: 'lance', entity: 'Projectile',
     name: { zh: '穿透音枪', en: 'Piercing Lance', ja: '貫通ランス' },
     desc: { zh: '高速穿透弹体；命中半径随「范围」放大（飞行距离不变）。', en: 'A fast piercing shot; hit radius scales with Area (travel distance unchanged).', ja: '高速貫通弾。命中半径は「範囲」で拡大（飛距離は不変）。' },
-    params: ['cd', 'dmg', 'count', 'pierce'],
-    base: { speed: 560, r: 8, life: 1.6, spread: 0.16 },
+    params: ['cd', 'dmg', 'count', 'pierce', 'spread', 'targets'],
+    /* v0.14：齐射按「最近 N 个不同的敌人」分配方向（targets，缺省 2），
+     * 多余的弹体才围绕基准方向补角；spread 从「张开一个大夹角」改为**很小的夹角**（≈5°）。 */
+    base: { speed: 560, r: 8, life: 1.6, spread: 0.085, targets: 2 },
     area: ['r'],
   },
   toss: {
     id: 'toss', entity: 'Toss → Zone',
     name: { zh: '投掷・滞留音场', en: 'Thrown Field', ja: '投擲・残響音場' },
-    desc: { zh: '抛物线投掷到目标点，落点生成滞留音场；**投掷距离与音场半径**随「范围」放大。', en: 'An arcing throw that leaves a lingering field; **throw range and field radius** scale with Area.', ja: '放物線で投擲し着地点に残響音場。**投擲距離と半径**が「範囲」で拡大。' },
-    params: ['cd', 'dmg', 'count', 'r', 'range', 'fly', 'life'],
-    base: { fly: 0.4, tickRate: 0.4, spread: 0.42, slowMul: 0.55, slowSec: 0.4 },
+    desc: { zh: '抛物线**分别投向最近 N 个不同敌人**（缺省 2），落点生成滞留音场；投掷距离与音场半径随「范围」放大。', en: 'Arcs toward **the nearest N different foes** (2 by default), each leaving a lingering field; throw range and field radius scale with Area.', ja: '最寄りの**別々の敵 N 体**へ放物線で投擲（既定 2）。着地点に残響音場。投擲距離と半径が「範囲」で拡大。' },
+    params: ['cd', 'dmg', 'count', 'r', 'range', 'fly', 'life', 'targets'],
+    /* v0.14：count 个投掷物**各向最近的不同敌人之一**（targets 决定"最近两个"的分配），
+     * 不再是对着同一个最近敌人按 spread 撒开 —— 那是"一下投掷两个"，不是"向两个敌人各投一个"。 */
+    base: { fly: 0.4, tickRate: 0.4, spread: 0.42, slowMul: 0.55, slowSec: 0.4, targets: 2 },
     area: ['r', 'range'],
   },
   bomb: {
@@ -375,10 +381,10 @@ KUP.WEAPONS = {
       ja: '楽曲「the last bullet」より、敵列を貫く音の銃撃。輪廻此処の初期武装。',
     },
     lvDesc: [
-      { zh: '朝移动方向射出 2 发贯穿音枪。', en: 'Fires 2 piercing lances toward your movement.', ja: '移動方向へ貫通音槍 ×2 を発射。' },
+      { zh: '朝最近的破维魔射出 2 发贯穿音枪（夹角很小，主要打同一个）。', en: 'Fires 2 piercing lances at the nearest foe (tight spread).', ja: '最寄りへ貫通音槍 ×2（狭い角度）。' },
       { zh: '音枪 ×3。', en: '3 lances.', ja: '音槍 ×3。' },
       { zh: '贯穿数 +1。', en: 'Pierce +1.', ja: '貫通数 +1。' },
-      { zh: '音枪 ×4，伤害提升。', en: '4 lances, more damage.', ja: '音槍 ×4、ダメージアップ。' },
+      { zh: '音枪 ×4（分射最近两个破维魔）。', en: '4 lances (the two nearest foes get one each).', ja: '音槍 ×4（最寄り 2 体へ）。' },
       { zh: '音枪 ×5，贯穿数 +1 —— 最后的一击。', en: '5 lances, pierce +1 — the final shot.', ja: '音槍 ×5、貫通数 +1 —— 最後の一撃。' },
     ],
     levels: [
@@ -411,7 +417,7 @@ KUP.WEAPONS = {
       { zh: '光束加宽，伤害提升。', en: 'Wider beam, more damage.', ja: 'ビームが太くなり、ダメージアップ。' },
       { zh: '光束延长。', en: 'Longer beam.', ja: 'ビームが長くなる。' },
       { zh: '伤害大幅提升。', en: 'Much more damage.', ja: 'ダメージが大幅アップ。' },
-      { zh: '光束 ×2 —— 消失于世界的彼端。', en: '2 beams — vanish beyond the world.', ja: 'ビーム ×2 —— 世界の彼端へ消える。' },
+      { zh: '光束 ×2 —— 分射最近的两个破维魔（只有一个时前后对穿）。', en: '2 beams — one for each of the two nearest foes (front & back when only one).', ja: 'ビーム ×2 —— 最寄りの 2 体へそれぞれ（1 体時は前後に）。' },
     ],
     levels: [
       { cd: 2.6, dmg: 20, len: 560, w: 16, double: false },
@@ -474,10 +480,10 @@ KUP.WEAPONS = {
       ja: '追従の歌が貫通の矢となる。地邑阿栖の初期武装。',
     },
     lvDesc: [
-      { zh: '朝移动方向射出 2 支贯穿之矢。', en: 'Fires 2 piercing arrows toward your movement.', ja: '移動方向へ貫通の矢 ×2 を発射。' },
+      { zh: '朝最近的破维魔射出 2 支贯穿之矢（夹角很小，主要打同一个）。', en: 'Fires 2 piercing arrows at the nearest foe (tight spread).', ja: '最寄りへ貫通の矢 ×2（狭い角度）。' },
       { zh: '之矢 ×3。', en: '3 arrows.', ja: '矢 ×3。' },
       { zh: '贯穿数 +1。', en: 'Pierce +1.', ja: '貫通数 +1。' },
-      { zh: '之矢 ×4，伤害提升。', en: '4 arrows, more damage.', ja: '矢 ×4、ダメージアップ。' },
+      { zh: '之矢 ×4（分射最近两个破维魔）。', en: '4 arrows (the two nearest foes get one each).', ja: '矢 ×4（最寄り 2 体へ）。' },
       { zh: '之矢 ×5，贯穿数 +1 —— 合唱不止。', en: '5 arrows, pierce +1 — the chorus never ends.', ja: '矢 ×5、貫通数 +1 —— 合唱は止まない。' },
     ],
     levels: [
@@ -645,6 +651,165 @@ KUP.WEAPONS = {
   },
 };
 
+/* ---------- 不同的大招（v0.14：按**角色**区分，不再是五位共用同一发） ----------
+ * 人类 2026-10-17：「设计不同的大招」。这里把大招做成**数据驱动**的一张小表：
+ * 每个角色 id → 一个大招定义；未列出的角色用 `default`（沿用旧「浄化の歌」）。
+ * 所有大招共用同一套规则（充能满 100 → 按 Space 释放、用完清零），差别只在
+ * **效果**：清怪、控场、回血、爆发各有侧重 —— 这才是"不同角色手感不同"的来源。
+ *
+ * 字段：
+ *   id       ── 唯一 id（存档/调试参数 ?ult= 只允许 1|0，这里的事件不涉及存档 schema）
+ *   icon     ── HUD 大招条的图标（霓虹字符）
+ *   name     ── 三语名（HUD 与横幅）
+ *   desc     ── 三语说明（UI/文档取用）
+ *   clearDanger ── true＝冲散**全部敌方攻击（Danger）**（旧「浄化の歌」的核心）
+ *   freeze   ── {seconds, all} 全场僵直（走 game.applyFreeze，Boss 减免照旧）
+ *   slow     ── {seconds, mul} 全场减速（走 game.applySlow）
+ *   rings    ── 冲击环数组：{maxR, speed, dmgMul, kb, color, arcDeg, dir}
+ *               dmgMul 是**玩家伤害倍率**的倍数；arcDeg<360 且 dir==='aim' 时朝瞄准方向成扇形
+ *   heal     ── 按最大生命的比例回复
+ *   invuln   ── 释放后的无敌秒数（至少 0.8 保证"释放瞬间不死"）
+ *   banner   ── 横幅用的 i18n 键（缺省 banner.ult）
+ */
+KUP.ULTIMATES = {
+  /* 花譜／化歩：等离子对撞机（HOP WTR 最早的大招样式——单体点杀 → 巨大能量） */
+  kaf: {
+    id: 'ult_kaf', icon: '♪',
+    name: { zh: '双极谐振', en: 'Bipolar Resonance', ja: '双極共鳴' },
+    desc: {
+      zh: '以自身为轴迸出**双重反相冲击环**，全场破除并重创（两道波接连扫过）。',
+      en: 'Two out-of-phase shock waves burst from you, clearing and blasting the whole field.',
+      ja: '自機を軸に**逆相の衝撃環を二重**に放ち、場全体を薙ぎ払う。',
+    },
+    clearDanger: true,
+    rings: [
+      { maxR: 950, speed: 760, dmgMul: 3.2, kb: 280, color: '#9ff3ff' },
+      { maxR: 760, speed: 620, dmgMul: 2.4, kb: 220, color: '#7dffe0' },
+    ],
+    invuln: 1.2,
+    cdMax: 2.6,
+  },
+  /* 理芽／狸眼：冰封剧场（把全场"摄影机"按下暂停） */
+  rim: {
+    id: 'ult_rim', icon: '❄',
+    name: { zh: '静止帧', en: 'Freeze Frame', ja: '静止フレーム' },
+    desc: {
+      zh: '全场怪异被**冻结 3.2 秒**（含 Boss，减免照旧）并清掉全部敌袭，顺势回血 15%。',
+      en: 'Every foe freezes for 3.2s (bosses reduced), all enemy attacks are dispelled, and you heal 15%.',
+      ja: '場のすべてを**3.2 秒凍結**（Boss は軽減）し敵襲を消去、さらに 15% 回復。',
+    },
+    clearDanger: true,
+    freeze: { seconds: 3.2, all: true },
+    heal: 0.15,
+    rings: [{ maxR: 420, speed: 560, dmgMul: 1.4, kb: 120, color: '#bff0ff' }],
+    invuln: 1.4,
+    cdMax: 3.0,
+  },
+  /* 春猿火／派流：火炎龙舞（正面扇形喷发，伤害最高但只朝一个方向）
+   * ⚠ 键名必须是**角色 id**（KUP.CHARS[].id ＝ 'harusaruhi'；'haru' 不是有效 id）。 */
+  harusaruhi: {
+    id: 'ult_haru', icon: '炎',
+    name: { zh: '九龍噴火', en: 'Nine-Dragon Breath', ja: '九龍噴火' },
+    desc: {
+      zh: '朝瞄准方向喷出 **160° 扇形烈焰**（伤害 ×4.5），并小幅回复；敌袭一并燃尽。',
+      en: 'A 160° flame cone blasts toward your aim (×4.5 damage) and mends you a little; enemy attacks burn away.',
+      ja: '照準方向へ **160° の扇形火炎**（ダメージ ×4.5）を噴き、少し回復。敵襲も焼き払う。',
+    },
+    clearDanger: true,
+    rings: [{ maxR: 700, speed: 900, dmgMul: 4.5, kb: 340, color: '#ffb25a', arcDeg: 160, dir: 'aim' }],
+    heal: 0.06,
+    invuln: 0.9,
+    cdMax: 2.2,
+  },
+  /* ヰ世界情緒／世界：星屑领域（全场减速 + 持续区域，控场型） */
+  isekaijoucho: {
+    id: 'ult_isekai', icon: '星',
+    name: { zh: '星海陷落', en: 'Starsea Collapse', ja: '星海陥落' },
+    desc: {
+      zh: '全场怪异 **减速至 35% 持续 10 秒**，并在周围留下 4 处星屑滞留区；伤害较低但控场极强。',
+      en: 'All foes slow to 35% for 10s, leaving four lingering stardust fields — lower damage, superb control.',
+      ja: '場のすべてを **35% に 10 秒減速**し、周囲に星屑の残響域 ×4 —— 低火力・高制圧。',
+    },
+    slow: { seconds: 10, mul: 0.35 },
+    fields: 4,
+    clearDanger: false,
+    rings: [{ maxR: 520, speed: 420, dmgMul: 1.0, kb: 60, color: '#c9a6ff' }],
+    invuln: 1.0,
+    cdMax: 3.4,
+  },
+  /* 輪廻此処／此処：the last bullet —— 环形速射（多道贯穿光束绕自身向外打） */
+  koko: {
+    id: 'ult_koko', icon: '弾',
+    name: { zh: '终结弹幕', en: 'The Last Barrage', ja: '終弾幕' },
+    desc: {
+      zh: '以自身为中心向 **12 个方向**同时射出贯穿光束（每发 ×1.6 伤害），并短暂无敌。',
+      en: 'Twelve piercing beams fire in all directions at once (×1.6 each), plus a short invulnerability.',
+      ja: '自機から **12 方向**へ同時に貫通ビーム（各 ×1.6）、短時間無敵。',
+    },
+    clearDanger: true,
+    beams: { count: 12, dmgMul: 1.6, len: 900, w: 14, color: '#7aa0ff' },
+    invuln: 1.2,
+    cdMax: 2.8,
+  },
+  /* 天祢亜留（魔女候補）：救済の聖歌 —— 回血 + 免疫型 |
+   * 注：「留作魔女候補的祝福」——她不是魔女之子，大招偏支援而非输出。 */
+  aru: {
+    id: 'ult_aru', icon: '鐘',
+    name: { zh: '救済の聖歌', en: 'Salvation Chant', ja: '救済の聖歌' },
+    desc: {
+      zh: '钟声涤荡——**回复 40% 最大生命**，3 秒无敌，全场冲击环伤害偏低。',
+      en: 'A cleansing bell — <b>heal 40% max HP</b>, 3s invulnerability, light field-wide damage.',
+      ja: '鐘の音が清める——<b>最大生命の 40% 回復</b>、3 秒無敵、場全体に軽いダメージ。',
+    },
+    clearDanger: true,
+    heal: 0.4,
+    rings: [{ maxR: 620, speed: 520, dmgMul: 1.2, kb: 180, color: '#8fa8ff' }],
+    invuln: 3.0,
+    cdMax: 4.0,
+  },
+  /* 地邑阿栖（魔女候補）：追唱の終楽章 —— 放射箭雨 |
+   * 射弹型：以玩家为中心向外打出一圈贯穿弹（正合 v0.14「射弹夹角小」的手感）。 */
+  asu: {
+    id: 'ult_asu', icon: '矢',
+    name: { zh: '終楽章・箭雨', en: 'Finale — Arrow Rain', ja: '終楽章・箭雨' },
+    desc: {
+      zh: '贯穿之矢向 **16 个方向**齐射（每发 ×1.3 伤害），并清除敌袭。',
+      en: 'Piercing arrows volley in sixteen directions (×1.3 each) and dispel enemy attacks.',
+      ja: '貫通の矢を **16 方向**へ一斉射（各 ×1.3）、敵襲を消去。',
+    },
+    clearDanger: true,
+    shots: { count: 16, dmgMul: 1.3, speed: 760, life: 1.3, pierce: 3, color: '#7de0c8' },
+    invuln: 1.0,
+    cdMax: 2.4,
+  },
+  /* 未列出的角色：沿用旧的「浄化の歌」（清屏冲击环 + 冲散敌袭 + 无敌） */
+  default: {
+    id: 'ult_default', icon: '♪',
+    name: { zh: '浄化の歌', en: 'Song of Purification', ja: '浄化の歌' },
+    desc: {
+      zh: '击破充能满 100 → 释放：净化冲击环 + 清除全部敌方攻击 + 短暂无敌。',
+      en: 'Charge to 100 → a purification shock ring, all enemy attacks dispelled, brief invulnerability.',
+      ja: 'チャージ 100 で発動——浄化の衝撃環・敵襲全消去・短時間無敵。',
+    },
+    clearDanger: true,
+    rings: [{ maxR: 950, speed: 700, dmgMul: 2.6, kb: 260, color: '#9ff3ff' }],
+    invuln: 1.2,
+    cdMax: 3.0,
+  },
+};
+/* 取某角色的大招（未知角色 → default） */
+/* 取某角色的大招（未知角色 → default）。未知 id 会 console.warn，便于发现键名写错
+ * （v0.14 实际踩过：把春猿火写成 'haru'，结果一直落到 default 而无人察觉）。 */
+KUP.ULTIMATE = id => {
+  const u = KUP.ULTIMATES[id];
+  if (!u && KUP.CHARS && KUP.CHARS.length) {
+    const know = KUP.CHARS.some(c => c.id === id);
+    if (!know) console.warn('[KUP] KUP.ULTIMATES 没有角色 "' + id + '" 的大招，回落到 default。可用：' +
+      KUP.CHARS.map(c => c.id).join(', '));
+  }
+  return u || KUP.ULTIMATES.default;
+};
+
 /* ---------- 被动强化（命名取自育成系谱：系谱曲／派生曲／拡声曲） ---------- */
 KUP.PASSIVES = {
   power:  {
@@ -684,13 +849,16 @@ KUP.PASSIVES = {
   },
   /* ===== 机制型被动（v0.8：闪避/护盾/吸血/反擊/疾走）=====
    * 针对「敌对伤害可被躲避」这一诉求：护盾吸收、回避免伤、吸血续航、反響报复、冲刺次数。 */
+  /* v0.14：护盾从「先吃伤害的独立血条」改为**减伤膜**——护盾值＝减伤强度（100＝满值），
+   * 从不被扣光；各受击类型的减伤见 KUP.CONFIG.SHIELD.REDUCE（贴靠 95%／音波 85%／
+   * 毒区 75%／轰炸 70%／光束 50%）。护盾每级 +22，满值 100 后其余照旧生效（見 recompute）。 */
   shield: {
     icon: '盾', color: '#8fd0ff', maxLv: 5,
     name: { zh: '防音护盾', en: 'Soundproof Shield', ja: '防音シールド' },
     desc: {
-      zh: '歌声化作护膜——获得 <b>+22 护盾</b>／级；4 秒未受伤后自动回复。',
-      en: 'Song becomes a membrane — <b>+22 shield</b> per level; it recharges after 4s without damage.',
-      ja: '歌が膜となる——<b>+22 シールド</b>／レベル。4 秒間無傷で自動回復。',
+      zh: '歌声化作减伤膜——<b>+22 护盾</b>／级（满值 100）。按受击类型减伤：<b>贴靠 95%</b>、音波 85%、毒区 75%、轰炸 70%、光束 50%。',
+      en: 'Song becomes a damage-reducing membrane — <b>+22 shield</b> per level (max 100). Reduction by hit type: <b>contact 95%</b>, rings 85%, fields 75%, bombs 70%, beams 50%.',
+      ja: '歌が軽減膜となる——<b>+22 シールド</b>／レベル（最大 100）。被弾種類ごとに軽減：<b>接触 95%</b>・音波 85%・毒域 75%・爆撃 70%・光条 50%。',
     },
   },
   dodge: {
@@ -755,13 +923,15 @@ KUP.PASSIVES = {
  *   - 效果为**立即生效**或**限时 BUFF**，用于应急（血线危险时升级池会出现更多生存道具）
  * 与瓦利斯的**局外强化**（護盾被动/常連の勘/薬膳スープ）互为补充：局外是永久小幅，局内是即时道具。 */
 KUP.ITEMS = {
+  /* v0.14：护盾改**减伤膜**（不是第二管血）。防音の符＝在现有护盾之上**追加一层 60 膜**，
+   * 只提高减伤、不提供任何"血量"；没有被动护盾时也能单独使用（此时就显示这 60 膜）。 */
   ward: {
-    id: 'ward', icon: '盾', color: '#8fd0ff', kind: 'shield', amount: 60,
+    id: 'ward', icon: '盾', color: '#8fd0ff', kind: 'shield', amount: 60, seconds: 30,
     name: { zh: '防音の符', en: 'Ward of Silence', ja: '防音の符' },
     desc: {
-      zh: '歌声凝成护膜——<b>立即获得 +60 护盾</b>（可暂时超过护盾上限）。',
-      en: 'Song condenses into a membrane — <b>+60 shield now</b> (may exceed the cap temporarily).',
-      ja: '歌が膜となる——<b>即座に +60 シールド</b>（一時的に上限を超えられる）。',
+      zh: '歌声凝成护膜——<b>30 秒内追加 60 膜层</b>：按受击类型大幅减伤（贴靠 95%、音波 85%、毒区 75%、轰炸 70%、光束 50%），<b>不会被当作生命扣光</b>。',
+      en: 'Song condenses into a membrane — <b>+60 membrane for 30s</b>: heavy damage reduction by hit type (contact 95%, ring 85%, field 75%, bomb 70%, beam 50%) — <b>never drained as a second HP bar</b>.',
+      ja: '歌が膜となる——<b>30 秒間、膜を 60 追加</b>：被弾の種類ごとに大幅軽減（接触 95%・音波 85%・毒域 75%・爆撃 70%・光条 50%）。<b>第二のHPとしては減らない</b>。',
     },
   },
   veil: {

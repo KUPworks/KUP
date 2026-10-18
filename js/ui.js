@@ -27,9 +27,9 @@ window.KUP = window.KUP || {};
         'reroll-n', 'btn-reroll', 'btn-banmode', 'lu-hint',
         'over-stats', 'win-stats', 'danger', 'hp-bar', 'hp-text', 'lv-num', 'timer', 'kills',
         'weapon-row', 'xp-bar-fill', 'boss-wrap', 'boss-name', 'boss-bar', 'vol-slider',
-        'shield-bar', 'shield-num', 'dash-pips', 'danger-warn', 'btn-dash', 'buff-row', 'btn-aim',
+        'shield-row', 'shield-orb', 'shield-num', 'shield-tag', 'dash-pips', 'danger-warn', 'btn-dash', 'buff-row', 'btn-aim',
         'area-cards', 'area-detail', 'fukkou-fill', 'fukkou-label', 'memory-list', 'memory-count',
-        'ult-wrap', 'ult-fill', 'win-sub', 'fukkou-menu-line',
+        'ult-wrap', 'ult-fill', 'ult-label', 'win-sub', 'fukkou-menu-line',
         'companion-strip', 'companion-detail', 'companion-form-wrap', 'companion-form-strip',
         'companion-form-detail', 'form-strip', 'form-detail', 'form-title', 'form-chips', 'hud-companion', 'companion-form-title',
         'shop-list', 'shop-tickets', 'fukkou-menu-tickets',
@@ -1035,11 +1035,22 @@ window.KUP = window.KUP || {};
       this.els['timer'].textContent = U.formatTime(g.time);
       this.els['kills'].textContent = KUP.I18N.t('hud.kills', { n: g.kills });
       this.els['xp-bar-fill'].style.width = Math.min(100, g.xp / KUP.XP_NEXT(g.level) * 100).toFixed(1) + '%';
-      // 浄化の歌充能条（第2話副标题 ★）
+      /* 大招充能条（第2話副标题 ★；v0.14：按角色显示**不同大招**的名字与冷却）
+       * 标签＝当前角色的大招名（KUP.ULTIMATES）；充能满但冷却中显示「冷却 Ns」。 */
       if (this.els['ult-wrap'] && this.els['ult-fill']) {
-        const ready = g.ult.charge >= 100;
+        const ud = g.ultimateDef ? g.ultimateDef() : null;
+        const ready = g.ultReady ? g.ultReady() : g.ult.charge >= 100;
         this.els['ult-wrap'].classList.toggle('ready', ready);
+        this.els['ult-wrap'].classList.toggle('cooling', (g.ult.cdT || 0) > 0 && g.ult.charge >= 100);
         this.els['ult-fill'].style.width = g.ult.charge.toFixed(0) + '%';
+        const usig = (ud ? ud.id : '') + '/' + Math.ceil(g.ult.cdT || 0) + '/' + (g.ult.charge >= 100 ? 1 : 0);
+        if (this.els['ult-label'] && usig !== this.lastUltSig) {
+          this.lastUltSig = usig;
+          const nm = ud ? KUP.I18N.tv(ud.name) : KUP.I18N.t('banner.ult');
+          this.els['ult-label'].textContent = (ud ? ud.icon + ' ' : '♪ ') + nm +
+            ((g.ult.cdT || 0) > 0 && g.ult.charge >= 100 ? ' · ' + KUP.I18N.t('ult.cd', { s: Math.ceil(g.ult.cdT) }) : '');
+          this.els['ult-label'].title = ud ? KUP.I18N.tv(ud.desc) : '';
+        }
       }
       // 武器图标（仅变化时重建；觉醒显示 ★）
       const sig = p.weapons.map(w => w.def.id + (w.evolved ? 'E' : '') + w.lv).join(',');
@@ -1059,14 +1070,27 @@ window.KUP = window.KUP || {};
           row.appendChild(d);
         }
       }
-      /* ---- v0.8 生存机制 HUD：护盾条 / 冲刺充能 / 敌袭警告 ---- */
-      if (this.els['shield-bar']) {
-        const sk = p.shieldMax > 0 ? Math.max(0, p.shield / p.shieldMax) : 0;
-        this.els['shield-bar'].style.width = (sk * 100).toFixed(1) + '%';
-        this.els['shield-bar'].classList.toggle('on', p.shield > 0);
-      }
-      if (this.els['shield-num']) {
-        this.els['shield-num'].textContent = p.shieldMax > 0 ? '🛡 ' + Math.ceil(p.shield) + '/' + p.shieldMax : '';
+      /* ---- v0.8 生存机制 HUD：护盾（v0.14 改减伤膜） / 冲刺充能 / 敌袭警告 ---- */
+      if (this.els['shield-row']) {
+        /* 护盾**独立一行**：显示总强度（护盾＋膜层）与当前对**贴靠**的减伤百分比，
+         * 不再占用血条——护盾不是第二管血，没有"被打掉多少"这件事。 */
+        const total = p.shieldTotal ? p.shieldTotal() : 0;
+        const row = this.els['shield-row'];
+        row.classList.toggle('hidden', total <= 0);
+        const sig = Math.round(total) + '/' + Math.round(p.shieldTmpT || 0) + '/' + (p.shieldTaintT > 0 ? 1 : 0);
+        if (sig !== this.lastShieldSig) {
+          this.lastShieldSig = sig;
+          const cf = KUP.shieldReducePct(p, 'contact');
+          if (this.els['shield-num']) this.els['shield-num'].textContent = Math.round(total);
+          if (this.els['shield-tag']) {
+            const pct = KUP.I18N.t('hud.shieldPct', { n: cf });
+            this.els['shield-tag'].textContent = (p.shieldTmp > 0)
+              ? pct + ' · ' + KUP.I18N.t('hud.shieldTmp', { s: Math.ceil(Math.max(0, p.shieldTmpT || 0)) })
+              : pct;
+          }
+        }
+        row.classList.toggle('tainted', p.shieldTaintT > 0);
+        if (this.els['shield-orb']) this.els['shield-orb'].style.opacity = p.shieldTaintT > 0 ? 0.45 : 1;
       }
       if (this.els['dash-pips']) {
         const dsig = p.dashCharge + '/' + p.dashMax;

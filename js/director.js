@@ -249,34 +249,53 @@ window.KUP = window.KUP || {};
           if (b.minionT <= 0) { b.minionT = 5.5; this.spawnEnemy('tank', b.x, b.y); }
           break;
         }
-        /* 〈観測〉肆番街：旋转光束扫射（先显示光路 0.3s 再发射）＋分裂体
-         * ⚠️ 只使用 Danger（敌方专属）：**不会对破维魔造成任何伤害**，也不再复用玩家 Beam。 */
+        /* 〈観測〉肆番街：**指向玩家**的光束（预警期内近段持续预瞄）＋分裂体
+         * ⚠️ 只使用 Danger（敌方专属）：**不会对破维魔造成任何伤害**，也不再复用玩家 Beam。
+         * v0.14（人类 2026-10-17「BOSS 的激光角度不能太死，要能打中 player」）：
+         * 旧版是固定角速度的自转扫射（1.5s 才转一圈，玩家站着不动都可能擦不到），
+         * 现在每条光束**发射时朝向玩家**、预警期里近段还会追着玩家转（Danger.aimAt），
+         * 所以：
+         *   ① 站着不动 → 多半被命中（这就叫"能打中"）；
+         *   ② 横向移动/冲刺 → 能在 0.3s 预警里走出光路（可躲避，不是必中）。
+         * 暴走时改为**双光束**（玩家两侧各一条，中间留一条缝隙），压力更大但仍可躲。 */
         case 'scan': {
-          b.angle += (b.enraged ? 1.5 : 0.95) * dt;
           b.t2 -= dt;
           if (b.t2 <= 0) {
-            b.t2 = b.enraged ? 0.45 : 0.62;
-            this.dangers.push(new KUP.Danger(b.x, b.y, {
-              kind: 'beam', dir: b.angle, len: 620, w: 22, dmg: 13, color: '#b58cff', arm: 0.3,
+            b.t2 = b.enraged ? 0.5 : 0.68;
+            const aim = Math.atan2(p.y - b.y, p.x - b.x);
+            const mk = off => this.dangers.push(new KUP.Danger(b.x, b.y, {
+              kind: 'beam', dir: aim + off, len: 620, w: 22, dmg: 13, color: '#b58cff', arm: 0.3,
+              aimAt: { x: b.x, y: b.y }, aimF: 0.55, aimTurn: 1.9,
             }));
+            mk(0);
+            if (b.enraged) mk(0.34);                 // 第二道：偏移 19°，玩家只需侧移一步
             KUP.Audio.sfx('laser');
           }
           b.minionT -= dt;
           if (b.minionT <= 0) { b.minionT = 7; this.spawnEnemy('glitch', b.x, b.y); this.spawnEnemy('glitch', b.x, b.y); }
           break;
         }
-        /* 〈爆塵〉伍番街：轰炸**远离玩家**落点（留出安全区）＋视野遮蔽 */
+        /* 〈爆塵〉伍番街：轰炸**压在玩家附近**（而不是远远绕开）＋视野遮蔽
+         * v0.14（人类「轰炸区域应更靠近 player 但 player 容易跑出」）：
+         * 旧版落点距玩家 150–300px 的环状带——既不压身又常常离得远，读感像"乱炸"。
+         * 现在：落点距玩家 40–160px，且**至少一部分直接瞄准"预判位置"**
+         * （玩家当前位置 + 当前速度 × 0.6s），爆炸半径 86 与信管 0.95–1.15s 不变
+         * ⇒ 站着不动会被压到，持续移动就能跑出（预警时长 > 爆炸半径 / 走速）。 */
         case 'smog': {
           b.t2 -= dt;
           if (b.t2 <= 0) {
-            b.t2 = b.enraged ? 1.3 : 2.0;
+            b.t2 = b.enraged ? 1.25 : 1.9;
             const n = b.enraged ? 3 : 2;
-            /* 环状落点：距玩家 150–300px（绝不砸在脚下）＋信管 1.1s（能跑出去） */
             const base = U.rng() * U.TAU;
+            /* 玩家速度（简化：用位移差/帧 1 阶估计，见 _playerVel 注释） */
+            const vel = this._playerVel(p, dt);
             for (let i = 0; i < n; i++) {
-              const a = base + (i / n) * U.TAU + U.rand(-0.25, 0.25);
-              const d = U.rand(150, 300);
-              this.dangers.push(new KUP.Danger(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, {
+              /* 第 0 个直接压预判点，其余散布在玩家周围 40–160px */
+              const lead = i === 0 ? 0 : U.rand(40, 160);
+              const a = i === 0 ? 0 : base + (i / n) * U.TAU + U.rand(-0.35, 0.35);
+              const tx = p.x + vel.x * 0.6 + Math.cos(a) * lead;
+              const ty = p.y + vel.y * 0.6 + Math.sin(a) * lead;
+              this.dangers.push(new KUP.Danger(tx, ty, {
                 kind: 'bomb', r: 86, dmg: 17, color: '#ffb25a', arm: b.enraged ? 0.95 : 1.15,
               }));
             }
@@ -288,7 +307,8 @@ window.KUP = window.KUP || {};
           if (b.minionT <= 0) { b.minionT = 6; this.spawnEnemy('noise', b.x, b.y); this.spawnEnemy('noise', b.x, b.y); }
           break;
         }
-        /* 〈再生〉陸番街（终盘）：阶段1 音波环+高速群 → 阶段2 轰炸+精英召唤 */
+        /* 〈再生〉陸番街（终盘）：阶段1 音波环+高速群 → 阶段2 轰炸+精英召唤
+         * v0.14：阶段2 的轰炸同样改为「压在玩家附近、并能被跑出」（同 〈爆塵〉口径）。 */
         case 'regen':
         default: {
           if (b.phaseNo === 1) {
@@ -304,11 +324,13 @@ window.KUP = window.KUP || {};
             b.t2 -= dt;
             if (b.t2 <= 0) {
               b.t2 = 1.5;
-              const base = U.rng() * U.TAU;
+              const vel = this._playerVel(p, dt);
               for (let i = 0; i < 3; i++) {
-                const a = base + (i / 3) * U.TAU + U.rand(-0.3, 0.3);
-                const d = U.rand(150, 290);
-                this.dangers.push(new KUP.Danger(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, {
+                const lead = i === 0 ? 0 : U.rand(40, 170);
+                const a = U.rng() * U.TAU;
+                const tx = p.x + vel.x * 0.55 + Math.cos(a) * lead;
+                const ty = p.y + vel.y * 0.55 + Math.sin(a) * lead;
+                this.dangers.push(new KUP.Danger(tx, ty, {
                   kind: 'bomb', r: 92, dmg: 19, color: '#8fd0ff', arm: 1.05,
                 }));
               }
@@ -320,6 +342,23 @@ window.KUP = window.KUP || {};
           break;
         }
       }
+    },
+
+    /* ---------- 玩家速度估计（v0.14：轰炸的"预判位置"用）----------
+     * 不读输入、不改玩家状态：用本帧与上一帧的位置差 / dt（一阶差分），
+     * 再钳到玩家最大移速以内（冲刺那一下不当作持续速度）。
+     * 首帧（无上帧记录）返回 (0,0) —— 此时落点就等于玩家脚下，同样符合"压在附近"。 */
+    _playerVel(p, dt) {
+      const last = this._pvLast;
+      let vx = 0, vy = 0;
+      if (last && dt > 0) {
+        vx = (p.x - last.x) / dt; vy = (p.y - last.y) / dt;
+        const cap = (p.speed || 200) * 1.1, sp = Math.hypot(vx, vy);
+        if (sp > cap) { vx = vx / sp * cap; vy = vy / sp * cap; }
+      }
+      if (!last) this._pvLast = {}; 
+      this._pvLast.x = p.x; this._pvLast.y = p.y;
+      return { x: vx, y: vy };
     },
 
     spawnEnemy(typeId, nx, ny) {

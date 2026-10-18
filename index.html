@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -19,13 +19,17 @@
     <div id="hud-topleft">
       <div id="hp-wrap">
         <div id="hp-bar"></div>
-        <div id="shield-bar"></div>
         <span id="hp-text">100/100</span>
       </div>
       <div id="lv-badge">Lv <span id="lv-num">1</span></div>
+      <!-- 护盾＝**减伤膜**（v0.14）：独立一行，**不画在血条上**，也不是第二管血 -->
+      <div id="shield-row" class="hidden">
+        <span id="shield-orb">盾</span>
+        <span id="shield-num">0</span>
+        <span id="shield-tag"></span>
+      </div>
       <div id="survive-row">
         <div id="dash-pips" title="冲刺 (Shift)"></div>
-        <div id="shield-num"></div>
         <div id="buff-row"></div>
       </div>
       <div id="weapon-row"></div>
@@ -250,19 +254,19 @@
   </div>
 </div>
 
-<script src="js/config.js?v=0.13.2-lore"></script>
-<script src="js/utils.js?v=0.13.2-lore"></script>
+<script src="js/config.js?v=0.14.0-shield"></script>
+<script src="js/utils.js?v=0.14.0-shield"></script>
 <!-- 存档层：必须在 i18n/audio/meta 之前（它们都经由 KUP.STORE 读写持久化数据） -->
-<script src="js/store.js?v=0.13.2-lore"></script>
-<script src="js/i18n.js?v=0.13.2-lore"></script>
-<script src="js/audio.js?v=0.13.2-lore"></script>
-<script src="js/data.js?v=0.13.2-lore"></script>
-<script src="js/meta.js?v=0.13.2-lore"></script>
-<script src="js/entities.js?v=0.13.2-lore"></script>
-<script src="js/game.js?v=0.13.2-lore"></script>
-<script src="js/director.js?v=0.13.2-lore"></script>
-<script src="js/render.js?v=0.13.2-lore"></script>
-<script src="js/ui.js?v=0.13.2-lore"></script>
-<script src="js/main.js?v=0.13.2-lore"></script>
+<script src="js/store.js?v=0.14.0-shield"></script>
+<script src="js/i18n.js?v=0.14.0-shield"></script>
+<script src="js/audio.js?v=0.14.0-shield"></script>
+<script src="js/data.js?v=0.14.0-shield"></script>
+<script src="js/meta.js?v=0.14.0-shield"></script>
+<script src="js/entities.js?v=0.14.0-shield"></script>
+<script src="js/game.js?v=0.14.0-shield"></script>
+<script src="js/director.js?v=0.14.0-shield"></script>
+<script src="js/render.js?v=0.14.0-shield"></script>
+<script src="js/ui.js?v=0.14.0-shield"></script>
+<script src="js/main.js?v=0.14.0-shield"></script>
 </body>
 </html>

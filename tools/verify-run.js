@@ -541,30 +541,98 @@ gB5.boss = gB5.spawnEnemy('boss5', gB5.player.x + 200, gB5.player.y);
 for (let i = 0; i < 200; i++) gB5.updateBossBehavior(0.02);
 const bombs5 = gB5.dangers.filter(d => d.kind === 'bomb');
 check('〈爆塵〉随机轰炸 + 视野遮蔽', bombs5.length > 0 && gB5.fogBoost > 0);
-check('〈爆塵〉轰炸落点远离玩家（≥150px，可躲避）', bombs5.every(d => {
-  const p = gB5.player; return Math.hypot(d.x - p.x, d.y - p.y) >= 140;
-}));
+/* v0.14（人类 2026-10-17「轰炸区域应更靠近 player 但 player 容易跑出」）：
+ * 旧断言要求落点 ≥150px 远离玩家（＝几乎炸不到人），已替换为新的两条口径：
+ *   ① 至少一发**压在玩家附近**（≤180px，含直接压在脚下的预判点）；
+ *   ② 信管 > 爆炸半径 / 玩家移速 ⇒ 持续移动就能跑出。 */
+check('〈爆塵〉轰炸落点靠近玩家（至少一发 ≤180px）', bombs5.some(d => {
+  const p = gB5.player; return Math.hypot(d.x - p.x, d.y - p.y) <= 180;
+}), 'min=' + Math.min.apply(null, bombs5.map(d => Math.round(Math.hypot(d.x - gB5.player.x, d.y - gB5.player.y)))) + 'px');
 check('〈爆塵〉轰炸有信管预警（arm ≥ 0.9s）', bombs5.every(d => d.arm >= 0.9));
+check('〈爆塵〉预警时长足以跑出爆炸半径（arm > r / 玩家移速）', bombs5.every(d => {
+  const walk = gB5.player.speed * d.arm;
+  return walk > d.r;
+}), 'walk=' + Math.round(gB5.player.speed * 1.15) + 'px ≥ r=86px');
+/* 〈観測〉光束：v0.14 改**指向玩家**（预警期内近段预瞄），而不是固定角速度自转 */
+const gScan = new KUP.Game(canvas);
+gScan.start({ char: 'kaf', area: 'area0', seed: 72 });
+gScan.player.weapons = [];
+const bScan = gScan.spawnEnemy('boss4', gScan.player.x - 300, gScan.player.y);
+gScan.time = 0;  // 不让 Boss 暴走干扰
+bScan.t2 = 0.02; // 立即触发第一发光束（避免只看计时器初值）
+for (let i = 0; i < 60; i++) gScan.updateBossBehavior(0.02);
+const beam0 = gScan.dangers.filter(d => d.kind === 'beam')[0];
+check('〈観測〉光束生成时朝玩家（误差 ≤ 单帧转向量 + 1°）', (() => {
+  if (!beam0) return false;
+  const want = Math.atan2(gScan.player.y - bScan.y, gScan.player.x - bScan.x);
+  const tol = (beam0.aimTurn || 1.9) * 0.02 + 0.02;
+  return Math.abs(KUP.U.angDiff(beam0.dir, want)) <= tol;
+})(), beam0 ? ((KUP.U.angDiff(beam0.dir, Math.atan2(gScan.player.y - bScan.y, gScan.player.x - bScan.x)) * 180 / Math.PI)).toFixed(2) + '°' : 'no beam');
+check('〈観測〉光束带近段预瞄（aimAt/aimF），可由横向移动躲开', !!beam0 && !!beam0.aimAt && beam0.aimF > 0 && beam0.aimF < 1);
 
 // 25b. v0.8 机制道具：护盾 / 回避 / 吸血 / 反響 / 冲刺
 check('新增机制型被动（护盾/回避/吸血/反響/疾风）', ['shield', 'dodge', 'drain', 'retaliate', 'dashup'].every(id => KUP.PASSIVES[id]));
-/* 护盾：先吸收伤害，未受伤后回复 */
+/* v0.14：护盾＝**减伤膜**，不是第二管血（人类 2026-10-17）。
+ * 旧断言（"护盾先于生命吸收、溢出到生命、自动回复"）描述的是第二管血，已整段替换。 */
 const gS = new KUP.Game(canvas);
 gS.start({ char: 'kaf', area: 'area0', seed: 91 });
 gS.player.addPassive('shield');
-check('护盾建立（+22/级）', gS.player.shieldMax === 22 && gS.player.shield === 22);
+check('护盾建立（+22/级，满值 100）', gS.player.shieldMax === 22 && gS.player.shield === 22);
 const hpS = gS.player.hp;
-gS.hurtPlayer(20);
-check('护盾先于生命吸收伤害（20 < 22 护盾）', gS.player.hp === hpS && gS.player.shield === 2,
-  'hp=' + gS.player.hp + ' sh=' + gS.player.shield);
-gS.player.hitT = 0; gS.player.shield = 22;   // 重置护盾再测溢出
-gS.hurtPlayer(30);
-check('护盾不足时溢出到生命（吸收 22 + 掉 8）', gS.player.hp === hpS - 8 && gS.player.shield === 0,
-  'hp=' + gS.player.hp + ' sh=' + gS.player.shield);
+gS.hurtPlayer(100, 'contact');
+/* 1 级护盾 = 22 强度 → 贴靠减伤 56%（强度曲线 base × (0.48 + 0.52k)） */
+const lossContact = hpS - gS.player.hp;
+check('贴靠受击按强度减伤（22 强度 → 56%，只掉 44）', Math.abs(lossContact - 44) < 0.01, 'loss=' + lossContact.toFixed(2));
+check('护盾**不会被扣掉**（不是第二管血）', gS.player.shield === 22, 'sh=' + gS.player.shield);
+gS.player.hitT = 0; gS.player.shieldTouchUsed = false;   // 当作"重新贴靠"再打一发光束
+const hpBeam0 = gS.player.hp;
+gS.hurtPlayer(100, 'beam');
+check('光束受击按类型减伤（beams 基础 50%，22 强度 → 44% → 掉 56）',
+  Math.abs(Math.round(hpBeam0 - gS.player.hp) - 56) <= 1, 'loss=' + (hpBeam0 - gS.player.hp).toFixed(2));
+check('光束打穿 → 贴靠膜失灵（taint 自动生效）', gS.player.shieldTaintT > 0, 'taint=' + gS.player.shieldTaintT.toFixed(2));
 gS.player.addPassive('shield'); gS.player.addPassive('shield'); gS.player.addPassive('shield'); gS.player.addPassive('shield');
-check('护盾随等级上限提升（+22/级）', gS.player.shieldMax === 110);
-for (let i = 0; i < 200; i++) gS.update(0.05);   // 10s 无伤
-check('未受伤一段时间后护盾回复', gS.player.shield > 0, 'sh=' + gS.player.shield.toFixed(1));
+check('护盾随等级提高（22/级，钳到满值 100）', gS.player.shieldMax === 100, 'sh=' + gS.player.shieldMax);
+/* 满值护盾：光束减伤 = 50%（HARD_CAP 95% 不触发），贴靠 = 95% */
+gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false;
+check('减伤百分比与表一致（满值：贴靠 95%）', gS.player.reducePct('contact') === 95, 'pct=' + gS.player.reducePct('contact'));
+check('减伤百分比按类型：光束 50%／轰炸 70%／毒区 75%／音波 85%',
+  gS.player.reducePct('beam') === 50 && gS.player.reducePct('bomb') === 70 &&
+  gS.player.reducePct('field') === 75 && gS.player.reducePct('ring') === 85,
+  [gS.player.reducePct('beam'), gS.player.reducePct('bomb'), gS.player.reducePct('field'), gS.player.reducePct('ring')].join('/'));
+check('强度不足时按比例打折（22 强度 → 56%、45 → 68%、满值 → 95%）', (() => {
+  /* reducePct 是只读函数：直接构造探针对象，不碰真实玩家（不破坏上面的状态） */
+  const probe = s => ({ shieldTotal: () => s, shieldTaintT: 0, shieldTouchUsed: false });
+  const a = KUP.shieldReducePct(probe(22), 'contact');
+  const b = KUP.shieldReducePct(probe(45), 'contact');
+  const c = KUP.shieldReducePct(probe(100), 'contact');
+  return a === 56 && b === 68 && c === 95;
+})());
+/* 贴靠膜要**持续贴靠**：第二击（同一窗口内）不再减伤 → 被围住时不是无敌 */
+gS.state = 'playing';
+gS.player.hp = gS.player.maxhp;
+gS.player.hitT = 0; gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false; gS.player.shieldTouchT = 0;
+gS.player.shield = gS.player.shieldMax;   // 满值
+const hpTouch1 = gS.player.hp;
+gS.hurtPlayer(100, 'contact');
+check('满值护盾贴靠只掉 5', Math.abs((hpTouch1 - gS.player.hp) - 5) < 0.01, 'loss=' + (hpTouch1 - gS.player.hp).toFixed(1));
+gS.player.hitT = 0;
+gS.hurtPlayer(100, 'contact');
+check('贴靠膜只挡一次：连续接触的第二击照常扣血（不是无敌）',
+  Math.abs(Math.round(hpTouch1 - gS.player.hp) - 100) <= 1, 'loss=' + (hpTouch1 - gS.player.hp).toFixed(1));
+/* 脱离接触 TOUCH_ARM 秒后贴靠膜恢复 */
+gS.player.update(KUP.CONFIG.SHIELD.TOUCH_ARM + 0.05, gS);
+check('脱离接触后贴靠膜恢复', gS.player.reducePct('contact') === 95, 'touchUsed=' + gS.player.shieldTouchUsed);
+/* 被光束打穿 → 贴靠膜失灵 TAINT_T 秒 */
+gS.player.hitT = 0;
+gS.hurtPlayer(10, 'beam');
+check('光束打穿后贴靠膜失灵（taint）', gS.player.shieldTaintT > 0 && gS.player.reducePct('contact') === 0,
+  'taint=' + gS.player.shieldTaintT.toFixed(2));
+gS.player.shieldTaintT = 0;
+/* 护盾不再是"回血量"：等待很久也不会变（旧版 4s 后回复） */
+const shFixed = gS.player.shield;
+for (let i = 0; i < 200; i++) gS.update(0.05);
+check('护盾不随时间回复/掉血（不是血条口径）', gS.player.shield === shFixed && gS.player.shieldTmpT === 0,
+  'sh=' + gS.player.shield);
 /* 回避：概率回避（把概率设为 1 验证通路） */
 const gDo = new KUP.Game(canvas);
 gDo.start({ char: 'kaf', area: 'area0', seed: 92 });
@@ -661,7 +729,15 @@ check('治癒の符：立即回复 45% 最大生命', Math.abs(gI.player.hp - (3
 gI.state = 'levelup'; gI.pendingLevels = 1; gI.choices = [{ kind: 'item', id: 'ward' }];
 const shBefore = gI.player.shield;
 gI.choose(0);
-check('防音の符：立即 +60 护盾（可超上限）', gI.player.shield === shBefore + 60, 'sh=' + gI.player.shield);
+/* v0.14：防音の符＝追加**膜层**（不是给护盾值加 60、更不是回血） */
+check('防音の符：无护盾时直接 +60 膜层（可见来源）', shBefore === 0 && gI.player.shieldTmp === 60, 'tmp=' + gI.player.shieldTmp);
+check('防音の符：膜层有存活时间（30s）', Math.abs(gI.player.shieldTmpT - KUP.CONFIG.SHIELD.TEMP_SECONDS) < 1e-9);
+check('防音の符：膜层计入护盾总强度（HUD 显示 60）', gI.player.shieldTotal() === 60, 'total=' + gI.player.shieldTotal());
+const hpWard = gI.player.hp;
+gI.player.hitT = 0;
+gI.hurtPlayer(100, 'contact');
+check('无护盾 + 60 膜时已能减伤（60 强度 → 贴靠 75%）', Math.round(hpWard - gI.player.hp) === 25,
+  'loss=' + (hpWard - gI.player.hp).toFixed(1) + ' pct=' + gI.player.reducePct('contact'));
 gI.state = 'levelup'; gI.pendingLevels = 1; gI.choices = [{ kind: 'item', id: 'echo' }];
 gI.choose(0);
 check('余韵の符：限时回血 BUFF', gI.player.buffs.regen > 0 && Math.abs(gI.player.effRegen() - 4) < 1e-9);
@@ -1799,6 +1875,163 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
     KUP.formGroups('recruit', 'aru').length === 1 && KUP.formGroups('companion', null).length === 0);
   check('「全部」＝该角色可选的全部形态数（化歩 16 条）', KUP.formsFor('witch', 'kaf').length === 16,
     String(KUP.formsFor('witch', 'kaf').length));
+}
+
+// ===== v0.14：瞄准规则（人类 2026-10-17 的六条反馈）=====
+{
+  /* ① 投掷型：向**最近的两个不同敌人**各投一个（不是对着一个撒两个） */
+  const gT = new KUP.Game(canvas);
+  gT.start({ char: 'kaf', area: 'area0', seed: 201 });
+  gT.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.toss, 5)];
+  gT.enemies.length = 0;
+  const px = gT.player.x, py = gT.player.y;
+  const eA = gT.spawnEnemy('noise', px + 160, py);
+  const eB = gT.spawnEnemy('noise', px - 200, py + 40);
+  eA.speed = 0; eB.speed = 0;
+  gT.tosses.length = 0;                     // 清空残留投掷物，只看这一轮齐射
+  gT.player.weapons[0].t = 0;
+  gT.player.weapons[0].update(0.016, gT);
+  gT.tosses.length = 2;                     // count=3 时第 3 个无目标（只有两只敌人），轮次无残留
+  const targetDists = gT.tosses.map(ts => {
+    /* 落点应各自贴近**不同的**敌人（允许 30px 误差，投掷有飞行时间） */
+    const da = Math.hypot(ts.tx - eA.x, ts.ty - eA.y), db = Math.hypot(ts.tx - eB.x, ts.ty - eB.y);
+    return Math.min(da, db);
+  });
+  check('投掷型向最近两个不同敌人各投一个（落点分别贴近两只）',
+    gT.tosses.length === 2 && Math.max.apply(null, targetDists) < 40,
+    'tosses=' + gT.tosses.length + ' d=' + targetDists.map(v => Math.round(v)).join(',') +
+    ' tg=' + gT.tosses.map(ts => ts.target ? Math.round(ts.target.x - px) : 'null').join('|'));
+  check('投掷物各自锁定目标（homing）并会修订落点',
+    gT.tosses.every(ts => !!ts.target) && gT.tosses[0].target !== gT.tosses[1].target);
+
+  /* ② 激光：双光束分射两个不同敌人；只有一个目标时前后对穿（不是张开夹角） */
+  const gL = new KUP.Game(canvas);
+  gL.start({ char: 'isekaijoucho', area: 'area0', seed: 202 });
+  gL.enemies.length = 0;
+  const lx = gL.player.x, ly = gL.player.y;
+  const lA = gL.spawnEnemy('noise', lx + 220, ly - 30);
+  const lB = gL.spawnEnemy('noise', lx - 120, ly + 260);
+  lA.speed = 0; lB.speed = 0;
+  gL.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.laser, 5)];   // Lv5＝双光束
+  gL.player.weapons[0].t = 0;
+  gL.player.weapons[0].update(0.016, gL);
+  const wantA = Math.atan2(lA.y - ly, lA.x - lx), wantB = Math.atan2(lB.y - ly, lB.x - lx);
+  const hitsA = gL.beams.some(b => Math.abs(KUP.U.angDiff(b.dir, wantA)) < 0.02);
+  const hitsB = gL.beams.some(b => Math.abs(KUP.U.angDiff(b.dir, wantB)) < 0.02);
+  check('激光双光束分射最近的两个敌人（各对准一个，不张开夹角）', gL.beams.length === 2 && hitsA && hitsB,
+    gL.beams.map(b => (b.dir * 180 / Math.PI).toFixed(1)).join('/'));
+  const gL1 = new KUP.Game(canvas);
+  gL1.start({ char: 'isekaijoucho', area: 'area0', seed: 203 });
+  gL1.enemies.length = 0;
+  const only = gL1.spawnEnemy('noise', gL1.player.x + 200, gL1.player.y);
+  only.speed = 0;
+  gL1.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.laser, 5)];
+  gL1.player.weapons[0].t = 0;
+  gL1.player.weapons[0].update(0.016, gL1);
+  check('激光只有一个目标时改为「前后对穿」（dir2 ≈ dir1 + π）', gL1.beams.length === 2 &&
+    Math.abs(Math.abs(KUP.U.angDiff(gL1.beams[1].dir, gL1.beams[0].dir)) - Math.PI) < 0.02);
+
+  /* ③ 射弹（音枪/音枪系）：夹角变小；最近两敌各一发，多出来的补小角度 */
+  check('射弹模组的 spread 从 0.16 降到 ≤0.09（夹角变小）', KUP.MODULE('lance').base.spread <= 0.09,
+    'spread=' + KUP.MODULE('lance').base.spread);
+  const gPj = new KUP.Game(canvas);
+  gPj.start({ char: 'asu', area: 'area0', seed: 204 });
+  gPj.enemies.length = 0;
+  const q1 = gPj.spawnEnemy('noise', gPj.player.x + 300, gPj.player.y - 20);
+  const q2 = gPj.spawnEnemy('noise', gPj.player.x - 260, gPj.player.y + 60);
+  q1.speed = 0; q2.speed = 0;
+  gPj.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.follow, 5)];   // count 5
+  gPj.player.weapons[0].t = 0;
+  gPj.player.weapons[0].update(0.016, gPj);
+  const dirs = gPj.projs.map(pr => Math.atan2(pr.vy, pr.vx));
+  const wq1 = Math.atan2(q1.y - gPj.player.y, q1.x - gPj.player.x);
+  const wq2 = Math.atan2(q2.y - gPj.player.y, q2.x - gPj.player.x);
+  check('射弹 5 发：两发分别对准最近两个敌人，其余补角 ≤ 5°×2', gPj.projs.length === 5 &&
+    dirs.some(d => Math.abs(KUP.U.angDiff(d, wq1)) < 0.02) && dirs.some(d => Math.abs(KUP.U.angDiff(d, wq2)) < 0.02) &&
+    dirs.every(d => Math.abs(KUP.U.angDiff(d, wq1)) < 0.2 || Math.abs(KUP.U.angDiff(d, wq2)) < 0.2),
+    dirs.map(d => (d * 180 / Math.PI).toFixed(0)).join('/'));
+  /* volleyAngles 的基础单元：目标不足时对称补角、无目标时也发得出 */
+  const gV2 = new KUP.Game(canvas);
+  gV2.start({ char: 'kaf', area: 'area0', seed: 205 });
+  const vv = gV2.volleyAngles(gV2.player, 4, { base: 0, spread: 0.085, targets: [] });
+  check('齐射无目标时仍沿基准方向对称发满（±0.085/±0.17）',
+    vv.angles.length === 4 && vv.angles.every(a => Math.abs(Math.abs(a) - 0.085) < 1e-9 || Math.abs(Math.abs(a) - 0.17) < 1e-9),
+    vv.angles.map(a => a.toFixed(3)).join(','));
+  /* 补角必须避开已被目标占用的方向（否则两发打同一处） */
+  const vv2 = gV2.volleyAngles(gV2.player, 3, { base: 0, spread: 0.085, targets: [gV2.player] });
+  check('齐射补角跳过已用方向（不重复打同一处）', (() => {
+    const dup = vv2.angles.some((a, i) => vv2.angles.some((b, j) => j > i && Math.abs(KUP.U.angDiff(a, b)) < 1e-9));
+    return vv2.angles.length === 3 && !dup;
+  })(), vv2.angles.map(a => a.toFixed(3)).join(','));
+}
+
+// ===== v0.14：不同的大招（按角色，数据表 KUP.ULTIMATES）=====
+{
+  const ids = ['kaf', 'rim', 'harusaruhi', 'isekaijoucho', 'koko', 'aru', 'asu'];
+  check('每个可玩角色都有独立的大招定义', ids.every(id => KUP.ULTIMATES[id] && KUP.ULTIMATES[id].id) &&
+    KUP.CHARS.every(c => KUP.ULTIMATES[c.id]),   // ★ 键名必须与 KUP.CHARS 的 id 完全一致
+    KUP.CHARS.filter(c => !KUP.ULTIMATES[c.id]).map(c => c.id).join(',') || '全部已定义');
+  check('各不相同（id 唯一）且都有三语名/说明', (() => {
+    const all = ids.map(id => KUP.ULTIMATES[id]);
+    return new Set(all.map(u => u.id)).size === ids.length &&
+      all.every(u => u.name && u.name.zh && u.name.en && u.name.ja && u.desc && u.desc.zh && u.desc.en && u.desc.ja);
+  })());
+  check('效果不雷同：至少分别是 冲击环/冻结/扇形/减速/弹幕/回血/箭雨 的多种组合', (() => {
+    const feat = u => [u.rings ? 1 : 0, u.freeze ? 1 : 0, u.slow ? 1 : 0, u.fields ? 1 : 0,
+      u.beams ? 1 : 0, u.shots ? 1 : 0, (u.heal || 0) > 0 ? 1 : 0,
+      (u.rings || []).some(r => (r.arcDeg || 360) < 360) ? 1 : 0].join('');
+    return new Set(ids.map(id => feat(KUP.ULTIMATES[id]))).size >= 6;
+  })());
+  check('未知角色回落到 default（旧「浄化の歌」）', KUP.ULTIMATE('nobody').id === 'ult_default');
+  /* 共通规则：充能 <100 不可释放；满 → 释放并清零 + 进入冷却；冷却中不可连续释放 */
+  const gU = new KUP.Game(canvas);
+  gU.start({ char: 'rim', area: 'area0', seed: 211 });
+  gU.ult.charge = 99;
+  gU.castUltimate();
+  check('充能 <100 不可释放', gU.ult.charge === 99);
+  gU.player.hp = gU.player.maxhp * 0.4;
+  const hpBefore = gU.player.hp;
+  gU.ult.charge = 100;
+  gU.castUltimate();
+  check('满充能 → 释放并清零、进入冷却', gU.ult.charge === 0 && gU.ult.cdT > 0);
+  check('静止帧：回血 15%（rim 的大招特征）', gU.player.hp > hpBefore);
+  gU.ult.charge = 100;
+  const ringsBefore = gU.rings.length;
+  gU.castUltimate();
+  check('冷却中不可释放（HUD 显示冷却秒数）', gU.rings.length === ringsBefore && gU.ult.charge === 100 && !gU.ultReady());
+  for (let i = 0; i < 400; i++) gU.update(0.016);   // 等冷却
+  check('冷却结束后可再次释放', gU.ultReady() || gU.state !== 'playing');
+  /* 冻结型（rim）确实冻结了全场；扇形型（haru）确实只朝瞄准方向成扇形 */
+  const gUf = new KUP.Game(canvas);
+  gUf.start({ char: 'rim', area: 'area0', seed: 212 });
+  const f1 = gUf.spawnEnemy('noise', gUf.player.x + 50, gUf.player.y);
+  gUf.ult.charge = 100; gUf.castUltimate();
+  check('静止帧冻结全场（敌人 stunT > 0）', f1.stunT > 0, 'stun=' + f1.stunT.toFixed(2));
+  const gUh = new KUP.Game(canvas);
+  gUh.start({ char: 'harusaruhi', area: 'area0', seed: 213 });   // 角色 id 是 harusaruhi（不是 haru）
+  gUh.player.weapons = [];
+  gUh.ult.charge = 100;
+  gUh.castUltimate();
+  const fan = gUh.rings.filter(r => r.arc < Math.PI * 1.9)[0] || gUh.rings[gUh.rings.length - 1];
+  check('九龍噴火：单条 160° 扇形波（不是整圆）', !!fan && Math.abs(fan.arc - 160 * Math.PI / 180) < 1e-6,
+    fan ? (fan.arc * 180 / Math.PI).toFixed(0) + '°' : 'no ring');
+  const gUk = new KUP.Game(canvas);
+  gUk.start({ char: 'koko', area: 'area0', seed: 214 });
+  gUk.ult.charge = 100;
+  gUk.castUltimate();
+  check('终结弹幕：一次性打出 12 道环形贯穿光束', gUk.beams.length === 12, 'beams=' + gUk.beams.length);
+  const gUi = new KUP.Game(canvas);
+  gUi.start({ char: 'isekaijoucho', area: 'area0', seed: 215 });
+  const s1 = gUi.spawnEnemy('noise', gUi.player.x + 40, gUi.player.y);
+  gUi.ult.charge = 100;
+  gUi.castUltimate();
+  check('星海陷落：全场减速 + 留下 4 处滞留区', s1.slowT > 0 && gUi.zones.length === 4,
+    'slow=' + s1.slowT.toFixed(1) + ' zones=' + gUi.zones.length);
+  const gUa = new KUP.Game(canvas);
+  gUa.start({ char: 'asu', area: 'area0', seed: 216 });
+  gUa.ult.charge = 100;
+  gUa.castUltimate();
+  check('終楽章・箭雨：16 方向放射贯穿箭', gUa.projs.length === 16, 'projs=' + gUa.projs.length);
 }
 
 console.log(fail === 0 ? '\nALL PASS' : '\n' + fail + ' FAILED');

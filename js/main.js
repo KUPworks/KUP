@@ -37,6 +37,10 @@ window.KUP = window.KUP || {};
     game.debug.lang = q.get('lang');
     game.debug.hurt = parseFloat(q.get('hurt')) || 0; // 初始损失 HP 比例
     game.debug.pick = q.get('pick');                  // 强制升级选项（逗号分隔）
+    /* v0.14：?auto=first|last 自动采升级卡（验证被动/护盾 HUD 等需要频繁升级的效果） */
+    const autoQ = q.get('auto');
+    if (autoQ === 'first') game.debug.autoPick = 0;
+    else if (autoQ === 'last') game.debug.autoPick = 2;
     game.debug.gem = q.get('gem');                    // 周期生成音片类型
     game.debug.ult = q.get('ult') === '1';            // 开局即充满浄化の歌（验证大招）
     game.debug.recruit = q.get('recruit') === '1';    // 调试：临时解锁全部招募（角色/同伴）
@@ -166,6 +170,12 @@ window.KUP = window.KUP || {};
       game.update(dt);
       game.render(now / 1000);
     } else {
+      /* 调试：?auto=first|last 自动采升级卡（验证被动/护盾/大招 HUD 的便捷入口）
+       * —— 升级会让状态变成 'levelup'，所以这一段必须放在 else 分支里；
+       * 只在调试参数存在时生效，正常游玩永远走玩家的键盘/触屏选择。 */
+      if (game.debug.autoPick !== undefined && game.state === 'levelup' && game.choices && game.choices.length) {
+        game.choose(Math.min(game.debug.autoPick | 0, game.choices.length - 1));
+      }
       if (game.state === 'menu' || game.state === 'select') {
         // 菜单/番街选择背景缓慢平移
         game.cam.x += 16 * dt;

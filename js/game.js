@@ -174,13 +174,20 @@ window.KUP = window.KUP || {};
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
-            const e = game.nearestEnemy(p.x, p.y);
-            const dir = e ? Math.atan2(e.y - p.y, e.x - p.x) : Math.atan2(p.aim.y, p.aim.x);
+            /* v0.14：「双光束」按**最近两个不同的敌人**各发一条；只有一个目标时发**对向**
+             * （前后两条直线），不再朝最近敌人张开 0.3rad 的夹角（那样两条都容易落空）。 */
+            const nBeam = s.double ? 2 : 1;
+            const tg = (nBeam > 1 && game.nearestEnemies) ? game.nearestEnemies(p.x, p.y, nBeam) : [];
+            const fallback = Math.atan2(p.aim.y, p.aim.x);
+            const e0 = tg[0] || game.nearestEnemy(p.x, p.y);
+            const dir = e0 ? Math.atan2(e0.y - p.y, e0.x - p.x) : fallback;
             game.beams.push(new KUP.Beam(p.x, p.y - 4, dir, {
               len: V('len', 400), w: V('w', 8), dmg: s.dmg * p.dmgMult, color: col, game,
             }));
             if (s.double) {
-              game.beams.push(new KUP.Beam(p.x, p.y - 4, dir + V('doubleAngle', 0.3), {
+              const e1 = tg[1] || null;
+              const dir2 = e1 ? Math.atan2(e1.y - p.y, e1.x - p.x) : dir + Math.PI;
+              game.beams.push(new KUP.Beam(p.x, p.y - 4, dir2, {
                 len: V('len', 400), w: V('w', 8), dmg: s.dmg * p.dmgMult * V('doubleDmgMul', 0.7), color: col, game,
               }));
             }
@@ -192,10 +199,18 @@ window.KUP = window.KUP || {};
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
-            const ad = game.aimDir(p);
-            const base = Math.atan2(ad.y, ad.x);
-            for (let i = 0; i < s.count; i++) {
-              const a = base + (i - (s.count - 1) / 2) * V('spread', 0.16);
+            /* v0.14：齐射方向按「最近 targets 个不同敌人」分配（缺省 2），其余补小角度。
+             * 语境：人类要求「射弹类夹角应小一些、不必分射两个敌人」——于是两者都要：
+             * ① 多余弹体的补角从 0.16rad（≈9°）降到 0.085rad（≈5°，spread 可调）；
+             * ② 若能拿到不同的目标就各打一个（不再对着一个目标撒成扇形）。 */
+            const count = s.count | 0;
+            const spread = V('spread', 0.085);
+            const nTargets = Math.min(count, s.targets !== undefined ? s.targets : 2);
+            const base = (() => { const ad = game.aimDir(p); return Math.atan2(ad.y, ad.x); })();
+            const targets = game.nearestEnemies ? game.nearestEnemies(p.x, p.y, nTargets) : [];
+            const vol = game.volleyAngles(p, count, { base, spread, targets });
+            for (let i = 0; i < count; i++) {
+              const a = vol.angles[i];
               const sp = V('speed', 560);
               game.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
                 /* r 随「范围」放大（命中面积），飞行距离（speed×life）刻意不变 */
@@ -207,20 +222,32 @@ window.KUP = window.KUP || {};
           break;
         }
         /* ===== 新武器组：滞留・投掷系 ===== */
-        case 'toss': { // 残留音块：自动投掷到最近敌人，落点留下滞留音场
+        case 'toss': { // 残留音块：**分别投向最近 N 个不同的敌人**，落点留下滞留音场
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
             const range = V('range', 300);
-            for (let i = 0; i < s.count; i++) {
-              const target = game.nearestEnemy(p.x, p.y);
-              const spread = (i - (s.count - 1) / 2) * V('spread', 0.42);
-              let a;
-              if (target) a = Math.atan2(target.y - p.y, target.x - p.x) + spread;
-              else a = Math.atan2(p.aim.y, p.aim.x) + spread;
-              const d = target ? Math.min(range, Math.hypot(target.x - p.x, target.y - p.y)) : range * 0.7;
+            /* v0.14（人类 2026-10-17）：「投掷型武器应该向最近的**两个**敌人投掷，而不是
+             * 一下投掷两个」。所以这里不再对同一个最近敌人按 spread 撒开，而是：
+             *   第 i 个投掷物 → 最近 targets 个不同敌人里的第 i 个；
+             *   目标不足时才退回基准方向的对称补角（不会把两个都丢在同一处）。
+             * 投掷距离仍按 range 与「到目标距离」取小（太近的目标也能准确命中）。
+             * 每个投掷物都要有自己的目标：目标数＝count（最近 count 个不同敌人），
+             * 只有实在凑不够（敌人比弹体少）时，多出来的那几个才围绕基准方向补角。 */
+            const count = s.count | 0;
+            const spread = V('spread', 0.42);
+            const nTargets = count;
+            const baseDir = Math.atan2(p.aim.y, p.aim.x);
+            const targets = game.nearestEnemies ? game.nearestEnemies(p.x, p.y, nTargets) : [];
+            const vol = game.volleyAngles(p, count, { base: baseDir, spread, targets });
+            for (let i = 0; i < count; i++) {
+              const target = targets[i] || null;
+              const a = vol.angles[i];
+              const d = target
+                ? Math.min(range, Math.hypot(target.x - p.x, target.y - p.y))
+                : range * 0.7;
               game.tosses.push(new KUP.Toss(p.x, p.y - 6, p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, {
-                fly: V('fly', 0.4), color: col,
+                fly: V('fly', 0.4), color: col, homing: target,
                 zone: {
                   r: V('r', 60), dmg: s.dmg * p.dmgMult, life: V('life', 3),
                   kind: 'field', color: col, slow: true, tickRate: V('tickRate', 0.4),
@@ -352,7 +379,7 @@ window.KUP = window.KUP || {};
       /* 章节演出 / 大招 / 記憶の卵 / 结局分歧 */
       this.evIdx = 0; this.surgeT = 0; this.surgePerSec = 0;
       this.fogBoost = 0; this.fogBoostT = 0;
-      this.ult = { charge: 0 };
+      this.ult = { charge: 0, cdT: 0, cdMax: 3 };   // cdMax 仅兜底，实际取 KUP.ULTIMATES[*].cdMax
       this.eggCount = 0; this.eggGain = 0; this.fragUnlocked = null;
       this.bossSpawned = false; this.boss = null; this.bossEnraged = false;
       this.metaResult = null;
@@ -862,6 +889,8 @@ window.KUP = window.KUP || {};
       this.cam.x += (tx - this.cam.x) * k;
       this.cam.y += (ty - this.cam.y) * k;
       this.cam.shake = Math.max(0, this.cam.shake - 14 * dt);
+      /* 大招冷却（充能满后仍要等的秒数；与充能互不影响） */
+      if (this.ult.cdT > 0) this.ult.cdT = Math.max(0, this.ult.cdT - dt);
 
       if (this.boss) KUP.UI.updateBoss(this.boss);
     }
@@ -904,7 +933,7 @@ window.KUP = window.KUP || {};
         for (const e of this.enemies) {
           if (e.dead || e.stunT > 0) continue;
           if (U.dist2(e.x, e.y, p.x, p.y) < Math.pow(e.r + p.r, 2)) {
-            this.hurtPlayer(e.dmg);
+            this.hurtPlayer(e.dmg, 'contact');
             break;
           }
         }
@@ -1032,26 +1061,91 @@ window.KUP = window.KUP || {};
       if (frag) KUP.UI.banner(KUP.I18N.t('banner.frag', { t: KUP.I18N.tv(frag.title) }), 2.2);
     }
 
-    /* ---------- 浄化の歌（清屏大招，第2话副标题 ★） ----------
-     * 击破充能满 100 → Space 释放：净化冲击环 + 清除**全部敌方攻击（Danger）** + 短暂无敌 */
+    /* ---------- 浄化の歌／角色大招（第2话副标题 ★；v0.14：按角色区分）----------
+     * 规则（所有角色**共用**）：击破充能满 100 → Space 释放 → 充能清零 → 进入冷却。
+     * 效果（**数据驱动**，见 js/data.js KUP.ULTIMATES）：每个角色一个大招 ——
+     *   kaf 双极谐振（双重冲击环）／rim 静止帧（冻结+回血）／haru 九龍噴火（扇形烈焰）
+     *   ／isekaijoucho 星海陷落（减速+滞留区）／koko 终结弹幕（环形贯穿弹幕）
+     *   ／aru 救済の聖歌（大回血+长无敌）／asu 終楽章・箭雨（放射箭雨）
+     * 加"新的大招"＝在数据表里加一条，这里不必改分派。 */
+    ultimateDef() {
+      const c = (this.player && this.player.def && this.player.def.id) || (this.run && this.run.char);
+      return KUP.ULTIMATE(c);
+    }
+    /* 冷却时长（充能满后仍要等的秒数；各角色大招不同，缺省 3 秒）
+     * 「派生之律」的冷却缩短对它有影响，让冷却流也有收益 */
+    ultCooldown() {
+      const UD = this.ultimateDef();
+      return Math.max(0.5, (UD.cdMax || 3) * (this.player ? this.player.cdMult : 1));
+    }
+    ultReady() { return this.ult.charge >= 100 && (this.ult.cdT || 0) <= 0; }
     castUltimate() {
       if (this.state !== 'playing') return;
       const p = this.player, u = this.ult;
-      if (!p || p.hp <= 0 || u.charge < 100) return;
+      if (!p || p.hp <= 0 || !this.ultReady()) return;
+      const UD = this.ultimateDef();
       u.charge = 0;
-      p.hitT = Math.max(p.hitT, 1.2);
-      this.rings.push(new KUP.Ring(p.x, p.y, {
-        maxR: 950, speed: 700, dmg: 120 * p.dmgMult, kb: 260, color: '#9ff3ff',
-      }));
-      /* 冲散敌方攻击：音波环/光束/毒区/空爆一并净化（v0.8：Danger 统一清除） */
-      for (const d of this.dangers) if (d.kind !== 'bomb' || d.armed) d.dead = true;
+      u.cdT = this.ultCooldown();
+      p.hitT = Math.max(p.hitT, UD.invuln || 0.8);
+      const aimA = (() => { const ad = this.aimDir(p); return Math.atan2(ad.y, ad.x); })();
+      /* ① 冲击环（一道或多道；arcDeg 可做扇形，dir:'aim' 朝瞄准方向） */
+      for (const r of (UD.rings || [])) {
+        this.rings.push(new KUP.Ring(p.x, p.y, {
+          maxR: r.maxR, speed: r.speed, dmg: (r.dmgMul || 1) * p.dmgMult, kb: r.kb || 0, color: r.color || '#9ff3ff',
+          arc: r.arcDeg ? r.arcDeg * DEG : undefined,
+          dir: r.dir === 'aim' ? aimA : 0,
+        }));
+      }
+      /* ② 冲散敌方攻击（音波环/光束/毒区一并净化；已引爆的 bomb 不重复清） */
+      if (UD.clearDanger) {
+        for (const d of this.dangers) if (d.kind !== 'bomb' || d.armed) d.dead = true;
+      }
+      /* ③ 状态异常：冻结／减速（走统一入口，Boss/精英减免照旧） */
+      if (UD.freeze) this.applyFreeze(UD.freeze);
+      if (UD.slow) this.applySlow(UD.slow);
+      /* ④ 回血 */
+      if (UD.heal > 0 && p.hp < p.maxhp) {
+        p.hp = Math.min(p.maxhp, p.hp + p.maxhp * UD.heal);
+        this.addText(p.x, p.y - 30, '+' + Math.round(p.maxhp * UD.heal), '#8affc9', 15);
+      }
+      /* ⑤ 环形贯穿光束（koko：「终结弹幕」） */
+      if (UD.beams) {
+        const cnt = UD.beams.count || 8;
+        for (let i = 0; i < cnt; i++) {
+          this.beams.push(new KUP.Beam(p.x, p.y - 4, (i / cnt) * U.TAU, {
+            len: UD.beams.len || 800, w: UD.beams.w || 12, dmg: UD.beams.dmgMul * p.dmgMult,
+            color: UD.beams.color || '#7aa0ff', game: this, life: 0.22,
+          }));
+        }
+      }
+      /* ⑥ 放射箭雨（asu：「終楽章・箭雨」） */
+      if (UD.shots) {
+        const cnt = UD.shots.count || 8;
+        for (let i = 0; i < cnt; i++) {
+          const a = (i / cnt) * U.TAU, sp = UD.shots.speed || 760;
+          this.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
+            dmg: UD.shots.dmgMul * p.dmgMult, r: 8, life: UD.shots.life || 1.3, pierce: UD.shots.pierce || 3,
+            color: UD.shots.color || '#7de0c8', kind: 'lance',
+          }));
+        }
+      }
+      /* ⑦ 星屑滞留区（isekaijoucho）：围绕玩家的 4 处减速音场 */
+      if (UD.fields) {
+        for (let i = 0; i < UD.fields; i++) {
+          const a = (i / UD.fields) * U.TAU + aimA, d = 130;
+          this.zones.push(new KUP.Zone(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, {
+            r: 110, dmg: 6 * p.dmgMult, life: 5, kind: 'field', color: '#c9a6ff', slow: true, tickRate: 0.5,
+          }));
+        }
+      }
+      /* 演出：粒子爆发 + 震屏 + 横幅（显示**这个大招的名字**） */
       for (let i = 0; i < 40; i++) {
         const a = (i / 40) * U.TAU;
         this.parts.push(new KUP.Particle(p.x + Math.cos(a) * 30, p.y + Math.sin(a) * 30,
           Math.cos(a) * 320, Math.sin(a) * 320, 0.8, '#bff7ff', 3.2));
       }
       this.shake(10);
-      KUP.UI.banner(KUP.I18N.t('banner.ult'), 2);
+      KUP.UI.banner(KUP.I18N.t('banner.ultName', { name: KUP.I18N.tv(UD.name) }), 2);
       KUP.Audio.sfx('ult');
     }
 
@@ -1069,11 +1163,15 @@ window.KUP = window.KUP || {};
       if (this.pendingLevels > 0 && this.state === 'playing') this.openLevelUp();
     }
 
-    /* ---------- 受伤结算（v0.8：回避 → 护盾 → 生命；反響被动触发） ---------- */
-    hurtPlayer(d) {
+    /* ---------- 受伤结算（v0.8：回避 → 护盾 → 生命；v0.14：护盾改**减伤膜**） ----------
+     * kind ＝ 伤害类型（contact／ring／field／bomb／beam），决定护盾的减伤比例。
+     * 护盾**不是第二管血**：它按类型给减伤（贴靠 95%／音波 85%／毒区 75%／轰炸 70%／
+     * 光束 50%），只减少扣到生命的伤害，护盾值/膜层从不被"扣空"，也没有"回血"。 */
+    hurtPlayer(d, kind) {
       const p = this.player;
       if (p.invuln || p.hitT > 0) return;
       p.noHitT = 0;
+      const k = kind || 'contact';
       /* 残響回避（被动 dodge ＋瓦利斯「常連の勘」＋道具「無傷の符」）：完全回避 */
       const dc = p.effDodge();
       if (dc > 0 && U.rng() < dc) {
@@ -1089,22 +1187,26 @@ window.KUP = window.KUP || {};
         return;
       }
       let rest = d;
-      /* 防音护盾（被动 shield）：先吃伤害 */
-      if (p.shield > 0) {
-        const absorbed = Math.min(p.shield, rest);
-        p.shield -= absorbed;
-        rest -= absorbed;
-        this.addText(p.x, p.y - 34, '-' + Math.round(absorbed), '#8fd0ff', 12);
+      /* 护盾（减伤膜）：按类型减伤，**不扣除护盾值本身**。
+       * kind 缺省（旧调用/调试）＝ contact —— 调 hurtPlayer(20) 仍会走贴靠膜。 */
+      if (p.shieldTotal && p.shieldTotal() > 0) {
+        const before = rest;
+        rest = p.applyShield(rest, k);
+        const blocked = Math.round(before - rest);
+        if (blocked > 0) this.addText(p.x, p.y - 40, '🛡 -' + blocked, '#7dffe0', 12);
       }
       if (rest > 0) {
         p.hp -= rest;
-        this.addText(p.x, p.y - 22, '-' + Math.round(rest), '#ff5a7a', 14);
+        this.addText(p.x, p.y - 22, '-' + Math.max(1, Math.round(rest)), '#ff5a7a', 14);
+      } else if (rest < d) {
+        /* 完全挡下：只提示"护盾挡下"，不显示掉血 */
+        this.addText(p.x, p.y - 22, KUP.I18N.t('hud.shieldBlock'), '#7dffe0', 13);
       }
       p.hitT = C.PLAYER_HIT_CD;
       p.flash = 0.25;
       this.shake(4);
       KUP.Audio.sfx('hurt');
-      /* 反響（被动 retaliate）：受击迸发冲击环反击 */
+      /* 反響（被动 retaliate）：受击迸发冲击环反击（被完全挡下也照常触发） */
       if (p.retaliateDmg > 0) {
         this.rings.push(new KUP.Ring(p.x, p.y, {
           maxR: 120 + 12 * (p.passives.retaliate || 0), speed: 460, dmg: p.retaliateDmg * p.dmgMult, kb: 150, color: '#ffb25a',
@@ -1204,6 +1306,59 @@ window.KUP = window.KUP || {};
         if (d < bd) { bd = d; best = e; }
       }
       return best;
+    }
+
+    /* ---------- 「最近 N 个**不同**的敌人」（v0.14）----------
+     * 人类 2026-10-17：「投掷/激光应该是**向最近的两个敌人分别投掷/发射**，而不是
+     * 对着最近的一个撒一把，也不是朝最近的一个张开夹角」。为此需要"按距离排前 N 且
+     * 互不重复"的目标表；同一次齐射的多个弹体各取一个，才能真正覆盖两个不同目标。
+     * maxRange：超出距离的敌人不算（投掷/瞄准的距离感，缺省不限）。 */
+    nearestEnemies(x, y, n, maxRange) {
+      const out = [];
+      const mr2 = maxRange ? maxRange * maxRange : Infinity;
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        const d = U.dist2(x, y, e.x, e.y);
+        if (d > mr2) continue;
+        /* 插入排序到前 n 名（n 很小，不必整体排序） */
+        let i = out.length;
+        if (i >= n && d >= out[n - 1].d) continue;
+        while (i > 0 && out[i - 1].d > d) i--;
+        out.splice(i, 0, { e, d });
+        if (out.length > n) out.pop();
+      }
+      return out.map(o => o.e);
+    }
+    /* ---------- 齐射：count 个弹体 ↔ count 个方向（v0.14）----------
+     * 人类 2026-10-17 的三条要求在这里统一成一套规则：
+     *   「投掷型应该向最近的两个敌人投掷」→ 目标优先、且**互不重复**；
+     *   「激光也是，而不是朝最近的一个张开夹角」→ 第二个弹体换一个敌人；
+     *   「射弹类夹角应小一些」→ 补角用很小的 spread（缺省 0.085rad≈5°）。
+     * 规则：
+     *   ① 前 N 个弹体（N＝min(count, 不同目标数)）各对准**一个不同的敌人**（最近优先）；
+     *   ② 剩下的弹体围绕基准方向补角，**跳过**已经用过的方向（避免两发打同一处）；
+     *   ③ 完全没有目标时也照样发满（围成一圈小角度），不会对着空气只放一发。
+     * 返回 { angles, targets }：angles 与 targets 一一对应（i < targets.length 时弹体 i 打 targets[i]）。 */
+    volleyAngles(p, count, opt) {
+      opt = opt || {};
+      const spread = opt.spread !== undefined ? opt.spread : 0.085;
+      const base = opt.base !== undefined ? opt.base
+        : (() => { const d = this.aimDir(p, opt); return Math.atan2(d.y, d.x); })();
+      const targets = (opt.targets || this.nearestEnemies(p.x, p.y, count, opt.maxRange)).slice(0, count);
+      const angles = [];
+      const near = a => angles.some(b => Math.abs(U.angDiff(a, b)) < spread * 0.5);
+      for (const t of targets) angles.push(Math.atan2(t.y - p.y, t.x - p.x));
+      /* 补角：先在基准方向两侧交替取，跳过已被目标占用的方向 */
+      let k = 0, guard = 0;
+      while (angles.length < count && guard++ < 200) {
+        const step = Math.floor(k / 2) + 1;
+        const a = base + (k % 2 === 0 ? -1 : 1) * step * spread;
+        k++;
+        if (near(a)) continue;
+        angles.push(a);
+      }
+      while (angles.length < count) angles.push(base);   // 极端兜底
+      return { angles, targets };
     }
 
     /* ---------- 升级三选一 ---------- */
@@ -1359,8 +1514,10 @@ window.KUP = window.KUP || {};
         const it = KUP.ITEMS[c.id];
         if (it) {
           if (it.kind === 'shield') {
-            p.addShield(it.amount);
-            this.addText(p.x, p.y - 26, '+' + it.amount + ' 🛡', '#8fd0ff', 15);
+            /* v0.14：护盾＝减伤膜 → 「防音の符」＝追加 60 膜层（不是第二管血） */
+            const r = p.addShield(it.amount);
+            this.addText(p.x, p.y - 26, '+' + it.amount + ' 🛡', '#7dffe0', 15);
+            KUP.UI.banner(KUP.I18N.t('banner.ward', { n: Math.round(r.shieldTmp) }), 1.4);
           } else if (it.kind === 'heal') {
             p.hp = Math.min(p.maxhp, p.hp + p.maxhp * it.amount);
             this.addText(p.x, p.y - 26, '+HP', '#7dff9a', 15);

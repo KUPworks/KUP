@@ -52,6 +52,11 @@ KUP.I18N = {
       'item.slow.text': '鈍足 —— 全场减速 {p}%',
       'banner.freeze': '❄ 凍結 —— 破维魔全部僵直',
       'banner.slow': '鈍足 —— 破维魔的步伐变慢',
+      /* v0.14 护盾＝减伤膜：HUD 一行显示强度与对贴靠的减伤（不是第二管血） */
+      'hud.shieldPct': '近身减伤 {n}%',
+      'hud.shieldTmp': '膜 {s}s',
+      'hud.shieldBlock': '盾',
+      'banner.ward': '🛡 防音の符 —— 追加 {n} 膜层',
       /* v0.13 治安战（无尽关卡）：没有败北，只有「战斗结束」；成绩独立记录 */
       'menu.orderBest': '⚔ 治安战最高记录：{score} 点 · WAVE {wave} · {time} · 净化 {kills}',
       'menu.orderBest.none': '⚔ 治安战：尚无记录 —— 无尽战斗等待观测',
@@ -126,6 +131,9 @@ KUP.I18N = {
       'banner.ult': '浄化の歌',
       'banner.frag': '記憶の卵解锁 —— {t}',
       'ult.ready': '♪ 浄化の歌 READY（Space）',
+      /* v0.14 角色大招（KUP.ULTIMATES）的**名字横幅**：{name} 由数据表填入三语名 */
+      'banner.ultName': '{name}',
+      'ult.cd': '冷却 {s}s',
       'meta.rate': '神椿市復興率 {n}%',
       'meta.next': '下一番街 {n}%',
       'meta.max': '全部番街已解锁',
@@ -238,6 +246,11 @@ KUP.I18N = {
       'item.slow.text': 'SLOTH — all slowed {p}%',
       'banner.freeze': '❄ FROZEN — every Tesseracter halted',
       'banner.slow': 'SLOTH — their steps grow heavy',
+      /* v0.14 shield = damage-reduction membrane (not a second HP bar) */
+      'hud.shieldPct': 'contact -{n}%',
+      'hud.shieldTmp': 'membrane {s}s',
+      'hud.shieldBlock': 'GUARD',
+      'banner.ward': '🛡 Ward of Silence — +{n} membrane',
       /* v0.13 Order War (endless): no defeat, only "battle over"; score kept separately */
       'menu.orderBest': '⚔ Order War best: {score} pts · WAVE {wave} · {time} · {kills} purified',
       'menu.orderBest.none': '⚔ Order War: no record yet — the endless battle awaits',
@@ -309,6 +322,9 @@ KUP.I18N = {
       'banner.ult': 'Song of Purification',
       'banner.frag': 'Egg of Memory unlocked — {t}',
       'ult.ready': '♪ Song of Purification READY (Space)',
+      /* v0.14 per-character ultimate banner (name comes from KUP.ULTIMATES) */
+      'banner.ultName': '{name}',
+      'ult.cd': 'cooldown {s}s',
       'meta.rate': 'Restoration rate {n}%',
       'meta.next': 'Next area at {n}%',
       'meta.max': 'All areas unlocked',
@@ -421,6 +437,11 @@ KUP.I18N = {
       'item.slow.text': '鈍足 —— 場のテセラクターを {p}% 減速',
       'banner.freeze': '❄ 凍結 —— テセラクターすべてが停止',
       'banner.slow': '鈍足 —— テセラクターの歩みが鈍る',
+      /* v0.14 シールド＝軽減膜（第二のHPではない） */
+      'hud.shieldPct': '近接軽減 {n}%',
+      'hud.shieldTmp': '膜 {s}秒',
+      'hud.shieldBlock': '盾',
+      'banner.ward': '🛡 防音の符 —— 膜 +{n}',
       /* v0.13 治安戦（無限）：敗北はなく「戦闘終了」のみ。成績は独立記録 */
       'menu.orderBest': '⚔ 治安戦 最高記録：{score} 点 · WAVE {wave} · {time} · 浄化 {kills}',
       'menu.orderBest.none': '⚔ 治安戦：記録なし —— 無限戦闘が待つ',
@@ -492,6 +513,9 @@ KUP.I18N = {
       'banner.ult': '浄化の歌',
       'banner.frag': '記憶の卵解放 —— {t}',
       'ult.ready': '♪ 浄化の歌 READY（Space）',
+      /* v0.14 キャラ別の奥義（KUP.ULTIMATES） */
+      'banner.ultName': '{name}',
+      'ult.cd': '冷却 {s}秒',
       'meta.rate': '神椿市復興率 {n}%',
       'meta.next': '次の番街 {n}%',
       'meta.max': '全番街解放済み',
