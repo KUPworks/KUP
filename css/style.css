@@ -405,7 +405,11 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 }
 .shop-tab:hover { color: #e8e4ff; border-color: rgba(170,150,255,.7); }
 .shop-tab.active { color: #120b26; font-weight: 700; border-color: transparent; background: linear-gradient(120deg, #ffd98a, #ff9ac2); }
+.shop-wallet { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.shop-cash { font-size: 13.5px; font-weight: 700; color: #7de0c8; letter-spacing: .08em; text-shadow: 0 0 10px rgba(125,224,200,.55); }
 .shop-tickets { font-size: 13.5px; font-weight: 700; color: #ffe08a; letter-spacing: .08em; text-shadow: 0 0 10px rgba(255,210,90,.6); }
+#btn-exchange { font-size: 12px; padding: 5px 10px; }
+#btn-exchange:disabled { opacity: .45; cursor: not-allowed; }
 #shop-list { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .shop-card {
   width: 168px; padding: 12px 12px 10px; cursor: pointer; text-align: left;

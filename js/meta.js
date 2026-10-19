@@ -15,7 +15,7 @@ window.KUP = window.KUP || {};
  * ---------- 存储结构（v0.7 起全部经由 KUP.STORE，见 js/store.js） ----------
  *   kup.slots      槽位索引 { active, seq, list:[{id,name,createdAt,playedAt,playtime,runs,wins}] }
  *   kup.save.<id>  每槽进度（本文件注册的 'progress' schema）：
- *     { fukkou, tickets, cleared: {areaId: count}, eggs: [fragId...], eggCount,
+ *     { fukkou, cash, tickets, cleared: {areaId: count}, eggs: [fragId...], eggCount,
  *       chars: [charId...], companions: [id...], shop: {itemId: lv},
  *       form, companion, companionForm,
  *       best: { win, time, kills, level, witch, area, at } | null,
@@ -37,6 +37,17 @@ window.KUP = window.KUP || {};
   const REPEAT_CLEAR = SC.REPEAT_CLEAR != null ? SC.REPEAT_CLEAR : 2;
   const RUN_MEASURED = SC.RUN_MEASURED != null ? SC.RUN_MEASURED : 1;
   const EGG_BONUS = SC.EGG_BONUS != null ? SC.EGG_BONUS : 1;
+  /* v0.16：**现金**（每局结束发放的局外主货币）
+   *   · 发放量 ＝ 原市民票收入的 CASH_INCOME_MUL 倍（沿用同一套来源：净化数／通关／
+   *     首通／記憶の卵／番街深度），所以"手感节奏"与旧版一致，只是数值放大；
+   *   · 瓦利斯的价格同步 ×CASH_PRICE_MUL（＝同一个倍数），因此升级节奏不变；
+   *   · 市民票改由现金**小比例兑换**（CASH_PER_TICKET 枚 → 1 张），
+   *     招募价统一 1 张 ⇒ "一张市民票即可招募"。
+   * 这三个常数是这次经济改造的**唯一调参处**。 */
+  const CASH_INCOME_MUL = 4;
+  const CASH_PRICE_MUL = 4;
+  const CASH_PER_TICKET = 100;
+  const RECRUIT_TICKETS = 1;
 
   const int = (v, d) => (Number.isFinite(Number(v)) ? Math.floor(Number(v)) : (d || 0));
   const num = (v, d) => (Number.isFinite(Number(v)) ? Number(v) : (d || 0));
@@ -131,6 +142,9 @@ window.KUP = window.KUP || {};
     return {
       fukkou: Math.max(0, num(d.fukkou, 0)),
       tickets: Math.max(0, int(d.tickets, 0)),
+      /* v0.16：**现金**（局外主货币，每局结束发放）——瓦利斯用它结算，
+       * 市民票由它按小比例兑换（见 META.exchangeCash）。旧存档没有这个字段 ⇒ 0。 */
+      cash: Math.max(0, int(d.cash, 0)),
       cleared: cleared,
       eggs: eggs,
       /* eggCount 是「累计拾取数」（可超过碎片总数），不得小于已解锁碎片数 */
@@ -260,17 +274,55 @@ window.KUP = window.KUP || {};
     },
     clearedCount(id) { return this.ensure().cleared[id] || 0; },
 
-    /* ---------- 局外货币：市民票（REGENERATE 术语） ---------- */
-    tickets() { return this.ensure().tickets; },
-    /* 一局的市民票收入：净化数 / 通关 / 首通 / 記憶の卵 / 番街深度 */
-    ticketIncome(r) {
+    /* ---------- 局外货币 ----------
+     * v0.16（人类 2026-10-19）：**每局结束发放「现金」（主货币）**，
+     *   · 瓦利斯（局外强化／支援／其它局外消费）一律用**现金**结算；
+     *   · 市民票改为**由现金小比例兑换**得到（`exchangeCash`），不再直接发放；
+     *   · 招募价统一 `RECRUIT_TICKETS`（＝1 张市民票）。
+     * 每局收入仍是同一套来源（净化数／通关／首通／記憶の卵／番街深度），乘 CASH_INCOME_MUL。 */
+    cash() { return this.ensure().cash; },
+    cashIncome(r) {
+      r = r || {};
       const kills = Math.floor((r.kills || 0) / 10);
       const win = r.win ? 15 : 3;
       const first = (r.win && r.firstClear) ? 10 : 0;
       const eggs = (r.eggs || 0) * 5;
       const depth = (r.areaIdx || 0) * 2;
-      return kills + win + first + eggs + depth;
+      return (kills + win + first + eggs + depth) * CASH_INCOME_MUL;
     },
+    addCash(n) {
+      const d = this.ensure();
+      d.cash = Math.max(0, d.cash + Math.floor(n));
+      this.save();
+      return d.cash;
+    },
+    /* 扣款（不足则原样返回 false，不动存档） */
+    spendCash(n) {
+      const d = this.ensure(), cost = Math.max(0, Math.floor(n));
+      if (d.cash < cost) return false;
+      d.cash -= cost;
+      return true;
+    },
+    /* 现金 → 市民票（小比例兑换）：默认换 1 张，返回实际换到的张数 */
+    cashPerTicket() { return CASH_PER_TICKET; },
+    exchangeCash(count) {
+      const d = this.ensure();
+      const want = Math.max(1, Math.floor(count || 1));
+      const afford = Math.floor(d.cash / CASH_PER_TICKET);
+      const got = Math.min(want, afford);
+      if (got <= 0) return 0;
+      d.cash -= got * CASH_PER_TICKET;
+      d.tickets += got;
+      this.save();
+      return got;
+    },
+
+    /* ---------- 局外货币：市民票（REGENERATE 术语） ----------
+     * ⚠ v0.16 起**不再由每局结算直接发放**（收入改成现金），只作为「招募凭证」：
+     * 由现金兑换而来，1 张即可招募一名魔女候補。`ticketIncome` 保留为**旧接口**
+     * （外部脚本/测试可能仍在调用），返回等值的现金而不是市民票。 */
+    tickets() { return this.ensure().tickets; },
+    ticketIncome(r) { return this.cashIncome(r); },
     addTickets(n) {
       const d = this.ensure();
       d.tickets = Math.max(0, d.tickets + Math.floor(n));
@@ -278,7 +330,7 @@ window.KUP = window.KUP || {};
       return d.tickets;
     },
 
-    /* ---------- 瓦利斯：局外强化（小幅永久强化） ---------- */
+    /* ---------- 瓦利斯：局外强化（小幅永久强化）——v0.16 起用**现金**结算 ---------- */
     shopLv(id) { return this.ensure().shop[id] || 0; },
     shopMax(id) { const it = KUP.SHOP_ITEM(id); return it ? this.shopLv(id) >= it.maxLv : true; },
     shopNextCost(id) {
@@ -286,15 +338,14 @@ window.KUP = window.KUP || {};
       const lv = this.shopLv(id); if (lv >= it.maxLv) return Infinity;
       return KUP.shopCost(it, lv);
     },
-    /* 购买一级；成功返回 true */
+    /* 购买一级（付 **现金**）；成功返回 true */
     buyShop(id) {
       const it = KUP.SHOP_ITEM(id), d = this.ensure();
       if (!it) return false;
       const lv = this.shopLv(id);
       if (lv >= it.maxLv) return false;
       const cost = KUP.shopCost(it, lv);
-      if (d.tickets < cost) return false;
-      d.tickets -= cost;
+      if (!this.spendCash(cost)) return false;
       d.shop[id] = lv + 1;
       this.save();
       return true;
@@ -324,7 +375,7 @@ window.KUP = window.KUP || {};
     isCompanionUnlocked(id) { return this.ensure().companions.indexOf(id) >= 0; },
     isRecruitUnlocked(id) { return this.isCharUnlocked(id) || this.isCompanionUnlocked(id); },
     /* ---------- 支援物品（v0.13.3）----------
-     * 「局外解锁 ＋ 出击时选一件」：解锁＝在瓦利斯花市民票（无门槛，随时可买）；
+     * 「局外解锁 ＋ 出击时选一件」：解锁＝在瓦利斯花**现金**（v0.16 起；无门槛，随时可买）；
      * 未解锁的支援物在出击界面显示为锁定，不能携带。 */
     isSupportUnlocked(id) { return this.ensure().supports.indexOf(id) >= 0; },
     paySupport(id) {
@@ -333,8 +384,7 @@ window.KUP = window.KUP || {};
       if (!ent) return false;
       if (d.supports.indexOf(id) >= 0) return false;             // 已解锁
       const cost = (ent.unlock && ent.unlock.cost) || 0;
-      if (d.tickets < cost) return false;                         // 市民票不足
-      d.tickets -= cost;
+      if (!this.spendCash(cost)) return false;                   // 现金不足
       d.supports.push(id);
       this.save();
       return true;
@@ -355,6 +405,9 @@ window.KUP = window.KUP || {};
       if (unlock.fukkou && this.total() >= unlock.fukkou) return true;
       return false;
     },
+    /* 招募（v0.16）：**条件门槛 ＋ 1 张市民票**（市民票由现金兑换而来）。
+     * `unlock.cost` 仍然读，但会与 RECRUIT_TICKETS 取较小值——数据表里残留的旧价
+     * （30/45/40）不会再把招募价抬高；想改价只改 RECRUIT_TICKETS。 */
     payRecruit(id) {
       const d = this.ensure();
       const c = KUP.CHARS.find(x => x.id === id && x.recruit);
@@ -364,7 +417,8 @@ window.KUP = window.KUP || {};
       const list = c ? d.chars : d.companions;
       if (list.indexOf(id) >= 0) return false;          // 已加入
       if (!this.gateMet(ent.unlock)) return false;       // 条件未达成
-      const cost = (ent.unlock && ent.unlock.cost) || 0;
+      const listed = (ent.unlock && ent.unlock.cost) || RECRUIT_TICKETS;
+      const cost = Math.max(1, Math.min(RECRUIT_TICKETS, listed));
       if (d.tickets < cost) return false;                // 市民票不足
       d.tickets -= cost;
       list.push(id);
@@ -430,11 +484,15 @@ window.KUP = window.KUP || {};
         d.cleared[areaId] = (d.cleared[areaId] || 0) + 1;
       }
       d.fukkou = before + gain;
-      /* 市民票（局外货币）收入 */
-      const tickets = this.ticketIncome({
+      /* v0.16：每局结束发放**现金**（局外主货币）；市民票不再直接发——由玩家在瓦利斯
+       * 用现金按小比例兑换（META.exchangeCash）。 */
+      const cash = this.cashIncome({
         kills: run.kills, eggs: run.eggs, areaIdx: run.areaIdx, win: win, firstClear: firstClear,
       });
-      d.tickets += tickets;
+      d.cash += cash;
+      /* 兼容返回字段：老 UI/脚本读 tickets 时给它**等值的现金**，但余额本身不再增加。
+       * 新字段 cash/cashTotal 才是真值。 */
+      const tickets = 0;
       d.stats.runs += 1;
       if (win) d.stats.wins += 1;
       if (Number.isFinite(run.time) && run.time > 0) d.stats.playtime += run.time;
@@ -447,7 +505,12 @@ window.KUP = window.KUP || {};
         .map(a => (KUP.I18N ? KUP.I18N.tv(a.name) : a.name.zh));
       const got = this.checkRecruits();
       const newlyRecruitable = got.chars.concat(got.companions).map(c => KUP.nameOf(c));
-      return { gain, total: after, tickets, ticketsTotal: d.tickets, newlyUnlocked, newlyRecruitable };
+      return {
+        gain, total: after,
+        cash, cashTotal: d.cash,
+        tickets, ticketsTotal: d.tickets,
+        newlyUnlocked, newlyRecruitable,
+      };
     },
 
     /* ---------- v0.13 治安战（无尽关卡）的独立成绩 ----------
@@ -477,16 +540,18 @@ window.KUP = window.KUP || {};
       const prev = d.orderBest;
       const isBest = !prev || score > prev.score || (score === prev.score && time > prev.time);
       if (isBest) d.orderBest = { score, kills, time, wave, at: Date.now() };
-      /* 市民票：治安战不设通关，按净化数 + 基础参战（用 win=false 的档位） */
-      const tickets = this.ticketIncome({ kills, eggs: 0, areaIdx: 0, win: false, firstClear: false });
-      d.tickets += tickets;
+      /* v0.16：现金（治安战同样发；市民票不再直接发，改由现金兑换） */
+      const cash = this.cashIncome({ kills, eggs: 0, areaIdx: 0, win: false, firstClear: false });
+      d.cash += cash;
       d.stats.runs += 1;
       if (time > 0) d.stats.playtime += time;
       this.save();
       STORE.slots.touch(this.slotId(), { run: true, win: false, playtime: Math.round(time) });
       return {
         order: true, score, best: d.orderBest.score, isBest, wave,
-        tickets, ticketsTotal: d.tickets, total: this.total(),
+        cash, cashTotal: d.cash,
+        tickets: 0, ticketsTotal: d.tickets,
+        total: this.total(),
       };
     },
 

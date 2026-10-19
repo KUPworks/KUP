@@ -122,8 +122,8 @@ KUP.CHARS = [
       ja: '参番街「ヰ世界救済教団」の教徒にして<b>魔女候補</b>——魔女の娘より下の階位だが、すでに歌える。<br>祈りを武器に、「救済の鐘」が衝撃環となって響く。HP ×1.1、範囲 ×1.1。<br><span class="cv-note">声 — 存流</span>',
     },
     stats: { hp: 110, speed: 142, dmg: 1.05, cd: 1.0, area: 1.1, xp: 1.05 },
-    /* 招募条件：通关参番街（教団的据点）＋ 培养费（市民票） */
-    unlock: { area: 'area3', cost: 30, desc: { zh: '通关参番街后加入', en: 'Joins after clearing Area 3', ja: '参番街クリアで加入' } },
+    /* 招募条件：通关参番街（教団的据点）＋ 1 张市民票（v0.16：票由现金兑换，一张即可） */
+    unlock: { area: 'area3', cost: 1, desc: { zh: '通关参番街后加入', en: 'Joins after clearing Area 3', ja: '参番街クリアで加入' } },
   },
   {
     id: 'asu',
@@ -139,8 +139,8 @@ KUP.CHARS = [
       ja: '教団の教徒で<b>亜留の妹分</b>、同じく魔女候補。<br>追従の歌が「追唱の矢」となり敵列を貫く。取得 ×1.3、攻撃 ×1.1。<br><span class="cv-note">声 — 明透</span>',
     },
     stats: { hp: 95, speed: 152, dmg: 1.1, cd: 0.95, area: 1.0, xp: 1.1, pickup: 1.3 },
-    /* 招募条件：復興率 55% ＋ 培养费（市民票） */
-    unlock: { fukkou: 55, cost: 45, desc: { zh: '復興率达到 55% 后加入', en: 'Joins at 55% restoration', ja: '復興率 55% で加入' } },
+    /* 招募条件：復興率 55% ＋ 1 张市民票（v0.16） */
+    unlock: { fukkou: 55, cost: 1, desc: { zh: '復興率达到 55% 后加入', en: 'Joins at 55% restoration', ja: '復興率 55% で加入' } },
   },
 ];
 /* 可操作角色（含招募角色）查询 */
@@ -1153,7 +1153,7 @@ KUP.FRAGMENTS = [
  *   ⚠️ CIEL 本人出自平级企划（深脊界／空爽），**不并入本作世界观**；本作只取她在
  *      神椿市侧的官方化身（lore §3.5／§13.5／§15.6）。
  *   与魔女候補（aru／asu，见上方 KUP.CHARS）同属「招募式」——需通关肆番街后、
- *   并在瓦利斯支付市民票，才能在选人界面带出。
+ *   并在瓦利斯支付 1 张市民票（v0.16：票由现金兑换），才能在选人界面带出。
  * perk 为同行效果；皮肤（KUP.FORMS kind='companion'）另加少量修正。 */
 KUP.COMPANIONS = [
   {
@@ -1169,8 +1169,8 @@ KUP.COMPANIONS = [
       en: 'A girl met in Area 4 and a <b>staff member of the Reconstruction Division</b>. Her observational support widens your song — pickup +20%, XP +15%.',
       ja: '肆番街で出会う少女、<b>復興課課員</b>。観測支援が歌声を支える——取得範囲 +20%、経験 +15%。',
     },
-    /* 招募条件：通关肆番街（復興課的活动区域）＋ 招募费（市民票） */
-    unlock: { area: 'area4', cost: 40, desc: { zh: '通关肆番街后加入', en: 'Joins after clearing Area 4', ja: '肆番街クリアで加入' } },
+    /* 招募条件：通关肆番街（復興課的活动区域）＋ 1 张市民票（v0.16） */
+    unlock: { area: 'area4', cost: 1, desc: { zh: '通关肆番街后加入', en: 'Joins after clearing Area 4', ja: '肆番街クリアで加入' } },
     /* v0.13.3：**彩季詩得先退出**（人类 2026-10-17 决定）——数据与 JK 皮肤全部保留，
      * retired 只表示「不在出击界面出现、不可被选」；以后想恢复只需去掉这个标记。
      * 同行支援的位置改由下面的「支援物品」承担（见 KUP.SUPPORTS）。 */
@@ -1191,7 +1191,7 @@ KUP.companionsActive = () => KUP.COMPANIONS.filter(c => !c.retired);
  *   - `owner`：该支援物对应的魔女之子 id（现在只作记录，不参与数值）。
  *   - `perk` ：支援效果；`type:'gather'` 的乘法项由 Player.recompute 结算，
  *             `type:'regen'` 由 game.update 周期结算（沿用旧同伴的两种机制）。
- *   - `unlock.cost`：**局外解锁**价（市民票，在瓦利斯的「培养・招募」页购买）。
+ *   - `unlock.cost`：**局外解锁**价（v0.16 起为**现金/元**，在瓦利斯的「培养・招募」页购买）。
  * 命名：冰淇淋／巧克力／糖果／泡芙／炸年糕果子（arare＝炸年糕果子，人类 2026-10-17 更正）。 */
 KUP.SUPPORTS = [
   {
@@ -1205,7 +1205,7 @@ KUP.SUPPORTS = [
       ja: '冷たい支援——観測支援はひとくちの甘さに。<b>取得範囲 +20%、経験 +15%</b>。',
     },
     perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
-    unlock: { cost: 20 },
+    unlock: { cost: 400 },
   },
   {
     id: 'chocolate', icon: '巧', color: '#c98a6b',
@@ -1218,7 +1218,7 @@ KUP.SUPPORTS = [
       ja: 'ほろ苦い支援——観測支援はひとかけのカカオに。<b>取得範囲 +20%、経験 +15%</b>。',
     },
     perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
-    unlock: { cost: 20 },
+    unlock: { cost: 400 },
   },
   {
     id: 'candy', icon: '糖', color: '#ff8ac4',
@@ -1231,7 +1231,7 @@ KUP.SUPPORTS = [
       ja: '口に含む支援——観測支援はひと粒の飴に。<b>取得範囲 +20%、経験 +15%</b>。',
     },
     perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
-    unlock: { cost: 20 },
+    unlock: { cost: 400 },
   },
   {
     id: 'puff', icon: '芙', color: '#ffd98a',
@@ -1244,7 +1244,7 @@ KUP.SUPPORTS = [
       ja: 'ふわりとした支援——観測支援はシュークリームに。<b>取得範囲 +20%、経験 +15%</b>。',
     },
     perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
-    unlock: { cost: 20 },
+    unlock: { cost: 400 },
   },
   {
     id: 'arare', icon: '炸', color: '#ffb25a',
@@ -1257,7 +1257,7 @@ KUP.SUPPORTS = [
       ja: '香ばしい支援——観測支援はあられに。<b>取得範囲 +20%、経験 +15%</b>。',
     },
     perk: { type: 'gather', pickup: 1.2, xp: 1.15 },
-    unlock: { cost: 20 },
+    unlock: { cost: 400 },
   },
 ];
 KUP.SUPPORT = id => KUP.SUPPORTS.find(s => s.id === id) || null;
@@ -1757,56 +1757,56 @@ KUP.ENEMIES.boss = KUP.BOSSES.boss0;
  *   ★ 官方本地化（srd VIRTUAL REALITY 页，见 docs/lore/research/official_srd_en_cn.md）：
  *     **官方中文＝「歌与中餐店·瓦利斯」／官方英文＝`VALIS, a shop in Area 2 that serves songs and Chinese cuisine`**。
  * ※ 表记约定：**日语原文（ja 文案、官方引述）保留官方当て字「瓦利欺」**；**中文（zh 文案）写作「瓦利斯」**。
- * 本作把它作为**局外强化商店**：用**市民票**（REGENERATE 术语）购买**小幅**永久强化。
+ * 本作把它作为**局外强化商店**：用**现金（元）**购买**小幅**永久强化（v0.16：现金每局结束发放）。
  * cost(lv) = base + lv * inc（lv 从 0 起算） */
 KUP.SHOP = [
   {
-    id: 'bun', icon: '包', maxLv: 5, base: 8, inc: 6, mods: { hp: 1.03 },
+    id: 'bun', icon: '包', maxLv: 5, base: 32, inc: 24, mods: { hp: 1.03 },
     name: { zh: '中华馒头', en: 'Steamed Bun', ja: '中華まん' },
     desc: { zh: '温暖的一个。最大生命 <b>+3%</b>／级。', en: 'One warm bun. Max HP <b>+3%</b> per level.', ja: '温かいひとつ。最大生命 <b>+3%</b>／レベル。' },
   },
   {
-    id: 'subuta', icon: '酢', maxLv: 5, base: 10, inc: 7, mods: { playerDmg: 1.02 },
+    id: 'subuta', icon: '酢', maxLv: 5, base: 40, inc: 28, mods: { playerDmg: 1.02 },
     name: { zh: '糖醋里脊', en: 'Sweet & Sour Pork', ja: '酢豚' },
     desc: { zh: '酸味让歌声更锐利。全部伤害 <b>+2%</b>／级。', en: 'The sourness sharpens the song. All damage <b>+2%</b> per level.', ja: '酸味が歌を尖らせる。全ダメージ <b>+2%</b>／レベル。' },
   },
   {
-    id: 'annin', icon: '杏', maxLv: 5, base: 8, inc: 5, mods: { pickup: 1.06 },
+    id: 'annin', icon: '杏', maxLv: 5, base: 32, inc: 20, mods: { pickup: 1.06 },
     name: { zh: '杏仁豆腐', en: 'Almond Jelly', ja: '杏仁豆腐' },
     desc: { zh: '温柔的甜味。拾取范围 <b>+6%</b>／级。', en: 'Gentle sweetness. Pickup range <b>+6%</b> per level.', ja: '優しい甘さ。取得範囲 <b>+6%</b>／レベル。' },
   },
   {
-    id: 'gyoza', icon: '餃', maxLv: 5, base: 9, inc: 6, mods: { speed: 1.02 },
+    id: 'gyoza', icon: '餃', maxLv: 5, base: 36, inc: 24, mods: { speed: 1.02 },
     name: { zh: '饺子', en: 'Dumplings', ja: '餃子' },
     desc: { zh: '面皮有弹性。移动速度 <b>+2%</b>／级。', en: 'A springy bite. Move speed <b>+2%</b> per level.', ja: '皮の張り。移動速度 <b>+2%</b>／レベル。' },
   },
   {
-    id: 'shokoshu', icon: '酒', maxLv: 5, base: 12, inc: 8, mods: { cd: 0.98 },
+    id: 'shokoshu', icon: '酒', maxLv: 5, base: 48, inc: 32, mods: { cd: 0.98 },
     name: { zh: '绍兴酒', en: 'Shaoxing Wine', ja: '紹興酒' },
     desc: { zh: '一盅的余韵。全部冷却 <b>−2%</b>／级。', en: 'A shot of afterglow. All cooldowns <b>−2%</b> per level.', ja: '一献の余韻。全クールダウン <b>−2%</b>／レベル。' },
   },
   {
-    id: 'lazy', icon: '回', maxLv: 5, base: 11, inc: 7, mods: { xp: 1.04 },
+    id: 'lazy', icon: '回', maxLv: 5, base: 44, inc: 28, mods: { xp: 1.04 },
     name: { zh: '回转台', en: 'Lazy Susan', ja: '回転テーブル' },
     desc: { zh: '音片转着圈来。经验 <b>+4%</b>／级。', en: 'The shards come around. XP <b>+4%</b> per level.', ja: '音片が回ってくる。経験 <b>+4%</b>／レベル。' },
   },
   {
-    id: 'sign', icon: '看', maxLv: 3, base: 16, inc: 10, mods: { startUlt: 15 },
+    id: 'sign', icon: '看', maxLv: 3, base: 64, inc: 40, mods: { startUlt: 15 },
     name: { zh: '瓦利斯招牌', en: 'VALIS Signboard', ja: '瓦利欺の看板' },
     desc: { zh: '老主顾的证明。开局<b>浄化の歌充能 +15%</b>／级。', en: 'Proof of a regular. <b>Song charge +15%</b> at run start per level.', ja: '常連の証。開局の<b>浄化の歌チャージ +15%</b>／レベル。' },
   },
   {
-    id: 'regular', icon: '常', maxLv: 3, base: 20, inc: 12, mods: { startLevel: 1 },
+    id: 'regular', icon: '常', maxLv: 3, base: 80, inc: 48, mods: { startLevel: 1 },
     name: { zh: '老主顾席位', en: "Regular's Table", ja: '常連の席' },
     desc: { zh: '熟面孔的待遇。开局<b>等级 +1</b>／级。', en: 'A familiar face. <b>Starting level +1</b> per level.', ja: '顔なじみ。開局<b>レベル +1</b>／レベル。' },
   },
   {
-    id: 'soup', icon: '湯', maxLv: 3, base: 18, inc: 11, mods: { regenAdd: 0.5 },
+    id: 'soup', icon: '湯', maxLv: 3, base: 72, inc: 44, mods: { regenAdd: 0.5 },
     name: { zh: '药膳汤', en: 'Medicinal Soup', ja: '薬膳スープ' },
     desc: { zh: '暖汤养声。<b>每秒回复 +0.5 生命</b>／级（与被动叠加）。', en: 'Warm soup for the voice. <b>+0.5 HP/s</b> per level (stacks with passives).', ja: '温かいスープが声を養う。<b>毎秒 +0.5 回復</b>／レベル（被动と加算）。' },
   },
   {
-    id: 'instinct', icon: '勘', maxLv: 3, base: 22, inc: 13, mods: { dodgeAdd: 0.03 },
+    id: 'instinct', icon: '勘', maxLv: 3, base: 88, inc: 52, mods: { dodgeAdd: 0.03 },
     name: { zh: '常连的直觉', en: "Regular's Instinct", ja: '常連の勘' },
     desc: { zh: '身体先于意识退开。<b>回避（MISS）率 +3%</b>／级（与被动叠加，上限 60%）。', en: 'The body steps aside first. <b>MISS chance +3%</b> per level (stacks, cap 60%).', ja: '身体が先に退く。<b>回避率 +3%</b>／レベル（被动と加算、上限 60%）。' },
   },

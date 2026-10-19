@@ -32,7 +32,7 @@ window.KUP = window.KUP || {};
         'ult-wrap', 'ult-fill', 'ult-label', 'win-sub', 'fukkou-menu-line',
         'companion-strip', 'companion-detail', 'companion-form-wrap', 'companion-form-strip',
         'companion-form-detail', 'form-strip', 'form-detail', 'form-title', 'form-chips', 'hud-companion', 'companion-form-title',
-        'shop-list', 'shop-tickets', 'fukkou-menu-tickets',
+        'shop-list', 'shop-tickets', 'shop-cash', 'btn-exchange', 'fukkou-menu-tickets',
         'menu-slot-line', 'slot-list', 'slot-warn', 'slot-io-text', 'slot-io-msg',
         'order-best-line', 'hud-wave'];
       for (const id of ids) this.els[id] = $(id);
@@ -107,6 +107,11 @@ window.KUP = window.KUP || {};
       $('btn-shop-back').addEventListener('click', () => { this.showScreen('screen-menu'); this.showBest(); });
       document.querySelectorAll('.shop-tab').forEach(t => {
         t.addEventListener('click', () => { KUP.Audio.sfx('select'); this.shopTab = t.dataset.tab; this.showShop(); });
+      });
+      /* v0.16：现金 → 市民票（小比例兑换） */
+      if ($('btn-exchange')) $('btn-exchange').addEventListener('click', () => {
+        KUP.Audio.sfx('select');
+        this.exchangeTicket();
       });
       $('btn-back-menu').addEventListener('click', () => { this.showScreen('screen-menu'); this.showHUD(false); this.showBest(); });
       $('btn-depart').addEventListener('click', () => {
@@ -338,7 +343,10 @@ window.KUP = window.KUP || {};
         this.els['fukkou-menu-line'].textContent = KUP.I18N.t('meta.eggs', { n: eggs });
       }
       if (this.els['fukkou-menu-tickets']) {
-        this.els['fukkou-menu-tickets'].textContent = KUP.I18N.t('shop.tickets', { n: KUP.META.tickets() });
+        /* v0.16：菜单同时显示两种局外货币——现金（主货币）＋ 市民票（招募凭证） */
+        this.els['fukkou-menu-tickets'].textContent =
+          KUP.I18N.t('menu.cash', { n: KUP.META.cash() }) + ' · ' +
+          KUP.I18N.t('shop.tickets', { n: KUP.META.tickets() });
       }
       /* 当前档位名称（多槽位） */
       if (this.els['menu-slot-line']) {
@@ -360,12 +368,12 @@ window.KUP = window.KUP || {};
       const wrap = this.els['shop-list'];
       wrap.innerHTML = '';
       if (this.shopTab !== 'recruit') {
-        /* 强化页：8 项小幅永久强化 */
+        /* 强化页：10 项小幅永久强化（v0.16：用**现金**结算） */
         for (const it of KUP.SHOP) {
           const lv = KUP.META.shopLv(it.id);
           const maxed = lv >= it.maxLv;
           const cost = KUP.META.shopNextCost(it.id);
-          const afford = KUP.META.tickets() >= cost;
+          const afford = KUP.META.cash() >= cost;
           const card = document.createElement('div');
           card.className = 'shop-card' + (maxed ? ' maxed' : '') + (afford && !maxed ? '' : ' poor');
           card.style.setProperty('--c', '#ffd98a');
@@ -376,7 +384,7 @@ window.KUP = window.KUP || {};
             '<div class="shop-name">' + KUP.I18N.tv(it.name) + '</div>' +
             '<div class="shop-pips">' + pips + '</div>' +
             '<div class="shop-desc">' + KUP.I18N.tv(it.desc) + '</div>' +
-            '<div class="shop-cost">' + (maxed ? KUP.I18N.t('shop.maxed') : '🎫 ' + cost) + '</div>';
+            '<div class="shop-cost">' + (maxed ? KUP.I18N.t('shop.maxed') : '🪙 ' + cost) + '</div>';
           if (!maxed) card.addEventListener('click', () => {
             if (KUP.META.buyShop(it.id)) { KUP.Audio.sfx('levelup'); this.showShop(); }
             else KUP.Audio.sfx('hurt');
@@ -384,7 +392,7 @@ window.KUP = window.KUP || {};
           wrap.appendChild(card);
         }
       } else {
-        /* 招募页：可操作角色（魔女候補）与同伴——条件＋市民票 */
+        /* 招募页：可操作角色（魔女候補）与同伴——条件 ＋ **1 张市民票**（v0.16） */
         const mkRecruit = (ent, kind) => {
           const joined = kind === 'char' ? KUP.META.isCharUnlocked(ent.id) : KUP.META.isCompanionUnlocked(ent.id);
           const gate = KUP.META.gateMet(ent.unlock);
@@ -423,7 +431,7 @@ window.KUP = window.KUP || {};
         const mkSupport = (sp) => {
           const got = KUP.META.isSupportUnlocked(sp.id);
           const cost = (sp.unlock && sp.unlock.cost) || 0;
-          const afford = KUP.META.tickets() >= cost;
+          const afford = KUP.META.cash() >= cost;
           const card = document.createElement('div');
           card.className = 'shop-card recruit' + (got ? ' joined' : (afford ? '' : ' poor'));
           card.style.setProperty('--c', sp.color || '#8fd0ff');
@@ -431,7 +439,7 @@ window.KUP = window.KUP || {};
             '<div class="shop-icon">' + (sp.icon || KUP.I18N.tv(sp.name).charAt(0)) + '</div>' +
             '<div class="shop-name">' + KUP.I18N.tv(sp.name) + '</div>' +
             '<div class="shop-desc">' + KUP.I18N.t('support.kind') + '<br>' + KUP.I18N.tv(sp.desc) + '</div>' +
-            '<div class="shop-cost">' + (got ? KUP.I18N.t('shop.joined') : ('🎫 ' + cost + ' · ' + KUP.I18N.t('support.unlockShort'))) + '</div>';
+            '<div class="shop-cost">' + (got ? KUP.I18N.t('shop.joined') : ('🪙 ' + cost + ' · ' + KUP.I18N.t('support.unlockShort'))) + '</div>';
           if (!got) card.addEventListener('click', () => {
             if (KUP.META.paySupport(sp.id)) {
               KUP.Audio.sfx('levelup');
@@ -446,11 +454,32 @@ window.KUP = window.KUP || {};
           wrap.innerHTML = '<div class="pick-detail">' + KUP.I18N.t('shop.none') + '</div>';
         }
       }
-      /* tab 高亮 + 市民票余额 */
+      /* tab 高亮 + 钱包（现金／市民票）＋ 兑换按钮 */
       for (const b of document.querySelectorAll('.shop-tab')) {
         b.classList.toggle('active', b.dataset.tab === (this.shopTab || 'upgrade'));
       }
+      if (this.els['shop-cash']) {
+        this.els['shop-cash'].textContent = KUP.I18N.t('shop.cash', { n: KUP.META.cash() });
+      }
       this.els['shop-tickets'].textContent = KUP.I18N.t('shop.tickets', { n: KUP.META.tickets() });
+      if (this.els['btn-exchange']) {
+        const rate = KUP.META.cashPerTicket();
+        const rateEl = this.els['btn-exchange'];
+        rateEl.textContent = KUP.I18N.t('shop.exchangeBtn', { c: rate });
+        rateEl.disabled = KUP.META.cash() < rate;
+      }
+    },
+
+    /* 现金 → 市民票（v0.16：小比例兑换；一次换 1 张，按钮在瓦利斯页头） */
+    exchangeTicket() {
+      const got = KUP.META.exchangeCash(1);
+      if (got > 0) {
+        KUP.Audio.sfx('levelup');
+        KUP.UI.banner(KUP.I18N.t('banner.exchange', { n: got }), 1.4);
+      } else {
+        KUP.Audio.sfx('hurt');
+      }
+      this.showShop();
     },
 
     /* ---------- 记忆图鉴（記憶の卵 ★ 动画第6話） ---------- */
@@ -1248,8 +1277,9 @@ window.KUP = window.KUP || {};
         let line = '<div class="fukkou-gain">' + KUP.I18N.t('end.order.best',
           { score: ob.score, wave: ob.wave, time: U.formatTime(ob.time || 0) }) + '</div>';
         if (meta.isBest) line += '<div class="new-record">' + KUP.I18N.t('end.order.newBest') + '</div>';
-        if (meta.tickets) {
-          line += '<div class="ticket-gain">🎫 ' + KUP.I18N.t('end.tickets', { n: meta.tickets, t: meta.ticketsTotal }) + '</div>';
+        /* v0.16：每局结束发放**现金**（元）；市民票不直接发，去瓦利斯兑换 */
+        if (meta.cash) {
+          line += '<div class="ticket-gain">💴 ' + KUP.I18N.t('end.cash', { n: meta.cash, t: meta.cashTotal }) + '</div>';
         }
         holder.innerHTML += line;
         this.updateMetaUI();
@@ -1268,9 +1298,9 @@ window.KUP = window.KUP || {};
         if (meta.newlyRecruitable && meta.newlyRecruitable.length) {
           line += '<div class="fukkou-unlock">' + KUP.I18N.t('end.recruitable', { name: meta.newlyRecruitable.join(' / ') }) + '</div>';
         }
-        /* 市民票收入（瓦利斯的局外货币） */
-        if (meta.tickets) {
-          line += '<div class="ticket-gain">🎫 ' + KUP.I18N.t('end.tickets', { n: meta.tickets, t: meta.ticketsTotal }) + '</div>';
+        /* v0.16：每局结束发放**现金**（元）——瓦利斯的局外货币；市民票由现金兑换 */
+        if (meta.cash) {
+          line += '<div class="ticket-gain">💴 ' + KUP.I18N.t('end.cash', { n: meta.cash, t: meta.cashTotal }) + '</div>';
         }
         holder.innerHTML += line;
         this.updateMetaUI();

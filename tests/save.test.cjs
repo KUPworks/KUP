@@ -89,14 +89,15 @@ section('1. 首次启动：默认槽位与默认进度');
   eq(META.ensure().stats.runs, 0, '初始出击局数 0');
 }
 
-section('2. 结算：復興率/市民票 + runId 幂等');
+section('2. 结算：復興率/现金 + runId 幂等');
 {
   const { KUP } = boot();
   const META = KUP.META;
   const r1 = META.addRunResult('area0', true, { runId: 'r1', kills: 30, eggs: 1, areaIdx: 0, time: 120 });
   ok(r1 && r1.gain === 13, '首通 = 計上1 + 首通12 = 13（卵的 +1% 在拾取时单独结算）');
   eq(META.total(), 13, '復興率累计 13');
-  ok(r1.tickets > 0, '市民票有收入 (' + r1.tickets + ')');
+  ok(r1.cash > 0, '现金有收入 (' + r1.cash + ')');
+  eq(META.tickets(), 0, 'v0.16：结算不再直接发市民票（改用现金兑换）');
   eq(META.clearedCount('area0'), 1, 'area0 通关 1 次');
   eq(META.ensure().stats.runs, 1, 'stats.runs = 1');
   eq(META.ensure().stats.wins, 1, 'stats.wins = 1');
@@ -254,6 +255,7 @@ section('8. 旧键一次性升级');
   const META = KUP.META;
   eq(META.total(), 33, '旧復興率被搬进新槽位');
   eq(META.tickets(), 250, '旧市民票搬入');
+  eq(META.cash(), 0, 'v0.16 旧档没有现金字段 → 默认 0（不影响旧进度）');
   eq(META.clearedCount('area0'), 2, '旧通关次数搬入');
   eq(META.shopLv('bun'), 2, '旧商店等级搬入');
   eq(META.best().kills, 120, '旧 kup_best 并入进度档');
@@ -270,7 +272,7 @@ section('9. 结构校验：手改存档被过滤/钳制');
   const { KUP, ls } = boot();
   const frag0 = KUP.FRAGMENTS[0].id;
   const evil = {
-    fukkou: 'NaN', tickets: -50, cleared: { area0: 3, notAnArea: 9 },
+    fukkou: 'NaN', tickets: -50, cash: -50, cleared: { area0: 3, notAnArea: 9 },
     eggs: [frag0, 'ghost-frag'], eggCount: -5,
     chars: [KUP.CHARS.filter(c => c.recruit).map(c => c.id)[0] || 'x', 'not-a-char'],
     companions: ['not-a-companion'], shop: { bun: 999, nope: 3 },
@@ -285,6 +287,8 @@ section('9. 结构校验：手改存档被过滤/钳制');
   const d = KUP.META.load(true);
   eq(d.fukkou, 0, 'fukkou "NaN" → 0');
   eq(d.tickets, 0, 'tickets 负数 → 0');
+  eq(d.cash, 0, 'v0.16 现金：负数 → 0');
+  eq(typeof d.cash, 'number', 'v0.16 现金：归一化为数字');
   eq(Object.keys(d.cleared).length, 1, '未知番街被丢弃');
   eq(d.cleared.area0, 3, '合法番街保留');
   eq(d.eggs.length, 1, '不存在的碎片 id 被丢弃');

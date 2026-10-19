@@ -69,6 +69,11 @@ window.KUP = window.KUP || {};
       KUP.META.ensure().tickets = Math.max(0, dbgTickets);
       console.info('[KUP] 调试：市民票 → ' + dbgTickets + '（仅内存，未写入存档）');
     }
+    const dbgCash = parseInt(q.get('cash'), 10);       // 调试：临时发放现金（v0.16，仅内存）
+    if (!isNaN(dbgCash) && KUP.META) {
+      KUP.META.ensure().cash = Math.max(0, dbgCash);
+      console.info('[KUP] 调试：现金 → ' + dbgCash + ' 元（仅内存，未写入存档）');
+    }
     if (game.debug.recruit && KUP.META) {            // 调试：临时解锁全部招募（仅内存）
       KUP.CHARS.filter(c => c.recruit).forEach(c => { if (!KUP.META.isCharUnlocked(c.id)) KUP.META.data.chars.push(c.id); });
       KUP.COMPANIONS.forEach(c => { if (!KUP.META.isCompanionUnlocked(c.id)) KUP.META.data.companions.push(c.id); });

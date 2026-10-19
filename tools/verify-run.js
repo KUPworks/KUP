@@ -30,6 +30,8 @@ const KUP = ctx.KUP;
 
 /* 音频/UI 桩（node 环境无 DOM/WebAudio；game.start 会调用） */
 KUP.Audio = { init() {}, resume() {}, startBGM() {}, stopBGM() {}, sfx() {} };
+/* 真 UI 留个引用：结算屏文案（现金 vs 市民票）要用 DOM 桩跑一遍 showEnd。 */
+const REAL_UI = KUP.UI;
 KUP.UI = {
   banner() {}, showScreen() {}, showHUD() {}, showBoss() {}, updateBoss() {}, syncBosses() {},
   showLevelUp() {}, showEnd() {}, updateHUD() {}, onLangChange() {},
@@ -321,15 +323,15 @@ gP2.boss = boss2b;
 gP2.damageEnemy(boss2b, 999999);                      // 未暴走
 check('惨胜不再单独结算：復興率增益与普通胜利一致', !!gP.metaResult && !!gP2.metaResult &&
   gP.metaResult.gain === gP2.metaResult.gain, gP2.metaResult.gain + ' vs ' + gP.metaResult.gain);
-check('惨胜不再单独结算：市民票收入与普通胜利一致', (() => {
-  /* 市民票收入含「通关 15 ＋ 首通 10 ＋ 卵 5 ＋ 击杀/10 ＋ 番街深度×2」——
-   * 两局在不同番街，所以先扣掉「番街深度×2」再比：剩下的公共部分应完全一致，
+check('惨胜不再单独结算：现金收入与普通胜利一致', (() => {
+  /* 现金收入＝（通关 15 ＋ 首通 10 ＋ 卵 5 ＋ 击杀/10 ＋ 番街深度×2）×4——
+   * 两局在不同番街，所以先扣掉「番街深度×2×4」再比：剩下的公共部分应完全一致，
    * 即没有任何"惨胜"专属的奖励或扣减。 */
-  const depth = id => KUP.META.areaIndex(id) * 2;
-  const a = gP.metaResult.tickets - depth('area6');
-  const b = gP2.metaResult.tickets - depth('area5');
+  const depth = id => KUP.META.areaIndex(id) * 2 * 4;
+  const a = gP.metaResult.cash - depth('area6');
+  const b = gP2.metaResult.cash - depth('area5');
   return a === b;
-})(), gP2.metaResult.tickets + ' vs ' + gP.metaResult.tickets);
+})(), gP2.metaResult.cash + ' vs ' + gP.metaResult.cash);
 {
   /* 结算副标题与菜单记录：直接读 ui.js 源码做断言（node 环境没有 DOM，不跑真实 UI） */
   const uiSrc = require('fs').readFileSync('js/ui.js', 'utf8');
@@ -390,24 +392,53 @@ check('槽位存档重载一致', KUP.META.total() === saved.fukkou && KUP.META.
 check('最佳记录随槽位持久化', (KUP.META.submitBest({ win: true, time: 120, kills: 30, witch: 'x' }),
   KUP.META.data = null, KUP.META.load(), KUP.META.best().time === 120));
 
-/* ========== v0.6：局外经济 / 商店 / 培养招募 ========== */
-// 19. 市民票收入
+/* ========== v0.6：局外经济 / 商店 / 培养招募 ==========
+ * v0.16（人类 2026-10-19）：经济改造——**每局结束发「现金」（单位：元）**，
+ * 瓦利斯一律用现金结算；市民票由现金**小比例兑换**（CASH_PER_TICKET 元 → 1 张），
+ * 且**一张市民票即可招募**。 */
+// 19. 现金收入（旧 ticketIncome 接口保留，返回等值现金）
 KUP.META.reset();
-const inc1 = KUP.META.ticketIncome({ kills: 100, eggs: 0, areaIdx: 0, win: true, firstClear: true });
-check('市民票：100 杀 + 首通 → 10+15+10=35', inc1 === 35, 'income=' + inc1);
-const inc2 = KUP.META.ticketIncome({ kills: 40, eggs: 2, areaIdx: 3, win: false, firstClear: false });
-check('市民票：败北也计入（4+3+0+10+6=23）', inc2 === 23, 'income=' + inc2);
-KUP.META.addTickets(inc1);
-check('市民票入账', KUP.META.tickets() === 35);
+const inc1 = KUP.META.cashIncome({ kills: 100, eggs: 0, areaIdx: 0, win: true, firstClear: true });
+check('现金收入：100 杀 + 首通 → (10+15+10)×4＝140 元', inc1 === 140, 'income=' + inc1);
+const inc2 = KUP.META.cashIncome({ kills: 40, eggs: 2, areaIdx: 3, win: false, firstClear: false });
+check('现金收入：败北也计入（(4+3+0+10+6)×4＝92 元）', inc2 === 92, 'income=' + inc2);
+check('旧接口 ticketIncome 保留，返回等值现金（兼容旧调用）',
+  KUP.META.ticketIncome({ kills: 100 }) === KUP.META.cashIncome({ kills: 100 }) &&
+  KUP.META.ticketIncome({ kills: 100 }) > 0);
+KUP.META.addCash(inc1);
+check('现金入账', KUP.META.cash() === 140);
+check('每局结算发放现金（不再是市民票）', (() => {
+  KUP.META.reset();
+  const r = KUP.META.addRunResult('area0', true, { kills: 50, eggs: 1, areaIdx: 0 });
+  return r && r.cash > 0 && r.cashTotal === r.cash && KUP.META.cash() === r.cash && KUP.META.tickets() === 0;
+})(), 'cash=' + KUP.META.cash() + ' tickets=' + KUP.META.tickets());
 
-// 20. 瓦利斯商店：价格递增、购买扣款、等级上限、乘积/加和汇总
+// 19b. 现金 → 市民票：小比例兑换
 KUP.META.reset();
-KUP.META.addTickets(500);
+KUP.META.addCash(250);
+const rate = KUP.META.cashPerTicket();
+check('兑换比例是小比例（≥50 元换 1 张，不会 1:1）', rate >= 50, 'rate=' + rate);
+check('兑换 1 张：扣 ' + rate + ' 元、得 1 张票', (() => {
+  const got = KUP.META.exchangeCash(1);
+  return got === 1 && KUP.META.tickets() === 1 && KUP.META.cash() === 250 - rate;
+})(), 'cash=' + KUP.META.cash() + ' tickets=' + KUP.META.tickets());
+check('现金不足时兑换失败（不产生负数/不吞钱）', (() => {
+  KUP.META.data.cash = rate - 1;
+  const got = KUP.META.exchangeCash(1);
+  return got === 0 && KUP.META.cash() === rate - 1 && KUP.META.tickets() === 1;
+})(), 'cash=' + KUP.META.cash());
+
+// 20. 瓦利斯商店：价格递增、购买扣**现金**、等级上限、乘积/加和汇总
+KUP.META.reset();
+KUP.META.addCash(2000);
 const bun = KUP.SHOP_ITEM('bun');
 check('商店表齐备（10 项·三语·mods）', KUP.SHOP.length === 10 && KUP.SHOP.every(s => s.mods && s.name.zh && s.desc.zh));
-check('价格随等级递增', KUP.shopCost(bun, 0) === 8 && KUP.shopCost(bun, 1) === 14 && KUP.shopCost(bun, 4) === 32);
-const t0 = KUP.META.tickets();
-check('购买一级成功并扣款', KUP.META.buyShop('bun') && KUP.META.shopLv('bun') === 1 && KUP.META.tickets() === t0 - 8);
+check('价格随等级递增（现金计价：32 / 56 / 128）',
+  KUP.shopCost(bun, 0) === 32 && KUP.shopCost(bun, 1) === 56 && KUP.shopCost(bun, 4) === 128);
+const c0 = KUP.META.cash();
+check('购买一级成功并扣**现金**（市民票不动）',
+  KUP.META.buyShop('bun') && KUP.META.shopLv('bun') === 1 &&
+  KUP.META.cash() === c0 - 32 && KUP.META.tickets() === 0);
 for (let i = 0; i < 10; i++) KUP.META.buyShop('bun');
 check('等级封顶 maxLv', KUP.META.shopLv('bun') === 5 && KUP.META.shopNextCost('bun') === Infinity);
 const mods1 = KUP.META.shopMods();
@@ -417,8 +448,8 @@ for (let i = 0; i < 3; i++) KUP.META.buyShop('regular');
 const mods2 = KUP.META.shopMods();
 check('加法型强化（开局充能/开局等级）汇总', mods2.startUlt === 30 && mods2.startLevel === 3, JSON.stringify({ u: mods2.startUlt, l: mods2.startLevel }));
 KUP.META.reset();
-KUP.META.addTickets(5);
-check('市民票不足时购买失败', !KUP.META.buyShop('bun') && KUP.META.tickets() === 5);
+KUP.META.addCash(31);
+check('现金不足时购买失败', !KUP.META.buyShop('bun') && KUP.META.cash() === 31);
 
 // 21. 商店强化接线到 Player / 开局等级与充能
 const pShop = new KUP.Player(KUP.CHAR('kaf'), KUP.modsFor('none'), { shopMods: { hp: 1.03, playerDmg: 1.02, pickup: 1.06, speed: 1.02, cd: 0.98, xp: 1.04 } });
@@ -429,30 +460,34 @@ check('商店强化接入 Player 数值',
   Math.abs(pShop.pickup - pPlain.pickup * 1.06) < 1e-9 &&
   Math.abs(pShop.cdMult - pPlain.cdMult * 0.98) < 1e-9);
 KUP.META.reset();
-KUP.META.addTickets(500);
+KUP.META.addCash(2000);
 for (let i = 0; i < 2; i++) KUP.META.buyShop('sign');
 KUP.META.buyShop('regular');
 const gShop = new KUP.Game(canvas);
 gShop.start({ char: 'kaf', area: 'area0', seed: 11 });
 check('开局充能/开局等级生效', gShop.ult.charge === 30 && gShop.level === 2, 'charge=' + gShop.ult.charge + ' lv=' + gShop.level);
 
-// 22. 培养（招募）需市民票：条件达成也不自动加入
+// 22. 招募（v0.16）：条件达成也不自动加入；**1 张市民票**即可招募
 KUP.META.reset();
 KUP.META.addRunResult('area3', true, { kills: 0, eggs: 0, areaIdx: 3 });
 KUP.META.data.tickets = 0; KUP.META.save();   // 归零：验证"票不足不可招募"
 check('通关参番街后亜留仍是"可招募"而非自动加入', !KUP.META.isCharUnlocked('aru') &&
   KUP.META.recruitable().chars.some(c => c.id === 'aru'));
 check('市民票不足时招募失败', !KUP.META.payRecruit('aru'));
-KUP.META.addTickets(30);
-check('支付 30 市民票培养亜留', KUP.META.payRecruit('aru') && KUP.META.isCharUnlocked('aru') && KUP.META.tickets() === 0);
+KUP.META.addCash(rate);                        // 兑换 1 张票
+KUP.META.exchangeCash(1);
+check('一张市民票即可招募亜留', KUP.META.payRecruit('aru') && KUP.META.isCharUnlocked('aru') &&
+  KUP.META.tickets() === 0, 'tickets=' + KUP.META.tickets());
 check('重复招募失败', !KUP.META.payRecruit('aru'));
 KUP.META.addRunResult('area4', true, { kills: 100, eggs: 1, areaIdx: 4 });
-KUP.META.addTickets(40);
-check('招募復興課同伴 彩季詩得（40 票）', KUP.META.payRecruit('ciel') && KUP.META.isCompanionUnlocked('ciel'));
+KUP.META.addCash(rate); KUP.META.exchangeCash(1);
+check('一张市民票即可招募復興課同伴 彩季詩得', KUP.META.payRecruit('ciel') && KUP.META.isCompanionUnlocked('ciel'));
 KUP.META.reset();
-KUP.META.data.fukkou = 55; KUP.META.addTickets(45);
-check('復興率 55% + 45 票 培养地邑阿栖', KUP.META.payRecruit('asu') && KUP.META.isCharUnlocked('asu'));
-check('条件未达成（未通关参番街）不可培养', (KUP.META.reset(), KUP.META.addTickets(99), !KUP.META.payRecruit('aru')));
+KUP.META.data.fukkou = 55;
+KUP.META.addCash(rate); KUP.META.exchangeCash(1);
+check('復興率 55% + 1 张票 招募地邑阿栖', KUP.META.payRecruit('asu') && KUP.META.isCharUnlocked('asu'));
+check('条件未达成（未通关参番街）不可招募',
+  (KUP.META.reset(), KUP.META.addCash(rate), KUP.META.exchangeCash(1), !KUP.META.payRecruit('aru')));
 
 // 23. 新武器组（滞留・投掷系）
 const AR = { x: 1500, y: 1500 };
@@ -1372,14 +1407,15 @@ KUP.META.reset();
     KUP.META.orderBest().wave === 4);
   check('治安战不发復興率、不写番街 best',
     KUP.META.total() === fukkou0 && KUP.META.best() === null && KUP.META.clearedCount('order') === 0);
-  check('治安战仍结算市民票', r1o.tickets > 0 && KUP.META.tickets() === r1o.tickets);
+  check('治安战仍结算现金（v0.16：不再直接发市民票）',
+    r1o.cash > 0 && KUP.META.cash() === r1o.cash && r1o.tickets === 0 && KUP.META.tickets() === 0);
   check('治安战结算幂等（同 runId 不重复）',
     KUP.META.addOrderResult({ runId: 'ord-1', kills: 120, time: 90, wave: 4, score: 1780 }) === null &&
-    KUP.META.tickets() === r1o.tickets);
-  const tBefore = KUP.META.tickets();
+    KUP.META.cash() === r1o.cash);
+  const cBefore = KUP.META.cash();
   const r2o = KUP.META.addOrderResult({ runId: 'ord-2', kills: 10, time: 30, wave: 2, score: 300 });
-  check('更低分不刷新记录（但仍结算市民票）',
-    !r2o.isBest && KUP.META.orderBest().score === 1780 && KUP.META.tickets() > tBefore);
+  check('更低分不刷新记录（但仍结算现金）',
+    !r2o.isBest && KUP.META.orderBest().score === 1780 && KUP.META.cash() > cBefore);
   const r3o = KUP.META.addOrderResult({ runId: 'ord-3', kills: 200, time: 200, wave: 8, score: 3200 });
   check('更高分刷新治安战记录', r3o.isBest && KUP.META.orderBest().score === 3200 && KUP.META.orderBest().wave === 8);
   /* 存档结构：orderBest 归一化（脏数据被拒） */
@@ -1548,16 +1584,71 @@ let awSeen = false;
 for (let i = 0; i < 60; i++) if (gAw.rollChoices().some(c => c.kind === 'awaken')) awSeen = true;
 check('觉醒卡仍会出现在升级池（优先展示）', awSeen);
 
-// 26. 结算包含市民票与"可招募"提示
+// 26. 结算包含现金收入与"可招募"提示
 KUP.META.reset();
 const gT = new KUP.Game(canvas);
 gT.start({ char: 'kaf', area: 'area3', seed: 81 });
 gT.kills = 100;
 gT.victory();
-check('结算返回市民票收入与合计', gT.metaResult.tickets > 0 && gT.metaResult.ticketsTotal === gT.metaResult.tickets,
-  JSON.stringify({ t: gT.metaResult.tickets }));
+check('结算返回现金收入与合计（v0.16：市民票不再直发）',
+  gT.metaResult.cash > 0 && gT.metaResult.cashTotal === gT.metaResult.cash &&
+  gT.metaResult.tickets === 0, JSON.stringify({ cash: gT.metaResult.cash }));
 check('结算提示可培养对象', gT.metaResult.newlyRecruitable.length >= 1, JSON.stringify(gT.metaResult.newlyRecruitable));
-check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && gT.stats().eggs >= 1);
+check('stats 含 Boss 名与卵来源', gT.stats().areaId === 'area3' && gT.stats().eggs >= 1);
+
+/* v0.16：结算屏文案必须写「现金（元）」，不能再出现「市民票 +N」。
+ * 用最小 DOM 桩跑一遍真 UI.showEnd（不改 KUP.UI 桩，只在这次调用里替换）。 */
+{
+  const mkEl = () => ({
+    classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
+    style: {}, textContent: '', innerHTML: '', dataset: {}, disabled: false,
+    appendChild() {}, addEventListener() {}, removeEventListener() {},
+    querySelector() { return null; }, querySelectorAll() { return []; },
+  });
+  const docMap = {};
+  ctx.document.getElementById = id => (docMap[id] || (docMap[id] = mkEl()));
+  ctx.document.querySelector = () => mkEl();
+  ctx.document.querySelectorAll = () => [];
+  ctx.document.createElement = () => mkEl();
+  const els = new Proxy({}, { get: (t, k) => (t[k] || (t[k] = mkEl())) });
+  const saved = { els: REAL_UI.els, game: REAL_UI.game, showBest: REAL_UI.showBest };
+  REAL_UI.els = els;
+  REAL_UI.game = gT;
+  KUP.UI = REAL_UI;                       // 这次调用走真 UI（showEnd 内部会用 KUP.UI）
+  try {
+    KUP.META.reset();
+    const gE = new KUP.Game(canvas);
+    gE.start({ char: 'kaf', area: 'area0', seed: 91 });
+    gE.kills = 60;
+    gE.metaResult = KUP.META.addRunResult('area0', true, { runId: 'end-1', kills: 60, eggs: 1, areaIdx: 0, time: 180 });
+    REAL_UI.game = gE;
+    REAL_UI.showEnd(true, gE.stats());
+    const html = els['win-stats'].innerHTML;
+    check('结算屏显示「现金 +N 元（共 M 元）」', /现金 \+\d+ 元（共 \d+ 元）/.test(html),
+      (html.match(/[^\u003c]*现金[^\u003c]*/) || [''])[0]);
+    check('结算屏不再出现「市民票 +N」', html.indexOf('市民票 +') < 0 && html.indexOf('end.tickets') < 0);
+    /* 治安战结算同样走现金分支 */
+    KUP.META.reset();
+    const gO = new KUP.Game(canvas);
+    gO.start({ char: 'kaf', area: 'order', seed: 92 });
+    gO.endless = true;
+    gO.metaResult = KUP.META.addOrderResult({ runId: 'ord-end-1', kills: 40, time: 60, wave: 3, score: 900 });
+    REAL_UI.game = gO;
+    REAL_UI.els = els;
+    els['win-stats'].innerHTML = '';
+    REAL_UI.showEnd(false, gO.stats());
+    const ohtml = els['over-stats'].innerHTML;
+    check('治安战结算屏也显示现金（不是市民票）',
+      /现金 \+\d+ 元/.test(ohtml) && ohtml.indexOf('市民票 +') < 0,
+      (ohtml.match(/[^\u003c]*现金[^\u003c]*/) || [''])[0]);
+  } finally {
+    KUP.UI = { banner() {}, showScreen() {}, showHUD() {}, showBoss() {}, updateBoss() {}, syncBosses() {},
+      showLevelUp() {}, showEnd() {}, updateHUD() {}, onLangChange() {} };
+    REAL_UI.els = saved.els;
+    REAL_UI.game = saved.game;
+    REAL_UI.showBest = saved.showBest;
+  }
+}
 
 /* ========== v0.13.1：绕楼寻路（空间索引 ＋ 局部避障转向） ========== */
 
@@ -2031,6 +2122,8 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   check('先不做差异化：五件 perk 数值完全相同', SP.every(s => perkSig(s) === perkSig(SP[0])), perkSig(SP[0]));
   check('支援物品都标了局外解锁价', SP.every(s => s.unlock && s.unlock.cost > 0),
     SP.map(s => s.unlock.cost).join('/'));
+  check('支援物品按**现金（元）**计价（v0.16：与原市民票价同一档位×4）',
+    SP.every(s => s.unlock.cost >= 200), SP.map(s => s.unlock.cost).join('/'));
 }
 
 // 25q-2. 局外解锁 ＋ 出击时选一件：meta 流程与出击接线
@@ -2039,11 +2132,11 @@ check('stats 含 Boss 名与市民票来源', gT.stats().areaId === 'area3' && g
   check('支援物品默认未解锁', !KUP.META.isSupportUnlocked('icecream'));
   KUP.META.setSupport('icecream');
   check('未解锁的支援物品选不上（回落为不带）', KUP.META.ensure().support === null);
-  check('市民票不足时买不了', KUP.META.paySupport('icecream') === false);
-  KUP.META.ensure().tickets = 25;
-  check('花市民票可解锁（局外解锁）', KUP.META.paySupport('icecream') === true &&
-    KUP.META.isSupportUnlocked('icecream') && KUP.META.tickets() === 5, '票=' + KUP.META.tickets());
-  check('重复购买被拒（不会重复扣票）', KUP.META.paySupport('icecream') === false && KUP.META.tickets() === 5);
+  check('现金不足时买不了', KUP.META.paySupport('icecream') === false);
+  KUP.META.ensure().cash = 1000;
+  check('花现金可解锁（局外解锁）', KUP.META.paySupport('icecream') === true &&
+    KUP.META.isSupportUnlocked('icecream') && KUP.META.cash() === 600, '现金=' + KUP.META.cash());
+  check('重复购买被拒（不会重复扣款）', KUP.META.paySupport('icecream') === false && KUP.META.cash() === 600);
   KUP.META.setSupport('icecream');
   check('解锁后可选中并写入存档', KUP.META.ensure().support === 'icecream');
   KUP.META.setSupport('nonexistent');
