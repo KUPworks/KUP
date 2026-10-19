@@ -270,10 +270,10 @@ section('8. 旧键一次性升级');
 section('9. 结构校验：手改存档被过滤/钳制');
 {
   const { KUP, ls } = boot();
-  const frag0 = KUP.FRAGMENTS[0].id;
   const evil = {
     fukkou: 'NaN', tickets: -50, cash: -50, cleared: { area0: 3, notAnArea: 9 },
-    eggs: [frag0, 'ghost-frag'], eggCount: -5,
+    /* v0.17：记忆图鉴移除后，旧档遗留的 eggs/eggCount 必须被安全忽略（不报错、不回流） */
+    eggs: ['ghost-frag'], eggCount: 4,
     chars: [KUP.CHARS.filter(c => c.recruit).map(c => c.id)[0] || 'x', 'not-a-char'],
     companions: ['not-a-companion'], shop: { bun: 999, nope: 3 },
     form: 'not-a-form', companion: 'not-a-companion', companionForm: 'none',
@@ -291,8 +291,8 @@ section('9. 结构校验：手改存档被过滤/钳制');
   eq(typeof d.cash, 'number', 'v0.16 现金：归一化为数字');
   eq(Object.keys(d.cleared).length, 1, '未知番街被丢弃');
   eq(d.cleared.area0, 3, '合法番街保留');
-  eq(d.eggs.length, 1, '不存在的碎片 id 被丢弃');
-  eq(d.eggCount, 1, 'eggCount 不得小于已解锁碎片数');
+  eq(d.eggs, undefined, 'v0.17：旧档 eggs 字段被忽略（图鉴已移除）');
+  eq(d.eggCount, undefined, 'v0.17：旧档 eggCount 字段被忽略');
   eq(d.chars.length, 1, '非法角色 id 被丢弃');
   eq(d.companions.length, 0, '非法同伴 id 被丢弃');
   eq(d.supports.length, 1, '非法支援物品 id 被丢弃，合法者保留');

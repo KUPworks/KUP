@@ -1,8 +1,8 @@
-﻿window.KUP = window.KUP || {};
+window.KUP = window.KUP || {};
 
 /* ================= 全局配置 ================= */
 KUP.CONFIG = {
-  VERSION: '0.16.0-cash',
+  VERSION: '0.17.0-phenomenon',
   ARENA: 3000,            // 正方形竞技场边长
   PLAYER_R: 13,
   PLAYER_HIT_CD: 0.55,    // 玩家受击无敌帧
@@ -115,6 +115,25 @@ KUP.CONFIG = {
     WAVE_T: 30, RATE_BASE: 1.4, RATE_STEP: 0.32, RATE_MAX: 7.5,
     ELITE_EVERY: 45, BOSS_EVERY: 120, BOSS_FIRST: 240, HP_STEP: 0.35, BOSS_ENRAGE: 75,
   },
+  /* ---------- 記憶の卵（v0.17：**局内「現象」卡**，不再是局外收集品）----------
+   * 人类 2026-10-19：「重设记忆之卵定位。每局有最多一次机会（且概率很低）抽到名为
+   *   『记忆之卵』的『现象』卡，允许玩家复活一次，同时小 aoe 和短暂无敌帧。
+   *   不做局外物品……玩家胜利结局不能重生，治安战可重生多次（概率依然很低）」。
+   * 规则：
+   *   · 升级三选一时，按 CHANCE **额外**多出一张現象卡（不占普通卡池、不可封禁）；
+   *   · 选中 ⇒ 获得 1 次復活充能（选择本身不附带其它成长 —— 用一次升级换一条命）；
+   *   · **番街一局最多出现一次**（eggOffered 一旦为真就不再抽，哪怕你没选）；
+   *   · **治安战**在充能用掉之后可以再次抽到 ⇒ 可復活多次，但每次仍受同一低概率限制；
+   *   · 復活只在 `state === 'playing'` 时触发 —— **胜利结局 / 结算之后不再復活**。
+   * 调参：CHANCE 是"每次升级"的概率（0.6% ⇒ 一局约 8–12% 见得到）；其余是復活的手感参数。 */
+  EGG: {
+    CHANCE: 0.006,
+    HP_PCT: 0.5,      // 復活后生命比例
+    AOE_R: 240,       // 小 AOE 半径（px）
+    AOE_DMG: 80,      // AOE 伤害（结算时再乘玩家 dmgMult）
+    KB: 300,          // AOE 击退
+    IFRAME: 2.5,      // 復活无敌帧（秒）
+  },
   DEFAULT_SEED: 20250314,
   DEFAULT_AREA: 'area0',
   DEFAULT_MOD: 'none',
@@ -128,7 +147,6 @@ KUP.CONFIG = {
     FIRST_CLEAR: 12,                 // 首次通关某番街
     REPEAT_CLEAR: 2,                 // 重复通关
     RUN_MEASURED: 1,                 // 任意完成一局（観測データの計上）
-    EGG_BONUS: 1,                    // 每枚記憶の卵
   },
 };
 

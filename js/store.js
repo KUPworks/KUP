@@ -429,7 +429,7 @@ window.KUP = window.KUP || {};
         const meta = this.entry(id) || {};
         const d = STORE.read('progress', this.saveKey(id));
         return {
-          fukkou: d.fukkou, tickets: d.tickets, eggs: d.eggCount,
+          fukkou: d.fukkou, tickets: d.tickets, cash: d.cash,
           runs: meta.runs || 0, wins: meta.wins || 0,
           playtime: meta.playtime || 0, playedAt: meta.playedAt || 0,
           best: d.best || null, total: d.fukkou,

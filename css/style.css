@@ -239,6 +239,10 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .lu-tag.new { color: #ffe08a; border: 1px solid rgba(255,214,110,.55); background: rgba(255,200,80,.08); }
 .lu-tag.up { color: #8affc9; border: 1px solid rgba(110,255,200,.5); background: rgba(80,255,190,.07); }
 .lu-tag.heal { color: #ff9ab5; border: 1px solid rgba(255,130,165,.5); background: rgba(255,110,150,.08); }
+/* v0.17 記憶の卵（現象卡）：金白发光，一眼看出「这不是普通成长」 */
+.lu-tag.egg { color: #ffe89a; border: 1px solid rgba(255,232,154,.8); background: rgba(255,220,120,.14); animation: egg-pulse 1.8s infinite; }
+@keyframes egg-pulse { 0%,100% { opacity: 1; } 50% { opacity: .82; } }
+.lu-card:has(.lu-tag.egg) { border-color: rgba(255,232,154,.45); box-shadow: 0 0 18px rgba(255,216,110,.12); }
 .lu-card .lu-name { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
 .lu-card .lu-desc { font-size: 12.5px; line-height: 1.75; color: #b9b1e4; min-height: 66px; }
 .lu-card .lu-lvline { margin-top: 8px; font-size: 12px; color: #8fd0ff; font-weight: 700; }
@@ -302,18 +306,6 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 #area-detail b { color: var(--c, #8fd0ff); }
 #area-detail .area-req { color: #8fd0ff; font-size: 12px; }
 
-/* ============ 记忆图鉴（記憶の卵 ★ 动画第6話） ============ */
-.mem-count { font-size: 13px; color: #ffe08a; letter-spacing: .12em; margin-bottom: 14px; }
-#memory-list { display: flex; flex-direction: column; gap: 8px; text-align: left; }
-.mem-item {
-  padding: 11px 14px; border-radius: 8px;
-  background: rgba(20,12,45,.7); border: 1px solid rgba(255,210,90,.35);
-}
-.mem-item .mem-title { font-size: 13.5px; font-weight: 700; color: #ffe08a; }
-.mem-item .mem-text { font-size: 12.5px; line-height: 1.8; color: #c9c2ee; margin-top: 4px; }
-.mem-item.mem-locked { opacity: .45; border-color: rgba(150,130,230,.25); filter: saturate(.3); }
-.mem-item.mem-locked .mem-title { color: #9a90d6; }
-
 /* ============ 浄化の歌充能条（HUD ★ 第2話副标题） ============ */
 #ult-wrap { margin-top: 6px; width: min(300px, 46vw); }
 #ult-label { font-size: 10.5px; letter-spacing: .18em; color: #8fd0ff; text-shadow: 0 0 8px rgba(90,200,255,.7); margin-bottom: 3px; }
@@ -335,7 +327,6 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .lu-tag.awaken { color: #ffe08a; border: 1px solid rgba(255,225,120,.7); background: rgba(255,210,90,.14); animation: ult-pulse 1.2s infinite; }
 .fukkou-gain { margin-top: 14px; font-size: 14px; font-weight: 700; color: #7dffe0; letter-spacing: .1em; }
 .fukkou-unlock { margin-top: 8px; font-size: 13px; color: #ffe08a; letter-spacing: .1em; animation: banner-in .5s ease-out; }
-.frag-unlock { margin-top: 8px; font-size: 12.5px; color: #ffd89a; letter-spacing: .08em; }
 .w-icon.evolved { box-shadow: 0 0 14px color-mix(in srgb, var(--c, #8fd0ff) 80%, transparent); border-color: #ffe08a; }
 .w-icon.evolved .e {
   position: absolute; top: -5px; right: -4px; font-size: 10px; color: #ffe08a;
@@ -482,6 +473,7 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 #buff-row .b-miss { color: #c9ffe8; box-shadow: 0 0 8px rgba(201,255,232,.5); }
 #buff-row .b-regen { color: #8affc9; box-shadow: 0 0 8px rgba(138,255,201,.5); }
 #buff-row .b-magnet { color: #5ad0ff; box-shadow: 0 0 8px rgba(90,208,255,.5); }
+#buff-row .b-egg { color: #ffe89a; box-shadow: 0 0 10px rgba(255,232,154,.7); border-color: rgba(255,225,120,.6); }
 /* 局内道具卡（护盾/MISS/回血）：虚线边框 + 专用标签色，与被动卡区分 */
 .lu-card .lu-tag.item { background: linear-gradient(120deg, #bff7ff, #7de0c8); color: #08202a; }
 .lu-card:has(.lu-tag.item) { border-style: dashed; }
@@ -653,9 +645,9 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .select-actions { margin-top: var(--ui-gap-m); gap: var(--ui-gap-m); }
 .select-actions .btn-primary, .select-actions .btn-ghost { padding: clamp(5px, .9vmin, 11px) clamp(12px, 2vmin, 26px); font-size: var(--ui-fs-s); }
 
-/* 列表型屏幕（商店/图鉴/存档）：网格自适应，不在小屏上撑出滚动条 */
-#shop-list, #memory-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(clamp(120px, 16vmin, 200px), 1fr)); gap: var(--ui-gap-m); }
-.shop-card, .mem-item { min-width: 0; }
+/* 列表型屏幕（商店/存档）：网格自适应，不在小屏上撑出滚动条 */
+#shop-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(clamp(120px, 16vmin, 200px), 1fr)); gap: var(--ui-gap-m); }
+.shop-card { min-width: 0; }
 
 /* 菜单页：长 lore 在小高度屏幕上收成 2 行，保证按钮不被挤出 */
 #screen-menu .lore {

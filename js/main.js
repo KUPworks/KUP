@@ -37,6 +37,8 @@ window.KUP = window.KUP || {};
     game.debug.lang = q.get('lang');
     game.debug.hurt = parseFloat(q.get('hurt')) || 0; // 初始损失 HP 比例
     game.debug.pick = q.get('pick');                  // 强制升级选项（逗号分隔）
+game.debug.egg = q.get('egg') === '1';            // v0.17 调试：下一次升级必出記憶の卵（現象卡）
+game.debug.revive = q.get('revive') === '1';      // v0.17 调试：开局带 1 次復活充能（验证復活手感）
     /* v0.14：?auto=first|last 自动采升级卡（验证被动/护盾 HUD 等需要频繁升级的效果） */
     const autoQ = q.get('auto');
     if (autoQ === 'first') game.debug.autoPick = 0;
@@ -118,7 +120,7 @@ window.KUP = window.KUP || {};
     if (game.state === 'levelup') {
       if (k === 'r') { if (!ev.repeat) game.rerollChoices(); return; }
       if (k === 'b') { if (!ev.repeat) KUP.UI.toggleBanMode(); return; }
-      if (k === '1' || k === '2' || k === '3') {
+      if (k === '1' || k === '2' || k === '3' || k === '4') {
         const idx = parseInt(k, 10) - 1;
         if (game.banMode) game.banChoice(idx); else game.choose(idx);
         return;

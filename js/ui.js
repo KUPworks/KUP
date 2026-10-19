@@ -1,12 +1,13 @@
 window.KUP = window.KUP || {};
 
 /* ================= UI 层（DOM） =================
- * v0.4.0-loop：番街选择（復興率解锁 ★★）、记忆图鉴（記憶の卵 ★）、
- * 復興率条（HUD）、浄化の歌充能条（HUD）、觉醒卡、结算「復興率 +N%」。 */
+ * v0.4.0-loop：番街选择（復興率解锁 ★★）、
+ * 復興率条（HUD）、浄化の歌充能条（HUD）、觉醒卡、结算「復興率 +N%」。
+ * v0.17：記憶の卵改局内現象卡——记忆图鉴屏已移除。 */
 (function () {
   const U = KUP.U;
   const $ = id => document.getElementById(id);
-  const SCREENS = ['screen-menu', 'screen-area', 'screen-select', 'screen-levelup', 'screen-pause', 'screen-over', 'screen-victory', 'screen-memory', 'screen-shop', 'screen-slots'];
+  const SCREENS = ['screen-menu', 'screen-area', 'screen-select', 'screen-levelup', 'screen-pause', 'screen-over', 'screen-victory', 'screen-shop', 'screen-slots'];
 
   const UI = {
     game: null,
@@ -28,8 +29,8 @@ window.KUP = window.KUP || {};
         'over-stats', 'win-stats', 'danger', 'hp-bar', 'hp-text', 'lv-num', 'timer', 'kills',
         'weapon-row', 'xp-bar-fill', 'boss-wrap', 'boss-rows', 'vol-slider',
         'shield-row', 'shield-orb', 'shield-num', 'shield-tag', 'dash-pips', 'danger-warn', 'btn-dash', 'buff-row', 'btn-aim',
-        'area-cards', 'area-detail', 'fukkou-fill', 'fukkou-label', 'memory-list', 'memory-count',
-        'ult-wrap', 'ult-fill', 'ult-label', 'win-sub', 'fukkou-menu-line',
+        'area-cards', 'area-detail', 'fukkou-fill', 'fukkou-label',
+        'ult-wrap', 'ult-fill', 'ult-label', 'win-sub',
         'companion-strip', 'companion-detail', 'companion-form-wrap', 'companion-form-strip',
         'companion-form-detail', 'form-strip', 'form-detail', 'form-title', 'form-chips', 'hud-companion', 'companion-form-title',
         'shop-list', 'shop-tickets', 'shop-cash', 'btn-exchange', 'fukkou-menu-tickets',
@@ -92,9 +93,6 @@ window.KUP = window.KUP || {};
       });
       $('btn-area-back').addEventListener('click', () => { this.showScreen('screen-menu'); this.showHUD(false); this.showBest(); });
       $('btn-area-next').addEventListener('click', () => { if (this.selectedArea) this.showSelect(); });
-      $('btn-memory').addEventListener('click', () => { KUP.Audio.sfx('select'); this.showMemory(); });
-      $('btn-memory-back').addEventListener('click', () => { this.showScreen('screen-menu'); this.showBest(); });
-      $('btn-memory-area').addEventListener('click', () => { this.showScreen('screen-area'); this.showAreaSelect(); });
       /* 冲刺按钮（触屏/鼠标）：与 Shift 等价 */
       if ($('btn-dash')) $('btn-dash').addEventListener('click', () => { if (KUP.game) KUP.game.tryDash(); });
       /* 瞄准模式切换（自动／鼠标／移动） */
@@ -231,8 +229,6 @@ window.KUP = window.KUP || {};
       } else if (st === 'screen-area') {
         this.showAreaSelect();
         this.selectArea(this.selectedArea);
-      } else if (st === 'screen-memory') {
-        this.showMemory();
       } else if (st === 'screen-shop') {
         this.showShop();
       } else if (st === 'screen-slots') {
@@ -335,13 +331,9 @@ window.KUP = window.KUP || {};
       for (const a of KUP.AREAS) {
         if (!KUP.META.isUnlocked(a.id)) { next = KUP.META.thresholdOf(a.id); break; }
       }
-      const eggs = KUP.META.ensure().eggCount;
       this.els['fukkou-label'].textContent = next != null
         ? KUP.I18N.t('meta.rate', { n: total }) + ' · ' + KUP.I18N.t('meta.next', { n: next })
         : KUP.I18N.t('meta.rate', { n: total }) + ' · ' + KUP.I18N.t('meta.max');
-      if (this.els['fukkou-menu-line']) {
-        this.els['fukkou-menu-line'].textContent = KUP.I18N.t('meta.eggs', { n: eggs });
-      }
       if (this.els['fukkou-menu-tickets']) {
         /* v0.16：菜单同时显示两种局外货币——现金（主货币）＋ 市民票（招募凭证） */
         this.els['fukkou-menu-tickets'].textContent =
@@ -482,26 +474,6 @@ window.KUP = window.KUP || {};
       this.showShop();
     },
 
-    /* ---------- 记忆图鉴（記憶の卵 ★ 动画第6話） ---------- */
-    showMemory() {
-      this.showScreen('screen-memory');
-      this.showHUD(false);
-      this.updateMetaUI();
-      const list = this.els['memory-list'];
-      list.innerHTML = '';
-      const unlocked = KUP.META.ensure().eggs;
-      for (const f of KUP.FRAGMENTS) {
-        const has = unlocked.indexOf(f.id) >= 0;
-        const row = document.createElement('div');
-        row.className = 'mem-item' + (has ? '' : ' mem-locked');
-        row.innerHTML = has
-          ? '<div class="mem-title">🥚 ' + KUP.I18N.tv(f.title) + '</div><div class="mem-text">' + KUP.I18N.tv(f.text) + '</div>'
-          : '<div class="mem-title">🥚 ' + KUP.I18N.t('mem.locked') + '</div><div class="mem-text">' + KUP.I18N.t('mem.lockedHint') + '</div>';
-        list.appendChild(row);
-      }
-      this.els['memory-count'].textContent = KUP.I18N.t('mem.count', { n: unlocked.length, m: KUP.FRAGMENTS.length });
-    },
-
     /* ---------- 存档 / 观测记录（v0.7 多槽位） ----------
      * 槽位管理全部经 KUP.META.slots → KUP.STORE；本层只负责 DOM 与确认交互。
      * ⚠️ 切换/删除槽位会重载 META 内存态，因此必须同步刷新菜单与选择界面的缓存状态。 */
@@ -554,7 +526,7 @@ window.KUP = window.KUP || {};
         const sumEl = document.createElement('div');
         sumEl.className = 'slot-sum';
         sumEl.textContent = KUP.I18N.t('slots.summary', {
-          f: Math.round(sum.fukkou), t: sum.tickets, e: sum.eggs,
+          f: Math.round(sum.fukkou), t: sum.tickets, c: sum.cash,
         });
         card.appendChild(sumEl);
 
@@ -979,8 +951,13 @@ window.KUP = window.KUP || {};
           tagCls = (c.kind === 'passive-new') ? 'new' : 'up';
           name = KUP.I18N.tv(def.name); desc = KUP.I18N.tv(def.desc);
           lvline = cur ? KUP.I18N.t('lu.lvline.up', { from: cur, to: cur + 1 }) : KUP.I18N.t('lu.lvline.new');
+        } else if (c.kind === 'egg') {
+          /* v0.17 記憶の卵（現象卡）：罕见的额外卡——用一次升级换一条命 */
+          col = '#ffe89a';
+          tag = KUP.I18N.t('lu.tag.egg'); tagCls = 'egg';
+          name = KUP.I18N.t('egg.name'); desc = KUP.I18N.t('egg.desc');
+          lvline = KUP.I18N.t('egg.line');
         } else {
-          tag = KUP.I18N.t('lu.tag.heal'); tagCls = 'heal'; col = '#ff9ab5';
           name = KUP.I18N.t('lu.heal.name'); desc = KUP.I18N.t('lu.heal.desc'); lvline = '—';
         }
         card.style.setProperty('--c', col);
@@ -1183,13 +1160,15 @@ window.KUP = window.KUP || {};
       /* 局内道具 BUFF（MISS／回血／磁石）剩余时间 */
       if (this.els['buff-row']) {
         const b = p.buffs || { miss: 0, regen: 0, magnet: 0 };
-        const bsig = Math.ceil(b.miss) + '/' + Math.ceil(b.regen) + '/' + Math.ceil(b.magnet || 0);
+        const bsig = Math.ceil(b.miss) + '/' + Math.ceil(b.regen) + '/' + Math.ceil(b.magnet || 0) + '/' + (g.eggCharge || 0);
         if (bsig !== this.lastBuffSig) {
           this.lastBuffSig = bsig;
           let h = '';
           if (b.miss > 0) h += '<span class="buff b-miss">避 ' + Math.ceil(b.miss) + 's</span>';
           if (b.regen > 0) h += '<span class="buff b-regen">潤 ' + Math.ceil(b.regen) + 's</span>';
           if (b.magnet > 0) h += '<span class="buff b-magnet">磁 ' + Math.ceil(b.magnet) + 's</span>';
+          /* v0.17：記憶の卵充能（可復活次数）——常驻显示，直到用掉 */
+          if (g.eggCharge > 0) h += '<span class="buff b-egg">' + KUP.I18N.t('hud.eggChip', { n: g.eggCharge }) + '</span>';
           this.els['buff-row'].innerHTML = h;
         }
       }
@@ -1252,7 +1231,7 @@ window.KUP = window.KUP || {};
         '<div class="stat"><b>' + st.kills + '</b><span>' + KUP.I18N.t('end.stat.kills') + '</span></div>' +
         '<div class="stat"><b>' + st.level + '</b><span>' + KUP.I18N.t('end.stat.level') + '</span></div>' +
         '<div class="stat"><b>' + st.witch + '</b><span>' + KUP.I18N.t('end.stat.witch') + '</span></div>' +
-        '<div class="stat"><b>🥚 ' + (st.eggs || 0) + '</b><span>' + KUP.I18N.t('end.stat.eggs') + '</span></div>';
+        '<div class="stat"><b>🥚 ' + (st.revives || 0) + '</b><span>' + KUP.I18N.t('end.stat.revive') + '</span></div>';
       /* 治安战：以「波次 + 点数」为主成绩（🧮 换掉卵的权重） */
       if (order) {
         html = '<div class="stat"><b>' + U.formatTime(st.time) + '</b><span>' + KUP.I18N.t('end.stat.time') + '</span></div>' +
@@ -1306,11 +1285,6 @@ window.KUP = window.KUP || {};
         this.updateMetaUI();
       }
       // 最佳记录：v0.15.2 起**不再写入番街战绩**（主菜单只显示治安战记录），因此这里不再提交
-      // 解锁的记忆片段提示
-      const frag = this.game.fragUnlocked;
-      if (frag) {
-        holder.innerHTML += '<div class="frag-unlock">🥚 ' + KUP.I18N.t('end.frag', { t: KUP.I18N.tv(frag.title) }) + '</div>';
-      }
       this.updateSaveHealth();     // 若结算落盘失败（配额/privacy），立刻让玩家看到
     },
     showBest() {

@@ -987,9 +987,9 @@ KUP.ITEMS = {
     id: 'magnet', icon: '磁', color: '#5ad0ff', kind: 'magnet', amount: 1, seconds: 8,
     name: { zh: '磁石の符', en: 'Ward of Magnetism', ja: '磁石の符' },
     desc: {
-      zh: '歌声化作磁场——<b>8 秒内全场音片被吸向魔女</b>（回复 ♥ 与記憶の卵同样被吸引）。',
-      en: 'Your song becomes a magnetic field — <b>every note shard is pulled to you for 8s</b> (hearts and Eggs of Memory too).',
-      ja: '歌が磁場となる——<b>8 秒間、場の音片すべてが引き寄せられる</b>（回復♥と記憶の卵も）。',
+      zh: '歌声化作磁场——<b>8 秒内全场音片被吸向魔女</b>（回复 ♥ 同样被吸引）。',
+      en: 'Your song becomes a magnetic field — <b>every note shard is pulled to you for 8s</b> (hearts too).',
+      ja: '歌が磁場となる——<b>8 秒間、場の音片すべてが引き寄せられる</b>（回復♥も）。',
     },
   },
   /* ===== v0.13 状态异常（僵直／冷冻 与 减速）=====
@@ -1056,97 +1056,10 @@ KUP.ENEMIES = {
   },
 };
 
-/* ---------- 记忆片段（記憶の卵 ★ 动画第6話解锁的记忆图鉴） ----------
- * 拾取記憶の卵 → 按顺序解锁一条。
- * ★ 标题全部取自**动画各话官方副标题**（【官方】）：魔女の娘（第1話）／悪意（第4話）／
- *   フラグメント -Energy of will-（第3話）／ファミリア -Familiar-（第5話）／
- *   記憶の卵 -Piece of memory-（第6話）／ブラックアウト＝大黒寂（第8話）／再生 -Regenerate-（第11話）。
- *   「復興率」取自協奏中官方机制。全部世界观依据见 docs/lore/worldview.md §2.3／§12。
- * ⚠️ 正文**不得解答官方"待解四问"**（少女们为何歌唱／神椿市为何反复崩坏再生／
- *    拉普拉斯是敌是友／破维魔的真面目）——官方明言「刻意不去提及」（lore §1、§15.6）。
- *    唯一的例外是「現象＝索菲娅的时间回溯」，且必须标注为**本作设定解读**。
- * ⚠️ 敌人根源的完整链条是「麦克斯韦 → 大黒寂（伪装天灾）→ 恐惧与欲望 → 破维魔 → 提取フラグメント」，
- *    但『malice』一篇沿用**动画官网可见文案「悪意と欲望」**（与该篇的官方副标题同源），
- *    不点出具象者麦克斯韦——更底层的写法只留在本注释里。 */
-KUP.FRAGMENTS = [
-  {
-    id: 'witchling',
-    title: { zh: '魔女の娘 -Witchling-', en: 'Witchling', ja: '魔女の娘 -Witchling-' },
-    text: {
-      zh: '五名魔女之子住在废墟之中，却仍在歌唱——那歌声，是这座城市最后的照明。',
-      en: 'Five witchlings live among the ruins, yet still sing — that song is the city\'s last light.',
-      ja: '五人の魔女の娘は廃墟に住み、それでも歌う——その歌声は、この街最後の照明だ。',
-    },
-  },
-  {
-    id: 'malice',
-    title: { zh: '悪意 -Malice-', en: 'Malice', ja: '悪意 -Malice-' },
-    text: {
-      zh: '破维魔诞生于人之恶意与欲望。净化不会终结——只要恶意仍在累积。',
-      en: 'Tesseracters are born of human malice and desire. Purification never ends — malice keeps accumulating.',
-      ja: 'テセラクターは人の悪意と欲望より生まれる。浄化は終わらない——悪意が蓄積し続ける限り。',
-    },
-  },
-  {
-    id: 'fragment',
-    title: { zh: 'フラグメント -Energy of will-', en: 'Fragment — Energy of Will', ja: 'フラグメント -Energy of will-' },
-    text: {
-      zh: '音片（フラグメント）是「想いの力」的结晶。收集它们，歌声便会愈发响亮。',
-      en: 'Fragments are crystallized "energy of will". Gather them, and the song grows louder.',
-      ja: 'フラグメントは「想いの力」の結晶。集めるほど、歌声はいっそう響き渡る。',
-    },
-  },
-  {
-    id: 'familiar',
-    title: { zh: 'ファミリア -Familiar-', en: 'Familiar', ja: 'ファミリア -Familiar-' },
-    /* ★ 2026-10 定论（本仓库 lore §4.2／§11 行 22）：眷魔**全体是破维魔盟友**——
-     *   与对应魔女可能有摩擦、矛盾、冲突，但**不存在完全敌对**。
-     *   ⚠️ 旧文案「敌与友，一线之隔」属于已被推翻的「敵友两义」说法，不得再出现；
-     *      本作也不做「先当敌人打、再收服」的转化叙事。 */
-    text: {
-      zh: '与魔女结盟的使魔「ファミリア（<b>眷魔</b>）」——它们同时仍是异能破维魔，却始终是<b>盟友</b>：会有摩擦与矛盾，但不会真正与你为敌。',
-      en: 'The familiars who covenant with witches — they remain aberrant Tesseracters, yet they are <b>allies</b>: friction and conflict, but never true enmity.',
-      ja: '魔女と盟した使い魔「ファミリア」。同時に異能テセラクターであり、そして<b>盟友</b>だ——摩擦はあれど、真に敵対することはない。',
-    },
-  },
-  {
-    id: 'egg',
-    title: { zh: '記憶の卵 -Piece of memory-', en: 'Piece of Memory', ja: '記憶の卵 -Piece of memory-' },
-    text: {
-      zh: '记忆的卵中封存着「魔女の娘の記憶」。观测者啊，你想起了什么？',
-      en: 'Inside the egg of memory sleeps "the witchlings\' memory". Observer — what do you recall?',
-      ja: '記憶の卵には「魔女の娘の記憶」が眠る。観測者よ、何を思い出す？',
-    },
-  },
-  {
-    id: 'daikokujaku',
-    title: { zh: '大黒寂', en: 'The Great Silence', ja: '大黒寂' },
-    text: {
-      zh: '七年前的大灾害「大黒寂」——神椿市从那片寂静中奇迹般复兴。',
-      en: 'Seven years ago came the Great Silence, "Daikoku-jaku" — Kamitsubaki City miraculously rose from it.',
-      ja: '七年前の大災害「大黒寂」——神椿市はあの静寂から奇跡的に復興した。',
-    },
-  },
-  {
-    id: 'fukkou',
-    title: { zh: '復興率', en: 'Restoration Rate', ja: '復興率' },
-    text: {
-      zh: '「打歌，提升神椿市的復興率」——复兴即是叙事。街区因歌声而苏醒。',
-      en: '"Play, and raise the city\'s restoration rate" — restoration is the story. The district wakes to song.',
-      ja: '「楽曲をプレイして神椿市の復興率を上げる」——復興こそが物語。街は歌によって目を覚ます。',
-    },
-  },
-  {
-    id: 'regenerate',
-    title: { zh: '再生 -Regenerate-', en: 'Regenerate', ja: '再生 -Regenerate-' },
-    text: {
-      zh: '终有一日，歌声将让世界「再生」——浄化的尽头，是重建的开始。',
-      en: 'One day, the song will "regenerate" the world — past purification lies the beginning of rebuilding.',
-      ja: 'いつか、歌は世界を「再生」する——浄化の果てに、建設の始まりがある。',
-    },
-  },
-];
-
+/* ---------- 记忆片段（已移除，v0.17） ----------
+ * 记忆图鉴与 8 条片段随「記憶の卵改成局内現象卡」一并删除（人类 2026-10-19 选择）。
+ * 世界观考据仍在 docs/lore/，不再以局外收集品的形式出现。
+ */
 /* ---------- 可招募（同行支援，非可操作角色） ----------
  * ★ 2026-10 修正：同行支援层不再是自创角色，改用 **REGENERATE 官方页给出的既存角色**——
  *   「肆番街相遇的少女，**復興課課員**」**彩季 詩得（サイキ シエル＝CIEL）**【官方】。

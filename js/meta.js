@@ -5,7 +5,9 @@ window.KUP = window.KUP || {};
  * 本作映射：一局结束 → 提升**神椿市復興率** → 达阈值**解锁下一番街**（零番街〜陸番街）。
  *
  * ★ 記憶の卵 —— 动画第6話副标题「記憶の卵 -Piece of memory-」：
- * 拾取记忆卵 → 解锁一条**记忆片段**（观测者的记忆，见 menu 记忆图鉴）＋ 復興率 +1%。
+ * 本作 v0.17 起改为**局内「現象」卡**（人类 2026-10-19）：低概率在升级三选一里额外出现，
+ * 选中后获得一次**復活**（回血 + 小 AOE + 无敌帧）。它**不产出任何局外进度**——
+ * 记忆图鉴与记忆片段已随之移除，復興率/现金也不再由卵提供。
  *
  * ★ 招募 —— 魔女候補（天祢亜留／地邑阿栖，ヰ世界救済教団）按条件加入；皮肤/形態选择亦持久化。
  *
@@ -15,7 +17,7 @@ window.KUP = window.KUP || {};
  * ---------- 存储结构（v0.7 起全部经由 KUP.STORE，见 js/store.js） ----------
  *   kup.slots      槽位索引 { active, seq, list:[{id,name,createdAt,playedAt,playtime,runs,wins}] }
  *   kup.save.<id>  每槽进度（本文件注册的 'progress' schema）：
- *     { fukkou, cash, tickets, cleared: {areaId: count}, eggs: [fragId...], eggCount,
+ *     { fukkou, cash, tickets, cleared: {areaId: count},
  *       chars: [charId...], companions: [id...], shop: {itemId: lv},
  *       form, companion, companionForm,
  *       best: { win, time, kills, level, witch, area, at } | null,
@@ -36,10 +38,9 @@ window.KUP = window.KUP || {};
   const FIRST_CLEAR = SC.FIRST_CLEAR != null ? SC.FIRST_CLEAR : 12;
   const REPEAT_CLEAR = SC.REPEAT_CLEAR != null ? SC.REPEAT_CLEAR : 2;
   const RUN_MEASURED = SC.RUN_MEASURED != null ? SC.RUN_MEASURED : 1;
-  const EGG_BONUS = SC.EGG_BONUS != null ? SC.EGG_BONUS : 1;
   /* v0.16：**现金**（每局结束发放的局外主货币）
    *   · 发放量 ＝ 原市民票收入的 CASH_INCOME_MUL 倍（沿用同一套来源：净化数／通关／
-   *     首通／記憶の卵／番街深度），所以"手感节奏"与旧版一致，只是数值放大；
+   *     首通／番街深度），所以"手感节奏"与旧版一致，只是数值放大；
    *   · 瓦利斯的价格同步 ×CASH_PRICE_MUL（＝同一个倍数），因此升级节奏不变；
    *   · 市民票改由现金**小比例兑换**（CASH_PER_TICKET 枚 → 1 张），
    *     招募价统一 1 张 ⇒ "一张市民票即可招募"。
@@ -56,16 +57,11 @@ window.KUP = window.KUP || {};
    * normalize 是**唯一的**存档形状权威：任何来源（磁盘、导入、迁移、旧档）都经过它。 */
   function normalizeProgress(raw) {
     const d = (raw && typeof raw === 'object') ? raw : {};
-    const frags = KUP.FRAGMENTS || [];
     const charsAll = KUP.CHARS || [];
     const compsAll = KUP.COMPANIONS || [];
     const forms = KUP.FORMS || [];
     const shopDefs = KUP.SHOP || [];
 
-    /* 记忆碎片：只保留当前数据表里存在的 id，且不超过总数 */
-    const eggs = Array.isArray(d.eggs)
-      ? d.eggs.filter(id => frags.some(f => f.id === id)).slice(0, frags.length)
-      : [];
     /* 招募名单：只保留合法的可招募角色 / 已知同伴，且去重 */
     const chars = Array.isArray(d.chars)
       ? Array.from(new Set(d.chars.filter(id => charsAll.some(c => c.id === id && c.recruit))))
@@ -146,9 +142,6 @@ window.KUP = window.KUP || {};
        * 市民票由它按小比例兑换（见 META.exchangeCash）。旧存档没有这个字段 ⇒ 0。 */
       cash: Math.max(0, int(d.cash, 0)),
       cleared: cleared,
-      eggs: eggs,
-      /* eggCount 是「累计拾取数」（可超过碎片总数），不得小于已解锁碎片数 */
-      eggCount: Math.max(eggs.length, int(d.eggCount, eggs.length)),
       chars: chars,
       companions: companions,
       supports: supports,
@@ -279,16 +272,16 @@ window.KUP = window.KUP || {};
      *   · 瓦利斯（局外强化／支援／其它局外消费）一律用**现金**结算；
      *   · 市民票改为**由现金小比例兑换**得到（`exchangeCash`），不再直接发放；
      *   · 招募价统一 `RECRUIT_TICKETS`（＝1 张市民票）。
-     * 每局收入仍是同一套来源（净化数／通关／首通／記憶の卵／番街深度），乘 CASH_INCOME_MUL。 */
+     * 每局收入仍是同一套来源（净化数／通关／首通／番街深度），乘 CASH_INCOME_MUL。
+     * v0.17：記憶の卵不再提供局外收入（它已改为局内現象卡）。 */
     cash() { return this.ensure().cash; },
     cashIncome(r) {
       r = r || {};
       const kills = Math.floor((r.kills || 0) / 10);
       const win = r.win ? 15 : 3;
       const first = (r.win && r.firstClear) ? 10 : 0;
-      const eggs = (r.eggs || 0) * 5;
       const depth = (r.areaIdx || 0) * 2;
-      return (kills + win + first + eggs + depth) * CASH_INCOME_MUL;
+      return (kills + win + first + depth) * CASH_INCOME_MUL;
     },
     addCash(n) {
       const d = this.ensure();
@@ -464,7 +457,7 @@ window.KUP = window.KUP || {};
     /* ---------- 一局结束：復興率结算 + 市民票收入 ----------
      * **幂等**：run.runId 与存档里的 lastRunId 相同则直接返回 null（同一局不重复结算）。
      * 这比「靠 game.state 挡住二次调用」可靠——任何重入/重复事件都不会刷復興率。
-     * run = { runId, kills, eggs, areaIdx, time }
+     * run = { runId, kills, areaIdx, time }
      * 返回 { gain, total, tickets, ticketsTotal, newlyUnlocked, newlyRecruitable } 或 null。 */
     addRunResult(areaId, win, run) {
       run = run || {};
@@ -487,7 +480,7 @@ window.KUP = window.KUP || {};
       /* v0.16：每局结束发放**现金**（局外主货币）；市民票不再直接发——由玩家在瓦利斯
        * 用现金按小比例兑换（META.exchangeCash）。 */
       const cash = this.cashIncome({
-        kills: run.kills, eggs: run.eggs, areaIdx: run.areaIdx, win: win, firstClear: firstClear,
+        kills: run.kills, areaIdx: run.areaIdx, win: win, firstClear: firstClear,
       });
       d.cash += cash;
       /* 兼容返回字段：老 UI/脚本读 tickets 时给它**等值的现金**，但余额本身不再增加。
@@ -515,7 +508,7 @@ window.KUP = window.KUP || {};
 
     /* ---------- v0.13 治安战（无尽关卡）的独立成绩 ----------
      * 规则：**没有败北**——只有「战斗结束」；成绩记入 `orderBest`（与番街 best 完全分离），
-     *       不发復興率、不写通关次数、不落記憶の卵；市民票按净化数照常结算。 */
+     *       不发復興率、不写通关次数；现金按净化数照常结算。 */
     orderScore(r) {
       r = r || {};
       return Math.max(0, Math.round((r.kills || 0) * 10 + (r.time || 0) * 2 + (r.wave || 1) * 100));
@@ -541,7 +534,7 @@ window.KUP = window.KUP || {};
       const isBest = !prev || score > prev.score || (score === prev.score && time > prev.time);
       if (isBest) d.orderBest = { score, kills, time, wave, at: Date.now() };
       /* v0.16：现金（治安战同样发；市民票不再直接发，改由现金兑换） */
-      const cash = this.cashIncome({ kills, eggs: 0, areaIdx: 0, win: false, firstClear: false });
+      const cash = this.cashIncome({ kills, areaIdx: 0, win: false, firstClear: false });
       d.cash += cash;
       d.stats.runs += 1;
       if (time > 0) d.stats.playtime += time;
@@ -582,20 +575,6 @@ window.KUP = window.KUP || {};
       d.best = next;
       this.save();
       return true;
-    },
-
-    /* ---------- 記憶の卵拣取 → 解锁下一条记忆片段 ＋ 復興率 +1% ---------- */
-    addEgg() {
-      const d = this.ensure();
-      d.eggCount += 1;
-      d.fukkou += EGG_BONUS;
-      let frag = null;
-      if (d.eggs.length < KUP.FRAGMENTS.length) {
-        frag = KUP.FRAGMENTS[d.eggs.length];
-        d.eggs.push(frag.id);
-      }
-      this.save();
-      return frag;
     },
 
     /* ---------- 皮肤/形態选择（外观，非关键 → 合并写） ---------- */

@@ -26,6 +26,5 @@ console.log('FORMS      ' + KUP.FORMS.length + '（' + KUP.FORMS.map(f => f.id).
 console.log('ENEMIES    ' + Object.keys(KUP.ENEMIES).filter(k => !k.startsWith('boss')).join(','));
 console.log('BOSSES     ' + Object.keys(KUP.BOSSES).length + ' 模式: ' + [...new Set(Object.values(KUP.BOSSES).map(b => b.pattern))].join('/'));
 console.log('MODIFIERS  ' + Object.keys(KUP.MODIFIERS).length + '（' + Object.keys(KUP.MODIFIERS).join(',') + '）');
-console.log('FRAGMENTS  ' + KUP.FRAGMENTS.length);
 console.log('MODS_KEYS  ' + KUP.MODS_KEYS.length);
 console.log('bossTime 默认 ' + KUP.CONFIG.BOSS_TIME + 's / 暴走 ' + KUP.CONFIG.ENRAGE_TIME + 's；XP_NEXT(1..5)=' + [1,2,3,4,5].map(l => KUP.XP_NEXT(l)).join(','));

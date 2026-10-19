@@ -778,7 +778,7 @@ window.KUP = window.KUP || {};
   class Gem {
     constructor(x, y, xp, type) {
       this.x = x; this.y = y; this.xp = xp;
-      this.type = type || 'xp';   // xp | heal | egg（記憶の卵）
+      this.type = type || 'xp';   // xp | heal（v0.17：記憶の卵不再是掉落物）
       this.vx = U.rand(-40, 40); this.vy = U.rand(-40, 40);
       this.t = U.rng() * U.TAU;
       this.dead = false;
@@ -809,9 +809,6 @@ window.KUP = window.KUP || {};
           game.player.hp = Math.min(game.player.maxhp, game.player.hp + amt);
           game.addText(p.x, p.y - 24, '+' + amt, '#7dff9a', 14);
           KUP.Audio.sfx('heal');
-        } else if (this.type === 'egg') {
-          // 記憶の卵 ★：解锁记忆片段 + 復興率 +1%（KUP.META）
-          game.onEggCollected(this);
         } else {
           game.gemCount += this.xp;
           game.addXP(this.xp);
@@ -827,14 +824,6 @@ window.KUP = window.KUP || {};
         ctx.font = 'bold 14px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText('♥', 0, 0);
-      } else if (this.type === 'egg') {
-        // 記憶の卵 ★（动画第6話）：发光的卵形收集物
-        const s = 1 + Math.sin(this.t) * 0.12;
-        ctx.scale(s, s);
-        ctx.fillStyle = '#fff6dd'; ctx.shadowColor = '#ffdf8a'; ctx.shadowBlur = 16;
-        ctx.beginPath(); ctx.ellipse(0, 0, 6, 8.2, 0, 0, U.TAU); ctx.fill();
-        ctx.fillStyle = '#ffd25a';
-        ctx.beginPath(); ctx.ellipse(-1.5, -2.5, 1.6, 2.2, -0.4, 0, U.TAU); ctx.fill();
       } else {
         const big = this.xp >= 10;
         const s = 1 + Math.sin(this.t) * 0.15;

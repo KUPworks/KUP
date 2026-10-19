@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -80,11 +80,9 @@
       </div>
       <div class="best-line" id="best-line"></div>
       <div class="best-line" id="order-best-line"></div>
-      <div class="best-line" id="fukkou-menu-line"></div>
       <div class="best-line" id="fukkou-menu-tickets"></div>
       <div class="menu-slot-line" id="menu-slot-line"></div>
       <div class="menu-btns">
-        <button id="btn-memory" class="btn-ghost btn-memory" data-i18n="menu.memory">🥚 记忆图鉴</button>
         <button id="btn-shop" class="btn-ghost btn-memory" data-i18n="menu.shop">🍜 瓦利斯（商店）</button>
         <button id="btn-slots" class="btn-ghost btn-memory" data-i18n="menu.slots">💾 存档 / 观测记录</button>
       </div>
@@ -102,20 +100,7 @@
       <div id="area-detail" data-i18n="area.default"></div>
       <div class="select-actions">
         <button id="btn-area-back" class="btn-ghost" data-i18n="select.back">◂ 返回</button>
-        <button id="btn-memory-area" class="btn-ghost" data-i18n="menu.memory">🥚 记忆图鉴</button>
         <button id="btn-area-next" class="btn-primary" data-i18n="area.next" disabled>选择魔女 ▶</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ============ 记忆图鉴 ============ -->
-  <div id="screen-memory" class="screen hidden">
-    <div class="menu-inner wide">
-      <div class="select-title"><span data-i18n="mem.title">記憶の卵 · 记忆图鉴</span> <span class="sub" data-i18n="mem.subtitle">拾取記憶の卵解锁观测者的记忆</span></div>
-      <div id="memory-count" class="mem-count"></div>
-      <div id="memory-list"></div>
-      <div class="select-actions">
-        <button id="btn-memory-back" class="btn-ghost" data-i18n="select.back">◂ 返回</button>
       </div>
     </div>
   </div>
@@ -258,19 +243,19 @@
   </div>
 </div>
 
-<script src="js/config.js?v=0.16.0-cash"></script>
-<script src="js/utils.js?v=0.16.0-cash"></script>
+<script src="js/config.js?v=0.17.0-phenomenon"></script>
+<script src="js/utils.js?v=0.17.0-phenomenon"></script>
 <!-- 存档层：必须在 i18n/audio/meta 之前（它们都经由 KUP.STORE 读写持久化数据） -->
-<script src="js/store.js?v=0.16.0-cash"></script>
-<script src="js/i18n.js?v=0.16.0-cash"></script>
-<script src="js/audio.js?v=0.16.0-cash"></script>
-<script src="js/data.js?v=0.16.0-cash"></script>
-<script src="js/meta.js?v=0.16.0-cash"></script>
-<script src="js/entities.js?v=0.16.0-cash"></script>
-<script src="js/game.js?v=0.16.0-cash"></script>
-<script src="js/director.js?v=0.16.0-cash"></script>
-<script src="js/render.js?v=0.16.0-cash"></script>
-<script src="js/ui.js?v=0.16.0-cash"></script>
-<script src="js/main.js?v=0.16.0-cash"></script>
+<script src="js/store.js?v=0.17.0-phenomenon"></script>
+<script src="js/i18n.js?v=0.17.0-phenomenon"></script>
+<script src="js/audio.js?v=0.17.0-phenomenon"></script>
+<script src="js/data.js?v=0.17.0-phenomenon"></script>
+<script src="js/meta.js?v=0.17.0-phenomenon"></script>
+<script src="js/entities.js?v=0.17.0-phenomenon"></script>
+<script src="js/game.js?v=0.17.0-phenomenon"></script>
+<script src="js/director.js?v=0.17.0-phenomenon"></script>
+<script src="js/render.js?v=0.17.0-phenomenon"></script>
+<script src="js/ui.js?v=0.17.0-phenomenon"></script>
+<script src="js/main.js?v=0.17.0-phenomenon"></script>
 </body>
 </html>

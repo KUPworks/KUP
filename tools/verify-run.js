@@ -188,13 +188,69 @@ KUP.META.reset();
 check('area1 默认锁定', !KUP.META.isUnlocked('area1'));
 check('area0 默认解锁（阈值 0）', KUP.META.isUnlocked('area0'));
 
-// 10. 記憶の卵 → 顺序解锁记忆片段 + 復興率 +1
+/* 10. 記憶の卵（v0.17）：**局内「現象」卡**——低概率额外出现，選中＝1 次復活
+ *    人类 2026-10-19：「重设记忆之卵定位……每局有最多一次机会（且概率很低）抽到
+ *    名为『记忆之卵』的『现象』卡，允许玩家复活一次，同时小 aoe 和短暂无敌帧。
+ *    不做局外物品……玩家胜利结局不能重生，治安战可重生多次（概率依然很低）」。 */
 KUP.META.reset();
-const f1 = KUP.META.addEgg();
-check('卵①解锁第一个记忆片段', f1 && f1.id === 'witchling');
-check('卵 → 復興率 +1', KUP.META.total() === 1);
-for (let i = 0; i < 10; i++) KUP.META.addEgg();
-check('卵全收集后不再越界（8 片段）', KUP.META.data.eggs.length === KUP.FRAGMENTS.length && KUP.FRAGMENTS.length === 8);
+check('記憶の卵不再是局外物品（无图鉴数据 / 无 addEgg / 不产出復興率）',
+  KUP.FRAGMENTS === undefined && KUP.META.addEgg === undefined && KUP.META.total() === 0);
+check('記憶の卵不再计入现金收入', KUP.META.cashIncome({ eggs: 9, kills: 0, win: false }) ===
+  KUP.META.cashIncome({ kills: 0, win: false }));
+{
+  const gEgg = new KUP.Game(canvas);
+  gEgg.start({ char: 'kaf', area: 'area0', seed: 4242 });
+  gEgg.debug.egg = true;                       // 调试钩子：下一次升级必出卵卡
+  const pool = gEgg.rollChoices();
+  check('現象卡作为**额外第 4 张**出现（不占普通三选一）',
+    pool.length === 4 && pool[3].kind === 'egg', JSON.stringify(pool.map(c => c.kind)));
+  check('現象卡不可封禁（无 id ⇒ 不渲染 ✕）', pool[3].id === undefined);
+  const again = gEgg.rollChoices();
+  check('同一等级重掷不重复掷卵（不会"刷卵"）', again.filter(c => c.kind === 'egg').length === 1);
+  /* 选中 → 復活充能 */
+  gEgg.state = 'levelup'; gEgg.pendingLevels = 1; gEgg.choices = pool;
+  gEgg.choose(3);
+  check('选中現象卡 → 獲得 1 次復活充能、回到 playing', gEgg.eggCharge === 1 && gEgg.state === 'playing');
+  check('选中后回到三选一（卵卡不占普通卡池）', gEgg.rollChoices().length === 3);
+  /* 致命伤 → 消耗卵復活（而不是 gameOver） */
+  gEgg.player.invuln = false; gEgg.player.hitT = 0;
+  gEgg.hurtPlayer(99999, 'contact');
+  check('HP 归零 → 消耗卵復活（不结算败北）', gEgg.state === 'playing' && gEgg.eggCharge === 0 && gEgg.eggUsed === 1);
+  check('復活回复 50% 生命', Math.abs(gEgg.player.hp - Math.round(gEgg.player.maxhp * 0.5)) <= 1, 'hp=' + gEgg.player.hp);
+  check('復活给短暂无敌帧（2.5s）', gEgg.player.hitT >= KUP.CONFIG.EGG.IFRAME - 0.1, 'hitT=' + gEgg.player.hitT);
+  check('復活释放小 AOE 冲击环（半径 240 / 有伤害）',
+    gEgg.rings.some(r => r.maxR === KUP.CONFIG.EGG.AOE_R && r.dmg > 0 && r.kb > 0));
+  /* 没有卵时照常败北 */
+  gEgg.player.invuln = false; gEgg.player.hitT = 0;
+  gEgg.hurtPlayer(99999, 'contact');
+  check('没有卵 → 正常败北（gameOver）', gEgg.state === 'over');
+  /* 番街：一局最多出现一次（哪怕没选也不算第二次机会） */
+  const gOnce = new KUP.Game(canvas);
+  gOnce.start({ char: 'kaf', area: 'area0', seed: 4243 });
+  gOnce.debug.egg = true;
+  gOnce.rollChoices();
+  gOnce.level += 3;                            // 换等级也不会再抽到
+  check('番街：本局抽过一次后不再出现（最多一次机会）',
+    gOnce.rollChoices().filter(c => c.kind === 'egg').length === 0);
+  /* 胜利/结算后不能復活 */
+  const gWin = new KUP.Game(canvas);
+  gWin.start({ char: 'kaf', area: 'area0', seed: 4244 });
+  gWin.eggCharge = 1; gWin.state = 'victory';
+  check('胜利结局不能復活（tryEggRevive 只在 playing 生效）',
+    gWin.tryEggRevive() === false && gWin.eggCharge === 1 && gWin.eggUsed === 0);
+  /* 治安战：充能用掉后可以再次抽到（可復活多次） */
+  const gEnd = new KUP.Game(canvas);
+  gEnd.start({ char: 'kaf', area: 'order', seed: 4245 });
+  gEnd.debug.egg = true;
+  gEnd.eggCharge = 0;
+  const p1 = gEnd.rollChoices();
+  check('治安战：卵卡同样能出现', p1.some(c => c.kind === 'egg'));
+  gEnd.eggCharge = 1; gEnd.eggOffered = true;
+  check('治安战：手里有充能时不再抽到', !gEnd.rollChoices().some(c => c.kind === 'egg'));
+  gEnd.eggCharge = 0; gEnd.level += 2;         // 充能用掉后（充能=0）允许再次出现
+  check('治安战：充能用掉后可再次抽到（可復活多次）',
+    gEnd.rollChoices().some(c => c.kind === 'egg'));
+}
 
 // 11. 覚醒：满级后进入觉醒池、觉醒后切换 stat
 const gA = new KUP.Game(canvas);
@@ -296,7 +352,7 @@ const boss = gV.spawnEnemy('boss', gV.player.x + 50, gV.player.y);
 gV.boss = boss;
 gV.damageEnemy(boss, 999999);
 check('击破 Boss → 胜利', gV.state === 'victory');
-check('胜利 → Boss 必得記憶の卵', gV.eggGain === 1);
+check('胜利不再必得記憶の卵（v0.17：改为局内現象卡）', gV.eggCharge === 0 && gV.eggUsed === 0);
 check('胜利 → 復興率已结算', !!gV.metaResult && gV.metaResult.gain >= 12, JSON.stringify(gV.metaResult));
 check('暴走标记照旧记录（只作 observability，不作判定）', gV.stats().bossEnraged === false);
 check('普通胜利的副标题取 end.win.sub（pyrrhic 分支已取消，源码断言见下方 14 条）', gV.stats().bossEnraged === false);
@@ -324,7 +380,7 @@ gP2.damageEnemy(boss2b, 999999);                      // 未暴走
 check('惨胜不再单独结算：復興率增益与普通胜利一致', !!gP.metaResult && !!gP2.metaResult &&
   gP.metaResult.gain === gP2.metaResult.gain, gP2.metaResult.gain + ' vs ' + gP.metaResult.gain);
 check('惨胜不再单独结算：现金收入与普通胜利一致', (() => {
-  /* 现金收入＝（通关 15 ＋ 首通 10 ＋ 卵 5 ＋ 击杀/10 ＋ 番街深度×2）×4——
+  /* 现金收入＝（通关 15 ＋ 首通 10 ＋ 击杀/10 ＋ 番街深度×2）×4——
    * 两局在不同番街，所以先扣掉「番街深度×2×4」再比：剩下的公共部分应完全一致，
    * 即没有任何"惨胜"专属的奖励或扣减。 */
   const depth = id => KUP.META.areaIndex(id) * 2 * 4;
@@ -367,28 +423,27 @@ check('area5 ブラックアウト事件触发增援', gE.surgeT > 0 && gE.surge
 check('ブラックアウト加深雾', gE.fogBoost === 0.34 && gE.fogBoostT > 0);
 check('area6 Boss 提前至 210s', KUP.AREA('area6').bossTime === 210 && KUP.AREA('area6').eliteTimes[0] === 75);
 
-// 17. 结算屏数据：卵计数与 run 元信息
+// 17. 结算屏数据：復活次数与 run 元信息
 const st = gV.stats();
-check('stats 含 run 元信息与卵', st.seed === 777 && st.areaId === 'area0' && st.eggs >= 1);
+check('stats 含 run 元信息与復活次数', st.seed === 777 && st.areaId === 'area0' && st.revives === 0 && st.eggCharge === 0);
 check('幸祜日文描述已修复（待修 #1）', KUP.WEAPONS.lance.desc.ja.indexOf('この世界に口づけを') < 0);
 
 // 18. 存档层持久化往返（v0.7：kup.save.<槽id> + 版本化信封）
 KUP.META.reset();
-KUP.META.addEgg();
-KUP.META.addRunResult('area0', true, { kills: 40, eggs: 1, areaIdx: 0, runId: 'vfy-1' });
+KUP.META.addRunResult('area0', true, { kills: 40, areaIdx: 0, runId: 'vfy-1' });
 const rawSave = ctx.localStorage.getItem('kup.save.' + KUP.META.slotId());
 const env = JSON.parse(rawSave);
 const saved = env.data;
-check('槽位存档已落盘（带版本信封）', !!saved && env.v === 1 && saved.fukkou > 0 && saved.eggs.length === 1,
+check('槽位存档已落盘（带版本信封）', !!saved && env.v === 1 && saved.fukkou > 0 && saved.cash > 0,
   'key=kup.save.' + KUP.META.slotId());
 check('结算写入 runId 幂等键', saved.lastRunId === 'vfy-1', 'lastRunId=' + saved.lastRunId);
 const dupTotal = KUP.META.total();
 check('同一 runId 重复结算被拒（復興率不重复累加）',
-  KUP.META.addRunResult('area0', true, { kills: 40, eggs: 1, areaIdx: 0, runId: 'vfy-1' }) === null
+  KUP.META.addRunResult('area0', true, { kills: 40, areaIdx: 0, runId: 'vfy-1' }) === null
   && KUP.META.total() === dupTotal);
 KUP.META.data = null;
 KUP.META.load();
-check('槽位存档重载一致', KUP.META.total() === saved.fukkou && KUP.META.ensure().eggs.length === 1);
+check('槽位存档重载一致', KUP.META.total() === saved.fukkou && KUP.META.cash() === saved.cash);
 check('最佳记录随槽位持久化', (KUP.META.submitBest({ win: true, time: 120, kills: 30, witch: 'x' }),
   KUP.META.data = null, KUP.META.load(), KUP.META.best().time === 120));
 
@@ -398,10 +453,10 @@ check('最佳记录随槽位持久化', (KUP.META.submitBest({ win: true, time: 
  * 且**一张市民票即可招募**。 */
 // 19. 现金收入（旧 ticketIncome 接口保留，返回等值现金）
 KUP.META.reset();
-const inc1 = KUP.META.cashIncome({ kills: 100, eggs: 0, areaIdx: 0, win: true, firstClear: true });
+const inc1 = KUP.META.cashIncome({ kills: 100, areaIdx: 0, win: true, firstClear: true });
 check('现金收入：100 杀 + 首通 → (10+15+10)×4＝140 元', inc1 === 140, 'income=' + inc1);
-const inc2 = KUP.META.cashIncome({ kills: 40, eggs: 2, areaIdx: 3, win: false, firstClear: false });
-check('现金收入：败北也计入（(4+3+0+10+6)×4＝92 元）', inc2 === 92, 'income=' + inc2);
+const inc2 = KUP.META.cashIncome({ kills: 40, areaIdx: 3, win: false, firstClear: false });
+check('现金收入：败北也计入（(4+3+0+6)×4＝52 元）', inc2 === 52, 'income=' + inc2);
 check('旧接口 ticketIncome 保留，返回等值现金（兼容旧调用）',
   KUP.META.ticketIncome({ kills: 100 }) === KUP.META.cashIncome({ kills: 100 }) &&
   KUP.META.ticketIncome({ kills: 100 }) > 0);
@@ -409,7 +464,7 @@ KUP.META.addCash(inc1);
 check('现金入账', KUP.META.cash() === 140);
 check('每局结算发放现金（不再是市民票）', (() => {
   KUP.META.reset();
-  const r = KUP.META.addRunResult('area0', true, { kills: 50, eggs: 1, areaIdx: 0 });
+  const r = KUP.META.addRunResult('area0', true, { kills: 50, areaIdx: 0 });
   return r && r.cash > 0 && r.cashTotal === r.cash && KUP.META.cash() === r.cash && KUP.META.tickets() === 0;
 })(), 'cash=' + KUP.META.cash() + ' tickets=' + KUP.META.tickets());
 
@@ -1478,7 +1533,7 @@ KUP.META.reset();
   check('治安战击破 Boss 不结束战斗（state 仍 playing）',
     gOK.state === 'playing' && gOK.boss === null && gOK.kills >= 1);
   check('治安战击破 Boss 有清场奖励与音片', gOK.gems.length > 0 && gOK.ult.charge >= 40);
-  /* 治安战不落記憶の卵（不污染復興率） */
+  /* 卵不再是掉落物（v0.17）：治安战不落卵、復興率不被卵污染 */
   const gOE = new KUP.Game(canvas);
   gOE.start({ char: 'kaf', area: 'order', seed: 505 });
   gOE.player.weapons = [];
@@ -1486,8 +1541,8 @@ KUP.META.reset();
     const el = gOE.spawnEnemy('elite', gOE.player.x + 300, gOE.player.y);
     gOE.killEnemy(el);
   }
-  check('治安战不落記憶の卵与復興率', gOE.gems.every(g => g.type !== 'egg') && gOE.eggCount === 0 &&
-    KUP.META.total() === 0);
+  check('卵不再是掉落物（无 egg 音片），治安战復興率不被污染',
+    gOE.gems.every(g => g.type !== 'egg') && gOE.eggCharge === 0 && KUP.META.total() === 0);
   /* 战斗结束：没有败北，只有「战斗结束」＋治安战成绩 */
   KUP.META.reset();
   const gOD = new KUP.Game(canvas);
@@ -1594,7 +1649,8 @@ check('结算返回现金收入与合计（v0.16：市民票不再直发）',
   gT.metaResult.cash > 0 && gT.metaResult.cashTotal === gT.metaResult.cash &&
   gT.metaResult.tickets === 0, JSON.stringify({ cash: gT.metaResult.cash }));
 check('结算提示可培养对象', gT.metaResult.newlyRecruitable.length >= 1, JSON.stringify(gT.metaResult.newlyRecruitable));
-check('stats 含 Boss 名与卵来源', gT.stats().areaId === 'area3' && gT.stats().eggs >= 1);
+check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
+  gT.stats().areaId === 'area3' && gT.stats().revives === 0 && gT.stats().eggCharge === 0);
 
 /* v0.16：结算屏文案必须写「现金（元）」，不能再出现「市民票 +N」。
  * 用最小 DOM 桩跑一遍真 UI.showEnd（不改 KUP.UI 桩，只在这次调用里替换）。 */
@@ -1620,7 +1676,7 @@ check('stats 含 Boss 名与卵来源', gT.stats().areaId === 'area3' && gT.stat
     const gE = new KUP.Game(canvas);
     gE.start({ char: 'kaf', area: 'area0', seed: 91 });
     gE.kills = 60;
-    gE.metaResult = KUP.META.addRunResult('area0', true, { runId: 'end-1', kills: 60, eggs: 1, areaIdx: 0, time: 180 });
+    gE.metaResult = KUP.META.addRunResult('area0', true, { runId: 'end-1', kills: 60, areaIdx: 0, time: 180 });
     REAL_UI.game = gE;
     REAL_UI.showEnd(true, gE.stats());
     const html = els['win-stats'].innerHTML;
@@ -2172,6 +2228,9 @@ check('stats 含 Boss 名与卵来源', gT.stats().areaId === 'area3' && gT.stat
     Array.isArray(dOld.supports) && dOld.supports.length === 0 && dOld.support === null,
     JSON.stringify({ supports: dOld.supports, support: dOld.support }));
   check('旧存档的 companions 列表不受影响', dOld.companions.indexOf('ciel') >= 0);
+  /* v0.17：记忆图鉴/片段已移除——旧档里的 eggs/eggCount 被安全忽略（不报错、不回流） */
+  check('旧档的 eggs/eggCount 被忽略（图鉴移除后不影响读档）',
+    dOld.eggs === undefined && dOld.eggCount === undefined);
 }
 
 // 25q-3. 彩季詩得「先退出」：数据与 JK 皮肤保留，但不可选、不进招募列表

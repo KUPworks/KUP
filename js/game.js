@@ -390,11 +390,13 @@ window.KUP = window.KUP || {};
       this.cam = { x: 0, y: 0, shake: 0 };
       this.spawnAcc = 0;
       this.eliteIdx = 0;
-      /* 章节演出 / 大招 / 記憶の卵 / 结局分歧 */
+      /* 章节演出 / 大招 / 記憶の卵（v0.17 局内現象卡）/ 结局分歧 */
       this.evIdx = 0; this.surgeT = 0; this.surgePerSec = 0;
       this.fogBoost = 0; this.fogBoostT = 0;
       this.ult = { charge: 0, cdT: 0, cdMax: 3 };   // cdMax 仅兜底，实际取 KUP.ULTIMATES[*].cdMax
-      this.eggCount = 0; this.eggGain = 0; this.fragUnlocked = null;
+      /* v0.17 記憶の卵（現象卡）：本局是否已抽过（番街一局最多一次）、復活充能、已復活次数 */
+      this.eggOffered = false; this.eggCharge = 0; this.eggUsed = 0;
+      this._eggLevel = -1; this._eggHit = false;   // 同等级抽卡结果缓存（重掷不刷卵）
       this.bossSpawned = false; this.boss = null; this.bossEnraged = false;
       this.metaResult = null;
       /* 同伴（魔女候補）的周期回复 */
@@ -591,6 +593,8 @@ window.KUP = window.KUP || {};
       if (shopMods.startLevel) this.level = Math.max(this.level, 1 + shopMods.startLevel);
       if (shopMods.startUlt) this.ult.charge = Math.min(100, this.ult.charge + shopMods.startUlt);
       if (this.debug.god) this.player.invuln = true;
+      /* v0.17 调试：?revive=1 开局带 1 次卵復活（实机验证復活手感；内存态，不进存档） */
+      if (this.debug.revive) { this.eggCharge = 1; this.eggOffered = true; }
       if (this.debug.dmg > 0) this.player.dmgMult *= this.debug.dmg; // 调试：伤害倍率
       if (this.debug.hurt > 0) { // 调试：初始残血（验证 HP 恢复）
         this.player.hp = Math.max(1, Math.round(this.player.hp * (1 - this.debug.hurt)));
@@ -1055,8 +1059,6 @@ window.KUP = window.KUP || {};
       if (e.elite) {
         this.shake(5);
         this.gems.push(new KUP.Gem(e.x + 16, e.y, 0, 'heal'));
-        /* 記憶の卵：精英 20% 掉落（对局中拾取）；治安战不落卵（不污染復興率） */
-        if (!this.endless && U.rng() < 0.2) this.gems.push(new KUP.Gem(e.x - 16, e.y, 0, 'egg'));
       }
     }
 
@@ -1070,15 +1072,66 @@ window.KUP = window.KUP || {};
       this.gems.push(new KUP.Gem(x, y, val));
     }
 
-    /* 記憶の卵拾取 → 解锁记忆片段 + 復興率 +1%（meta.js） */
-    onEggCollected(gem) {
+    /* ---------- 記憶の卵（v0.17 局内「現象」卡）：抽取 / 选中 / 復活 ----------
+     * 人类 2026-10-19 重设定位：卵不再是掉落物，也不再产出任何局外进度；
+     * 它是升级时**低概率额外出现**的一张現象卡，选中后换 1 次復活。
+     * 番街一局最多抽一次（eggOffered 永不复位）；治安战在充能用掉后可再次抽到
+     * ⇒ 一场可復活多次，但每次仍受同一个低概率限制。 */
+    eggEligible() {
+      /* rollChoices 在 state==='levelup' 时调用（openLevelUp 先切状态），所以两态都算 */
+      if (this.state !== 'playing' && this.state !== 'levelup') return false;
+      if (!this.endless && this.eggOffered) return false;   // 番街：本局已抽过（无论选没选）
+      return this.eggCharge <= 0;                            // 手里已有充能就不再抽
+    }
+    /* 升级抽卡时调用：命中则这一抽出现現象卡（并记下本局已抽过）。
+     * 同一等级的多次 rollChoices（重掷／多级连升）只掷一次，避免"重掷刷卵"。 */
+    rollEggCard() {
+      if (this.eggCharge > 0) return false;                  // 手里已有充能：不再出现
+      if (this._eggLevel === this.level) return !!this._eggHit; // 同等级重掷：结果不变（卡不会消失）
+      if (!this.eggEligible()) return false;
+      const C = KUP.CONFIG.EGG || {};
+      this._eggLevel = this.level;
+      this._eggHit = (this.debug && this.debug.egg) ? true
+        : U.rng() < (C.CHANCE != null ? C.CHANCE : 0.006);
+      if (this._eggHit) this.eggOffered = true;
+      return this._eggHit;
+    }
+    /* 选中現象卡：获得 1 次復活充能（不附带其它成长——用一次升级换一条命） */
+    takeEggCard() {
+      this.eggCharge++;
+      this.eggOffered = true;
       const p = this.player;
-      this.eggCount++;
-      const frag = KUP.META.addEgg();
-      if (frag) this.fragUnlocked = frag;
-      this.addText(p.x, p.y - 30, KUP.I18N.t('hud.egg'), '#ffe89a', 15);
+      this.addText(p.x, p.y - 34, KUP.I18N.t('hud.egg'), '#ffe89a', 16);
+      KUP.UI.banner(KUP.I18N.t('banner.egg'), 2.2);
       KUP.Audio.sfx('egg');
-      if (frag) KUP.UI.banner(KUP.I18N.t('banner.frag', { t: KUP.I18N.tv(frag.title) }), 2.2);
+    }
+    /* HP 归零时尝试用卵復活；只在 `playing` 触发（胜利结局 / 结算后不再復活）。
+     * 返回 true 表示已復活（调用方不要再 gameOver）。 */
+    tryEggRevive() {
+      if (this.state !== 'playing' || this.eggCharge <= 0 || !this.player) return false;
+      const C = KUP.CONFIG.EGG || {};
+      const p = this.player;
+      this.eggCharge--; this.eggUsed++;
+      p.hp = Math.max(1, Math.round(p.maxhp * (C.HP_PCT != null ? C.HP_PCT : 0.5)));
+      /* 短暂无敌帧：沿用受击无敌计时（hurtPlayer 在 hitT > 0 时直接返回） */
+      p.hitT = Math.max(p.hitT, C.IFRAME != null ? C.IFRAME : 2.5);
+      p.flash = 0.3;
+      /* 小 AOE：向外扩散的冲击环（伤害 + 击退），复用 Ring 实体 */
+      this.rings.push(new KUP.Ring(p.x, p.y, {
+        maxR: C.AOE_R != null ? C.AOE_R : 240, speed: 900,
+        dmg: (C.AOE_DMG != null ? C.AOE_DMG : 80) * p.dmgMult,
+        kb: C.KB != null ? C.KB : 300, color: '#ffe89a',
+      }));
+      for (let i = 0; i < 26; i++) {
+        const a = U.rng() * U.TAU;
+        this.parts.push(new KUP.Particle(p.x, p.y, Math.cos(a) * U.rand(90, 260), Math.sin(a) * U.rand(90, 260),
+          0.8, '#ffe89a', U.rand(2, 3.5)));
+      }
+      this.shake(10);
+      this.addText(p.x, p.y - 30, KUP.I18N.t('hud.egg'), '#ffe89a', 17);
+      KUP.UI.banner(KUP.I18N.t('banner.revive'), 2.6);
+      KUP.Audio.sfx('egg');
+      return true;
     }
 
     /* ---------- 浄化の歌／角色大招（第2话副标题 ★；v0.14：按角色区分）----------
@@ -1232,7 +1285,11 @@ window.KUP = window.KUP || {};
           maxR: 120 + 12 * (p.passives.retaliate || 0), speed: 460, dmg: p.retaliateDmg * p.dmgMult, kb: 150, color: '#ffb25a',
         }));
       }
-      if (p.hp <= 0) { p.hp = 0; this.gameOver(); }
+      if (p.hp <= 0) {
+        /* v0.17 記憶の卵：先尝试復活（只在 playing 生效；胜利结局 / 结算后不復活） */
+        if (this.tryEggRevive()) return;
+        p.hp = 0; this.gameOver();
+      }
     }
 
     /* 冲刺（Shift / HUD 按钮）：主动回避，带无敌帧 */
@@ -1455,6 +1512,9 @@ window.KUP = window.KUP || {};
       }
       while (out.length < 3) out.push({ kind: 'heal' });               // 4. 兜底
       U.shuffle(out);   // 位置随机：避免「闭眼点第一格」
+      /* v0.17 記憶の卵（現象卡）：低概率**额外**多出第 4 张（不进普通卡池、不可封禁、
+       * 不占分桶保底配额）。选中＝用这次升级换 1 次復活。 */
+      if (this.rollEggCard()) out.push({ kind: 'egg' });
       // 调试：?pick=heart,heal,ward 强制指定升级选项（确定性验证；支持被动/武器/道具 id）
       if (this.debug.pick) {
         const mk = s => s === 'heal' ? { kind: 'heal' }
@@ -1488,6 +1548,7 @@ window.KUP = window.KUP || {};
       const others = this.choices.filter((_, k) => k !== i);
       const used = new Set(others.map(x => x.kind + ':' + x.id));
       const repl = this.rollChoices().find(x =>
+        x.kind !== 'egg' &&                       // 現象卡不受封禁逻辑影响（不能当替换卡塞进来）
         (x.kind === 'heal' || !used.has(x.kind + ':' + x.id)) && (!x.id || !this.banned.has(x.id)));
       this.choices[i] = repl || { kind: 'heal' };
       KUP.UI.showLevelUp(this.choices, this.level);
@@ -1564,6 +1625,9 @@ window.KUP = window.KUP || {};
           }
           KUP.Audio.sfx('heal');
         }
+      } else if (c.kind === 'egg') {
+        /* v0.17 記憶の卵：獲得 1 次復活充能（局内現象卡） */
+        this.takeEggCard();
       } else if (c.kind === 'heal') {
         p.hp = Math.min(p.maxhp, p.hp + p.maxhp * 0.4);
         this.addText(p.x, p.y - 26, '+HP', '#7dff9a', 15);
@@ -1571,6 +1635,8 @@ window.KUP = window.KUP || {};
       }
       this.pendingLevels--;
       KUP.Audio.sfx('select');
+      /* 本次升级已结算：清掉「同等级卵卡结果」缓存（同一次选择内的重掷仍保留卵卡） */
+      this._eggLevel = -1;
       if (this.pendingLevels > 0) {
         this.choices = this.rollChoices();
         KUP.UI.showLevelUp(this.choices, this.level);
@@ -1602,12 +1668,8 @@ window.KUP = window.KUP || {};
     victory() {
       if (this.state === 'victory') return;
       this.state = 'victory';
-      /* 記憶の卵：击破 Boss 必得（结算屏无法再拾取，直接结算） */
-      if (!this.eggGain) {
-        this.eggGain = 1;
-        this.fragUnlocked = KUP.META.addEgg() || this.fragUnlocked;
-      }
-      /* 復興率结算（首通 +12% / 重复 +2% / 計上 +1%）＋市民票收入 */
+      /* 復興率结算（首通 +12% / 重复 +2% / 計上 +1%）＋现金收入
+       * v0.17：記憶の卵不再由击破 Boss 必得（改为局内現象卡）。 */
       this.metaResult = KUP.META.addRunResult(this.run.area, true, this.runStats());
       KUP.Audio.stopBGM();
       KUP.Audio.sfx('levelup');
@@ -1619,7 +1681,7 @@ window.KUP = window.KUP || {};
       return {
         runId: this.run.id || null,
         kills: this.kills,
-        eggs: this.eggCount + this.eggGain,
+        revives: this.eggUsed,
         areaIdx: KUP.META ? KUP.META.areaIndex(this.run.area) : 0,
         time: this.time,
       };
@@ -1637,7 +1699,9 @@ window.KUP = window.KUP || {};
         area: KUP.I18N.tv(this.area.name), mod: KUP.I18N.tv(this.mod.name),
         seed: this.run.seed,
         areaId: this.run.area,
-        eggs: this.eggCount + this.eggGain,
+        /* v0.17：記憶の卵＝局内復活（不再进图鉴）；统计只反映本局用了多少次 */
+        revives: this.eggUsed,
+        eggCharge: this.eggCharge,
         bossEnraged: !!this.bossEnraged,
         bossName: this.boss ? KUP.I18N.tv(this.boss.def.name) : null,
         /* 形態/皮膚/同伴：结算与调试用 */
