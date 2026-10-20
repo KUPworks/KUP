@@ -168,6 +168,14 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
   color: #ffd25a; text-shadow: 0 0 12px rgba(255,210,90,.7);
 }
 #hud-wave.hidden { display: none; }
+/* v0.18 不可解空間：HUD 常驻「◇ 空間名」（颜色由 JS 按空间调色） */
+#hud-space {
+  margin-top: 3px; font-size: 13px; font-weight: 800; letter-spacing: .14em;
+  color: var(--c, #ffe89a); text-shadow: 0 0 12px color-mix(in srgb, var(--c, #ffe89a) 60%, transparent);
+  animation: space-glow 2.4s ease-in-out infinite;
+}
+#hud-space.hidden { display: none; }
+@keyframes space-glow { 0%,100% { opacity: 1; } 50% { opacity: .72; } }
 /* ---------- Boss 血条（v0.15.3：多体 Boss 依次纵排） ----------
  * 治安战里会出现多体 Boss 并存；旧版只有一条 #boss-bar，只显示 this.boss 那一体，
  * 击破其中一体还会把整块面板 showBoss(false) 掉 —— 其它 Boss 的血条跟着"被击退出场"。
@@ -325,6 +333,11 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 
 /* ============ 升级·觉醒卡 / 结算·復興率 ============ */
 .lu-tag.awaken { color: #ffe08a; border: 1px solid rgba(255,225,120,.7); background: rgba(255,210,90,.14); animation: ult-pulse 1.2s infinite; }
+/* v0.18 静音空間：浄化の歌被封印——充能条整体置灰，避免误读成"没充能" */
+#ult-wrap.locked { opacity: .38; filter: grayscale(.85); }
+#ult-wrap.locked #ult-label::after { content: ' 🔇'; }
+/* v0.18 不可解空間徽章（结算屏） */
+.space-tag { margin-top: 8px; font-size: 13px; color: #ffe89a; letter-spacing: .1em; }
 .fukkou-gain { margin-top: 14px; font-size: 14px; font-weight: 700; color: #7dffe0; letter-spacing: .1em; }
 .fukkou-unlock { margin-top: 8px; font-size: 13px; color: #ffe08a; letter-spacing: .1em; animation: banner-in .5s ease-out; }
 .w-icon.evolved { box-shadow: 0 0 14px color-mix(in srgb, var(--c, #8fd0ff) 80%, transparent); border-color: #ffe08a; }

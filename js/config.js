@@ -2,7 +2,7 @@ window.KUP = window.KUP || {};
 
 /* ================= 全局配置 ================= */
 KUP.CONFIG = {
-  VERSION: '0.17.0-phenomenon',
+  VERSION: '0.18.0-space',
   ARENA: 3000,            // 正方形竞技场边长
   PLAYER_R: 13,
   PLAYER_HIT_CD: 0.55,    // 玩家受击无敌帧
@@ -133,6 +133,16 @@ KUP.CONFIG = {
     AOE_DMG: 80,      // AOE 伤害（结算时再乘玩家 dmgMult）
     KB: 300,          // AOE 击退
     IFRAME: 2.5,      // 復活无敌帧（秒）
+  },
+  /* ---------- 不可解空間（v0.18）----------
+   * 人类 2026-10-20：「研究接口，BOSS战时有几率进入『不可解空间』」。
+   * 规则：**Boss 出现时**掷一次 CHANCE；命中则该场 Boss 战进入一处随机「不可解空間」，
+   * 规则按 `KUP.SPACES` 临时改写（战斗/经济乘数 + 少量非乘数效果），
+   * 直到**触发它的那体 Boss** 被击破（治安战多体并存时同理）。
+   * 空间只借用世界观名词作随机规则变异外壳，**不得断言与『Q』等价**（lore §4.3）。 */
+  SPACE: {
+    CHANCE: 0.35,     // 每体 Boss 出现时进入不可解空間的概率
+    DELAY: 1.6,       // Boss 横幅之后多久展开空間（秒）
   },
   DEFAULT_SEED: 20250314,
   DEFAULT_AREA: 'area0',
@@ -399,3 +409,96 @@ KUP.modsFor = id => {
   for (const k of KUP.MODS_KEYS) out[k] = (m[k] !== undefined ? m[k] : 1);
   return out;
 };
+/* 两组乘数相乘（基础修正 × 不可解空間）——缺项一律按 1 处理 */
+KUP.combineMods = (a, b) => {
+  const out = {};
+  for (const k of KUP.MODS_KEYS) {
+    const x = (a && a[k] !== undefined) ? a[k] : 1;
+    const y = (b && b[k] !== undefined) ? b[k] : 1;
+    out[k] = x * y;
+  }
+  return out;
+};
+
+/* ================= 不可解空間（v0.18）=================
+ * 世界观依据：『Q』把周围化为「異界」，内部由「无视物理法则的独自规则」支配、**规则因个体而异**
+ * （动画/官方游戏均出现该词；「不可解空間」在世界观内**无官方定义**，见 docs/lore/related-settings.md §4.3）。
+ * 本作只把它当**随机规则变异**的叙事外壳：效果全部由乘数驱动，另有两个非乘数字段——
+ *   · `fog`      追加雾浓度（复用 render 的雾气层）
+ *   · `ultLock`  封印浄化の歌（HUD 充能条置灰）
+ *   · `rotateEvery` 每隔 N 秒随机改写为另一条空间（錯乱空間）
+ * 进入/退出时会**按比例同步活着敌人的 speed/dmg/maxhp**，所以不是"只影响新刷的怪"；
+ * 玩家的 playerDmg/playerSpeed/cooldown/pickup 走 `Player.recompute()` 即时生效。 */
+KUP.SPACES = [
+  {
+    id: 'dense', weight: 1,
+    name: { zh: '過密空間', en: 'Overcrowded Space', ja: '過密空間' },
+    desc: {
+      zh: '破维魔成群涌来，但被空间压得更脆——音片掉落也更多。',
+      en: 'Tesseracters swarm in, but the space makes them brittle — more shards drop.',
+      ja: 'テセラクターが群れで押し寄せるが、空間に押し潰されて脆い——音片も増える。',
+    },
+    color: '#ff9a5a', mods: { spawnRate: 1.6, enemyHp: 0.85, dropRate: 1.15 },
+  },
+  {
+    id: 'fog', weight: 1,
+    name: { zh: '深霧空間', en: 'Deep-Fog Space', ja: '深霧空間' },
+    desc: {
+      zh: '浓雾吞没视野；作为补偿，拾取范围与经验获取提高。',
+      en: 'Thick fog swallows your sight; pickup range and XP gain rise to compensate.',
+      ja: '濃霧が視界を呑む。代わりに拾取範囲と獲得経験が上がる。',
+    },
+    color: '#9a90d6', mods: { enemySpeed: 0.9, pickup: 1.2, xpGain: 1.15 }, fog: 0.22,
+  },
+  {
+    id: 'stiff', weight: 1,
+    name: { zh: '硬直空間', en: 'Rigid Space', ja: '硬直空間' },
+    desc: {
+      zh: '身体像被灌了铅——移动变慢，但冷却缩短、伤害提高。',
+      en: 'Your body feels leaden — slower movement, but shorter cooldowns and more damage.',
+      ja: '身体が鉛のように重い——移動は遅いが、冷却短縮・与ダメージ上昇。',
+    },
+    color: '#8fd0ff', mods: { playerSpeed: 0.9, cooldown: 0.85, playerDmg: 1.1 },
+  },
+  {
+    id: 'mute', weight: 1,
+    name: { zh: '静音空間', en: 'Muted Space', ja: '静音空間' },
+    desc: {
+      zh: '声音被空间吞掉——伤害大幅提升，代价是**浄化の歌被封印**。',
+      en: 'Sound is swallowed — damage surges, but the **Song of Purification is sealed**.',
+      ja: '音が空間に呑まれる——与ダメージは大きく上がるが、**浄化の歌は封じられる**。',
+    },
+    color: '#ff5aa8', mods: { playerDmg: 1.3, enemyDmg: 1.15 }, ultLock: true,
+  },
+  {
+    id: 'bloom', weight: 1,
+    name: { zh: '豊穣空間', en: 'Abundant Space', ja: '豊穣空間' },
+    desc: {
+      zh: '音片如雨——拾取与经验大增，代价是敌人更快。',
+      en: 'A rain of shards — pickup and XP soar, but enemies move faster.',
+      ja: '音片の雨——拾取と経験が大きく伸びるが、敵は速くなる。',
+    },
+    color: '#8affc9', mods: { pickup: 1.5, xpGain: 1.2, enemySpeed: 1.15 },
+  },
+  {
+    id: 'heat', weight: 1,
+    name: { zh: '高熱空間', en: 'Heat Space', ja: '高熱空間' },
+    desc: {
+      zh: '空间灼烧着双方——你的伤害与受到的伤害同时提高。',
+      en: 'The space scalds both sides — your damage and the damage you take both rise.',
+      ja: '空間が双方を灼く——与ダメージも被ダメージも上がる。',
+    },
+    color: '#ffd25a', mods: { playerDmg: 1.3, enemyDmg: 1.3 },
+  },
+  {
+    id: 'chaos', weight: 1,
+    name: { zh: '錯乱空間', en: 'Chaos Space', ja: '錯乱空間' },
+    desc: {
+      zh: '规则本身不稳定——每隔一段时间随机改写为另一条空间。',
+      en: 'The rules themselves are unstable — every so often they rewrite into another space.',
+      ja: '規則そのものが不安定——一定時間ごとに別の空間へ書き換わる。',
+    },
+    color: '#ffe89a', mods: {}, rotateEvery: 25,
+  },
+];
+KUP.SPACE_DEF = id => KUP.SPACES.find(s => s.id === id) || null;

@@ -184,10 +184,10 @@ window.KUP = window.KUP || {};
       ctx.globalAlpha = 1;
     },
 
-    /* 街区雾气：覆盖可视世界区域（章节演出 fog 事件会临时加深） */
+    /* 街区雾气：覆盖可视世界区域（章节演出 fog 事件与「深霧空間」都会临时加深） */
     drawFog(ctx) {
       const boost = this.fogBoostT > 0 ? (this.fogBoost || 0) : 0;
-      const f = (this.area.fog || 0) + boost;
+      const f = (this.area.fog || 0) + boost + (this.spaceFog || 0);
       if (f <= 0) return;
       ctx.fillStyle = 'rgba(10,8,22,' + Math.min(0.75, f).toFixed(3) + ')';
       ctx.fillRect(this.cam.x, this.cam.y, this.view.w, this.view.h);

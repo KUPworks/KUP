@@ -49,6 +49,8 @@ window.KUP = window.KUP || {};
         this.boss = this.spawnEnemy(area.boss || 'boss0');
         KUP.UI.banner(KUP.I18N.t('banner.boss', { name: KUP.I18N.tv(this.boss.def.name) }), 2.6, 'warn');
         KUP.Audio.sfx('boss');
+        /* v0.18：Boss 出现时按概率进入「不可解空間」（延迟 DELAY 秒展开，避免盖住 Boss 横幅） */
+        this.maybeEnterSpace(this.boss);
         /* v0.15.3：血条不再在这里手动 showBoss —— 统一由 game.update 的 syncBosses
          * 按「存活 Boss 列表」每帧维护（多体并存时逐行显示、击破一体只减一行）。 */
       }
@@ -122,6 +124,7 @@ window.KUP = window.KUP || {};
           this.boss = b;
           KUP.UI.banner(KUP.I18N.t('banner.order.boss', { name: KUP.I18N.tv(b.def.name), n: this.orderBossIdx }), 2.4, 'warn');
           KUP.Audio.sfx('boss');
+          this.maybeEnterSpace(b);   // v0.18：治安战每体 Boss 同样有几率触发不可解空間
         }
       }
     },

@@ -37,8 +37,9 @@ window.KUP = window.KUP || {};
     game.debug.lang = q.get('lang');
     game.debug.hurt = parseFloat(q.get('hurt')) || 0; // 初始损失 HP 比例
     game.debug.pick = q.get('pick');                  // 强制升级选项（逗号分隔）
-game.debug.egg = q.get('egg') === '1';            // v0.17 调试：下一次升级必出記憶の卵（現象卡）
-game.debug.revive = q.get('revive') === '1';      // v0.17 调试：开局带 1 次復活充能（验证復活手感）
+    game.debug.egg = q.get('egg') === '1';            // v0.17 调试：下一次升级必出記憶の卵（現象卡）
+    game.debug.revive = q.get('revive') === '1';      // v0.17 调试：开局带 1 次復活充能（验证復活手感）
+    game.debug.space = q.get('space');                // v0.18 调试：?space=<id> 指定 / ?space=1 随机 / ?space=off 关闭
     /* v0.14：?auto=first|last 自动采升级卡（验证被动/护盾 HUD 等需要频繁升级的效果） */
     const autoQ = q.get('auto');
     if (autoQ === 'first') game.debug.autoPick = 0;

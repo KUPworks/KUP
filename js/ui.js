@@ -35,7 +35,7 @@ window.KUP = window.KUP || {};
         'companion-form-detail', 'form-strip', 'form-detail', 'form-title', 'form-chips', 'hud-companion', 'companion-form-title',
         'shop-list', 'shop-tickets', 'shop-cash', 'btn-exchange', 'fukkou-menu-tickets',
         'menu-slot-line', 'slot-list', 'slot-warn', 'slot-io-text', 'slot-io-msg',
-        'order-best-line', 'hud-wave'];
+        'order-best-line', 'hud-wave', 'hud-space'];
       for (const id of ids) this.els[id] = $(id);
       /* 形态/皮肤/同伴 + 上次出击配置：读回本槽存档（kup.save.<id>） */
       if (KUP.META) {
@@ -1203,6 +1203,28 @@ window.KUP = window.KUP || {};
           if (n !== this._waveSig) { this._waveSig = n; this.els['hud-wave'].textContent = KUP.I18N.t('hud.wave', { n }); }
         }
       }
+      /* v0.18 不可解空間：HUD 常驻「◇ 空間名」（含静音空間的封印提示） */
+      if (this.els['hud-space']) {
+        const on = !!(g.space && g.state === 'playing');
+        this.els['hud-space'].classList.toggle('hidden', !on);
+        if (on) {
+          const sig = g.space.id + (g.space.ultLock ? '!' : '');
+          if (sig !== this._spaceSig) {
+            this._spaceSig = sig;
+            this.els['hud-space'].textContent = KUP.I18N.t(g.space.ultLock ? 'hud.spaceLocked' : 'hud.space',
+              { name: KUP.I18N.tv(g.space.name) });
+            this.els['hud-space'].style.setProperty('--c', g.space.color || '#ffe89a');
+          }
+        }
+      }
+      /* 静音空間：大招条置灰（封印不是"没充能"，要看得出来） */
+      if (this.els['ult-wrap']) {
+        const lock = !!(g.space && g.space.ultLock);
+        if (lock !== this._ultLockSig) {
+          this._ultLockSig = lock;
+          this.els['ult-wrap'].classList.toggle('locked', lock);
+        }
+      }
     },
 
     /* ---------- 结算（含復興率 ★★ 与结局分歧；v0.13 治安战：只写「战斗结束」） ---------- */
@@ -1247,6 +1269,11 @@ window.KUP = window.KUP || {};
       if (st.companion) {
         const skin = st.companionForm !== 'none' ? '（' + st.companionFormLabel + '）' : '';
         html += '<div class="stat"><b>' + st.companion + skin + '</b><span>' + KUP.I18N.t('end.stat.companion') + '</span></div>';
+      }
+      /* v0.18 不可解空間徽章（一局里遇到过的最后一处；多次时标 ×N） */
+      if (st.spaceName) {
+        const nm = (st.spaceCount > 1 ? st.spaceName + ' ×' + st.spaceCount : st.spaceName);
+        html += '<div class="space-tag">◇ ' + KUP.I18N.t('end.space', { name: nm }) + '</div>';
       }
       const holder = win ? this.els['win-stats'] : this.els['over-stats'];
       holder.innerHTML = html;

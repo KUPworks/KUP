@@ -352,11 +352,13 @@ window.KUP = window.KUP || {};
       }
       this.area = KUP.AREA(this.run.area);
       this.mod = KUP.MOD(this.run.mod);
-      this.mods = KUP.modsFor(this.mod.id);
       /* 建筑实体开关（v0.11）：?solid=0/1 调试覆盖，默认取 CONFIG.CITY.SOLID */
       this.citySolid = (this.debug && this.debug.solid !== undefined) ? !!this.debug.solid : C.CITY.SOLID;
       this.rng = U.mulberry32(this.run.seed);
       U.rng = this.rng;
+      /* v0.18：基础规则乘数单独留一份——不可解空間只在它之上临时叠加 */
+      this.baseMods = KUP.modsFor(this.mod.id);
+      this.mods = Object.assign({}, this.baseMods);
       if (rebuildCity !== false) this.city = this.buildCity();
     }
 
@@ -397,6 +399,9 @@ window.KUP = window.KUP || {};
       /* v0.17 記憶の卵（現象卡）：本局是否已抽过（番街一局最多一次）、復活充能、已復活次数 */
       this.eggOffered = false; this.eggCharge = 0; this.eggUsed = 0;
       this._eggLevel = -1; this._eggHit = false;   // 同等级抽卡结果缓存（重掷不刷卵）
+      /* v0.18 不可解空間：Boss 出现时按概率进入；觸发体被击破后退回基础规则 */
+      this.space = null; this.spaceBoss = null; this.spacePending = null;
+      this.spaceT = 0; this.spaceRotT = 0; this.spaceFog = 0; this.spacesSeen = [];
       this.bossSpawned = false; this.boss = null; this.bossEnraged = false;
       this.metaResult = null;
       /* 同伴（魔女候補）的周期回复 */
@@ -822,12 +827,112 @@ window.KUP = window.KUP || {};
       return false;
     }
 
+    /* ---------- 不可解空間（v0.18）----------
+     * Boss 出现时掷一次骰：命中则 DELAY 秒后展开一处随机空間，规则临时改写，
+     * 直到「触发它的那体 Boss」被击破才退回基础规则（治安战多体并存时同理）。
+     * 只借用世界观名词作随机规则变异外壳，**不得断言与『Q』等价**（lore §4.3）。 */
+    maybeEnterSpace(boss) {
+      if (this.space || this.spacePending) return false;
+      const S = KUP.CONFIG.SPACE || {};
+      const dbg = this.debug && this.debug.space;
+      if (dbg === 'off') return false;                    // 调试：?space=off 关闭
+      let def = null;
+      if (dbg && dbg !== '1') def = KUP.SPACE_DEF(dbg);   // 调试：?space=<id> 指定
+      if (!def) {
+        if (!dbg && U.rng() >= (S.CHANCE != null ? S.CHANCE : 0.35)) return false;
+        def = U.pick(KUP.SPACES);                         // ?space=1 → 随机
+      }
+      this.spacePending = { def: def, boss: boss || null, t: (S.DELAY != null ? S.DELAY : 1.6) };
+      return true;
+    }
+    enterSpace(def, boss) {
+      if (!def) return false;
+      const first = !this.space;
+      this.space = def;
+      this.spaceBoss = boss || this.boss || null;
+      this.spaceT = 0; this.spaceRotT = 0;
+      this.spacesSeen.push(def.id);
+      this._applySpace(def);
+      KUP.UI.banner(KUP.I18N.t(first ? 'banner.space' : 'banner.spaceShift',
+        { name: KUP.I18N.tv(def.name) }), first ? 2.8 : 2.0);
+      KUP.Audio.sfx(first ? 'warning' : 'select');
+      const p = this.player;
+      if (p) {
+        this.addText(p.x, p.y - 44, KUP.I18N.tv(def.name), def.color || '#ffe89a', 16);
+        for (let i = 0; i < 18; i++) {
+          const a = U.rng() * U.TAU;
+          this.parts.push(new KUP.Particle(p.x, p.y, Math.cos(a) * U.rand(70, 200), Math.sin(a) * U.rand(70, 200),
+            0.7, def.color || '#ffe89a', U.rand(1.8, 3.2)));
+        }
+        this.rings.push(new KUP.Ring(p.x, p.y, { maxR: 420, speed: 900, dmg: 0, kb: 0, color: def.color || '#ffe89a' }));
+        this.shake(6);
+      }
+      return true;
+    }
+    /* 把「当前空間规则」写进 this.mods／玩家／场上敌人（敌人按比例缩放，而不是只影响新刷的怪） */
+    _applySpace(def) {
+      const old = this.mods || this.baseMods || {};
+      this.mods = KUP.combineMods(this.baseMods || {}, def.mods || {});
+      this.spaceFog = def.fog || 0;
+      this._scaleLiveEnemies(old, this.mods);
+      if (this.player) { this.player.mods = this.mods; this.player.recompute(); }
+    }
+    _scaleLiveEnemies(a, b) {
+      const ratio = k => ((b && b[k] !== undefined ? b[k] : 1) / (a && a[k] !== undefined ? a[k] : 1));
+      const rs = ratio('enemySpeed'), rd = ratio('enemyDmg'), rh = ratio('enemyHp');
+      if (Math.abs(rs - 1) < 1e-9 && Math.abs(rd - 1) < 1e-9 && Math.abs(rh - 1) < 1e-9) return;
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        e.speed *= rs; e.dmg *= rd;
+        if (Math.abs(rh - 1) > 1e-9) { e.maxhp *= rh; e.hp *= rh; }
+      }
+    }
+    exitSpace(silent) {
+      if (!this.space) return false;
+      const old = this.mods;
+      this.space = null; this.spaceBoss = null; this.spaceFog = 0;
+      this.mods = Object.assign({}, this.baseMods || {});
+      this._scaleLiveEnemies(old, this.mods);
+      if (this.player) { this.player.mods = this.mods; this.player.recompute(); }
+      if (!silent && this.state === 'playing') {
+        KUP.UI.banner(KUP.I18N.t('banner.spaceExit'), 2.0);
+        KUP.Audio.sfx('select');
+      }
+      return true;
+    }
+    /* 每帧：延迟展开 / 触发体死亡后退回 / 錯乱空間的规则改写 */
+    _tickSpace(dt) {
+      if (this.spacePending) {
+        this.spacePending.t -= dt;
+        if (this.spacePending.t <= 0) {
+          const q = this.spacePending; this.spacePending = null;
+          this.enterSpace(q.def, q.boss);
+        }
+      }
+      if (!this.space) return;
+      this.spaceT += dt;
+      if (this.spaceBoss && this.spaceBoss.dead) { this.exitSpace(); return; }
+      if (this.space.rotateEvery) {
+        this.spaceRotT += dt;
+        if (this.spaceRotT >= this.space.rotateEvery) {
+          this.spaceRotT = 0;
+          const next = U.pick(KUP.SPACES.filter(s => s.id !== this.space.id));
+          this.space = next;
+          this.spacesSeen.push(next.id);
+          this._applySpace(next);
+          KUP.UI.banner(KUP.I18N.t('banner.spaceShift', { name: KUP.I18N.tv(next.name) }), 1.8);
+          KUP.Audio.sfx('select');
+        }
+      }
+    }
+
     update(dt) {
       this.time += dt;
       const p = this.player;
       p.update(dt, this);
       for (const w of p.weapons) w.update(dt, this);
       this.director(dt);
+      this._tickSpace(dt);   // v0.18 不可解空間：延迟展开／触发体击破后退回／錯乱改写
       // 调试：?gem=heal 周期生成指定音片（验证 HP 恢复第二路径）
       if (this.debug.gem) {
         this._gemT = (this._gemT || 0) - dt;
@@ -1156,6 +1261,11 @@ window.KUP = window.KUP || {};
       if (this.state !== 'playing') return;
       const p = this.player, u = this.ult;
       if (!p || p.hp <= 0 || !this.ultReady()) return;
+      /* v0.18 静音空間：浄化の歌被封印 */
+      if (this.space && this.space.ultLock) {
+        this.addText(p.x, p.y - 30, KUP.I18N.t('hud.ultLocked'), '#ff9a5a', 14);
+        return;
+      }
       const UD = this.ultimateDef();
       u.charge = 0;
       u.cdT = this.ultCooldown();
@@ -1702,6 +1812,15 @@ window.KUP = window.KUP || {};
         /* v0.17：記憶の卵＝局内復活（不再进图鉴）；统计只反映本局用了多少次 */
         revives: this.eggUsed,
         eggCharge: this.eggCharge,
+        /* v0.18 不可解空間：本局遇到过的空間（结算徽章展示；结束时已退回规则，故记 last） */
+        space: (this.spacesSeen && this.spacesSeen.length) ? this.spacesSeen[this.spacesSeen.length - 1] : null,
+        spaceName: (() => {
+          const seen = this.spacesSeen || [];
+          const d = seen.length ? KUP.SPACE_DEF(seen[seen.length - 1]) : null;
+          return d ? KUP.I18N.tv(d.name) : null;
+        })(),
+        spaceCount: (this.spacesSeen || []).length,
+        spaceActive: this.space ? this.space.id : null,
         bossEnraged: !!this.bossEnraged,
         bossName: this.boss ? KUP.I18N.tv(this.boss.def.name) : null,
         /* 形態/皮膚/同伴：结算与调试用 */

@@ -252,6 +252,93 @@ check('記憶の卵不再计入现金收入', KUP.META.cashIncome({ eggs: 9, kil
     gEnd.rollChoices().some(c => c.kind === 'egg'));
 }
 
+/* 10b. 不可解空間（v0.18）：BOSS 战有几率进入，规则临时改写
+ *    人类 2026-10-20：「研究接口，BOSS战时有几率进入『不可解空间』」。
+ *    接口＝KUP.MODIFIERS / MODS_KEYS；本作把它用作 Boss 战的随机规则变异外壳。 */
+{
+  const gSp = new KUP.Game(canvas);
+  gSp.start({ char: 'kaf', area: 'area0', seed: 707 });
+  check('不可解空間数据表（≥6 条、三语名/说明/颜色、乘数键合法）',
+    KUP.SPACES.length >= 6 && KUP.SPACES.every(s =>
+      s.name && s.name.zh && s.name.en && s.name.ja &&
+      s.desc && s.desc.zh && s.color &&
+      Object.keys(s.mods || {}).every(k => KUP.MODS_KEYS.indexOf(k) >= 0)));
+  check('combineMods 按项相乘、缺项补 1',
+    (() => {
+      const m = KUP.combineMods({ playerDmg: 1.1 }, { playerDmg: 1.3, enemySpeed: 1.15 });
+      return Math.abs(m.playerDmg - 1.43) < 1e-9 && m.spawnRate === 1 && m.enemySpeed === 1.15;
+    })());
+  gSp.debug.space = 'heat';
+  const bossSp = gSp.spawnEnemy('boss', gSp.player.x + 60, gSp.player.y);
+  gSp.boss = bossSp;
+  /* 另放一只活着的杂兵，用来验证「退出后回退」（死掉的触发体不再参与缩放） */
+  const tankSp = gSp.spawnEnemy('tank', gSp.player.x + 200, gSp.player.y);
+  const baseDmg = bossSp.dmg, basePlayerDmg = gSp.player.dmgMult, tankBaseDmg = tankSp.dmg;
+  check('BOSS 出现 → 先记录待展开（延迟展开，不盖 Boss 横幅）',
+    gSp.maybeEnterSpace(bossSp) === true && !!gSp.spacePending && gSp.space === null);
+  check('展开前规则未变（mods 仍为基础）', Math.abs(gSp.mods.playerDmg - 1) < 1e-9);
+  for (let i = 0; i < 120; i++) gSp._tickSpace(0.02);
+  check('延迟后进入指定空間（?space=heat）', !!gSp.space && gSp.space.id === 'heat' && gSp.spaceBoss === bossSp);
+  check('空間规则叠加：playerDmg 1.3 / enemyDmg 1.3',
+    Math.abs(gSp.mods.playerDmg - 1.3) < 1e-9 && Math.abs(gSp.mods.enemyDmg - 1.3) < 1e-9);
+  check('玩家即时重算（伤害 ×1.3）', Math.abs(gSp.player.dmgMult - basePlayerDmg * 1.3) < 1e-6);
+  check('场上已有敌人同步（伤害 ×1.3，而不是只影响新刷的怪）',
+    Math.abs(bossSp.dmg - baseDmg * 1.3) < 1e-6);
+  check('同一时间不会叠加第二个空間', gSp.maybeEnterSpace(bossSp) === false);
+  /* 触发体被击破 → 规则回归 */
+  bossSp.dead = true;
+  gSp._tickSpace(0.02);
+  check('触发体击破 → 退出空間、规则回归', gSp.space === null && Math.abs(gSp.mods.playerDmg - 1) < 1e-9);
+  check('玩家与敌人同步回退', Math.abs(gSp.player.dmgMult - basePlayerDmg) < 1e-6 &&
+    Math.abs(tankSp.dmg - tankBaseDmg) < 1e-6);
+  check('stats 记录遇到过的空間（结算徽章）',
+    gSp.stats().space === 'heat' && !!gSp.stats().spaceName && gSp.stats().spaceCount === 1);
+  /* 敌人血量类空间：过密空間让已存在的敌人也更脆 */
+  const gDn = new KUP.Game(canvas);
+  gDn.start({ char: 'kaf', area: 'area0', seed: 708 });
+  gDn.debug.space = 'dense';
+  const eDn = gDn.spawnEnemy('tank', gDn.player.x + 80, gDn.player.y);
+  const hpDn = eDn.hp;
+  gDn.maybeEnterSpace(null);
+  for (let i = 0; i < 120; i++) gDn._tickSpace(0.02);
+  check('過密空間：敌人在场血量 ×0.85',
+    Math.abs(eDn.maxhp - hpDn * 0.85) < 1e-6 && Math.abs(eDn.hp - hpDn * 0.85) < 1e-6);
+  /* 静音空間：浄化の歌被封印 */
+  const gMu = new KUP.Game(canvas);
+  gMu.start({ char: 'kaf', area: 'area0', seed: 709 });
+  gMu.debug.space = 'mute';
+  const bMu = gMu.spawnEnemy('boss', gMu.player.x + 60, gMu.player.y);
+  gMu.boss = bMu;
+  gMu.maybeEnterSpace(bMu);
+  for (let i = 0; i < 120; i++) gMu._tickSpace(0.02);
+  gMu.ult.charge = 100;
+  const ringN = gMu.rings.length;
+  gMu.castUltimate();
+  check('静音空間封印浄化の歌（充能不被清空、不释放）', gMu.ult.charge === 100 && gMu.rings.length === ringN);
+  /* 关闭开关 + 錯乱空間改写 + 随机可复现 */
+  const gOff = new KUP.Game(canvas);
+  gOff.start({ char: 'kaf', area: 'area0', seed: 710 });
+  gOff.debug.space = 'off';
+  check('?space=off 关闭（调试/回归用）', gOff.maybeEnterSpace(null) === false);
+  const gCh = new KUP.Game(canvas);
+  gCh.start({ char: 'kaf', area: 'area0', seed: 711 });
+  gCh.debug.space = 'chaos';
+  gCh.maybeEnterSpace(null);
+  for (let i = 0; i < 120; i++) gCh._tickSpace(0.02);
+  const firstId = gCh.space && gCh.space.id;
+  for (let i = 0; i < 1400; i++) gCh._tickSpace(0.02);   // > rotateEvery(25s)
+  check('錯乱空間：规则会改写为另一条空間',
+    firstId === 'chaos' && !!gCh.space && gCh.space.id !== 'chaos' && gCh.spacesSeen.length >= 2);
+  const mkRand = seed => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'kaf', area: 'area0', seed });
+    g.debug.space = '1';
+    g.maybeEnterSpace(null);
+    return g.spacePending && g.spacePending.def.id;
+  };
+  check('同 seed 的随机空間可复现（确定性）', !!mkRand(4242) && mkRand(4242) === mkRand(4242));
+}
+
 // 11. 覚醒：满级后进入觉醒池、觉醒后切换 stat
 const gA = new KUP.Game(canvas);
 gA.start({ char: 'kaf', area: 'area0', seed: 555 });
