@@ -829,7 +829,9 @@ window.KUP = window.KUP || {};
 
     /* ---------- 不可解空間（v0.18）----------
      * Boss 出现时掷一次骰：命中则 DELAY 秒后展开一处随机空間，规则临时改写，
-     * 直到「触发它的那体 Boss」被击破才退回基础规则（治安战多体并存时同理）。
+     * 直到**这场 Boss 战结束**（场上所有 Boss 都被击破）才退回基础规则。
+     * 治安战多体并存时：同一时间只允许一处空间（不叠加），且触发体先死、另一体还活着时
+     * 空间不提前退——否则“另一体还在打，规则却突然变回去”。
      * 只借用世界观名词作随机规则变异外壳，**不得断言与『Q』等价**（lore §4.3）。 */
     maybeEnterSpace(boss) {
       if (this.space || this.spacePending) return false;
@@ -900,18 +902,23 @@ window.KUP = window.KUP || {};
       }
       return true;
     }
-    /* 每帧：延迟展开 / 触发体死亡后退回 / 錯乱空間的规则改写 */
+    /* 场上是否还有活着的 Boss（治安战多体并存时，空间要跟着「整场 Boss 战」走） */
+    hasLiveBoss() { return this.enemies.some(e => e.boss && !e.dead); }
+    /* 每帧：延迟展开 / 触发体所在 Boss 战结束后退回 / 錯乱空間的规则改写 */
     _tickSpace(dt) {
       if (this.spacePending) {
         this.spacePending.t -= dt;
         if (this.spacePending.t <= 0) {
           const q = this.spacePending; this.spacePending = null;
-          this.enterSpace(q.def, q.boss);
+          /* 延迟期间触发体就被击破 → 现象不成立（否则会「展开即崩壊」闪一下横幅） */
+          if (!q.boss || !q.boss.dead) this.enterSpace(q.def, q.boss);
         }
       }
       if (!this.space) return;
       this.spaceT += dt;
-      if (this.spaceBoss && this.spaceBoss.dead) { this.exitSpace(); return; }
+      /* 治安战多体 Boss：**等整场 Boss 战结束**才退回，而不是触发体一死就退
+       * （否则另一体还在打，规则却突然变回去）。番街只有一体，效果相同。 */
+      if (this.spaceBoss && this.spaceBoss.dead && !this.hasLiveBoss()) { this.exitSpace(); return; }
       if (this.space.rotateEvery) {
         this.spaceRotT += dt;
         if (this.spaceRotT >= this.space.rotateEvery) {

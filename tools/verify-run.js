@@ -293,6 +293,36 @@ check('記憶の卵不再计入现金收入', KUP.META.cashIncome({ eggs: 9, kil
     Math.abs(tankSp.dmg - tankBaseDmg) < 1e-6);
   check('stats 记录遇到过的空間（结算徽章）',
     gSp.stats().space === 'heat' && !!gSp.stats().spaceName && gSp.stats().spaceCount === 1);
+  /* 治安战多体 Boss：空间不叠加，且「触发体死了但另一体还在」时保持到整场 Boss 战结束 */
+  const gMb = new KUP.Game(canvas);
+  gMb.start({ char: 'kaf', area: 'order', seed: 712 });
+  gMb.debug.space = 'heat';
+  const bA = gMb.spawnEnemy('boss0', gMb.player.x + 60, gMb.player.y);
+  gMb.boss = bA;
+  gMb.maybeEnterSpace(bA);
+  for (let i = 0; i < 120; i++) gMb._tickSpace(0.02);
+  const bB = gMb.spawnEnemy('boss1', gMb.player.x - 60, gMb.player.y);
+  check('多体 Boss：既存空间期间不会叠加第二处', gMb.maybeEnterSpace(bB) === false && !!gMb.space);
+  bA.dead = true;
+  gMb._tickSpace(0.02);
+  check('多体 Boss：触发体被击破但仍有一体存活 → 空间保留', !!gMb.space && gMb.space.id === 'heat');
+  check('多体 Boss：空间仍作用于后出现的 Boss（规则未提前回退）',
+    Math.abs(gMb.mods.playerDmg - 1.3) < 1e-9 &&
+    Math.abs(gMb.player.dmgMult - gMb.player.base.dmg * 1.3) < 1e-6);
+  bB.dead = true;
+  gMb._tickSpace(0.02);
+  check('多体 Boss 全部击破 → 空间退出、规则回归',
+    gMb.space === null && Math.abs(gMb.mods.playerDmg - 1) < 1e-9);
+  /* 延迟期间触发体就被击破：不展开（否则会「展开即崩壊」闪一下） */
+  const gPd = new KUP.Game(canvas);
+  gPd.start({ char: 'kaf', area: 'area0', seed: 713 });
+  gPd.debug.space = 'heat';
+  const bPd = gPd.spawnEnemy('boss', gPd.player.x + 60, gPd.player.y);
+  gPd.maybeEnterSpace(bPd);
+  bPd.dead = true;
+  for (let i = 0; i < 120; i++) gPd._tickSpace(0.02);
+  check('延迟期间触发体被击破 → 不展开空间（不闪横幅）',
+    gPd.space === null && gPd.spacesSeen.length === 0);
   /* 敌人血量类空间：过密空間让已存在的敌人也更脆 */
   const gDn = new KUP.Game(canvas);
   gDn.start({ char: 'kaf', area: 'area0', seed: 708 });
