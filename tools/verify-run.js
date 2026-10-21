@@ -889,6 +889,25 @@ gS.hurtPlayer(2, 'ring');
 check('受伤会打断恢复计时', gS.player.shieldRegenT === 0, 't=' + gS.player.shieldRegenT.toFixed(2));
 for (let i = 0; i < 20; i++) gS.player.update(0.05, gS);
 check('打断后的 3 秒内仍不回复', gS.player.shield < shMid + 8, 'sh=' + gS.player.shield.toFixed(1));
+/* v0.18.5（人类 2026-10-22「应是不为0就有减伤效果」）：
+ * 耐久只剩一点点也照样减伤，只有归零才失去（旧版有"耐久 <20 就不挡"的门槛）。 */
+gS.player.shield = 5; gS.player.shieldTmp = 0;
+gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false;
+check('耐久剩 5（>0）仍保留 95% 贴靠减伤', gS.player.reducePct('contact') === 95,
+  'pct=' + gS.player.reducePct('contact'));
+gS.player.hitT = 0; gS.player.invuln = false;
+gS.player.hp = gS.player.maxhp;          // 前面的大伤害测试可能已把 HP 打空，这里先复位
+const hpLow = gS.player.hp;
+gS.hurtPlayer(20, 'contact');
+check('耐久很低时依然挡下伤害（20 点只掉 1）',
+  Math.abs((hpLow - gS.player.hp) - 1) < 0.01 && gS.player.shield === 0,
+  'loss=' + (hpLow - gS.player.hp).toFixed(2) + ' sh=' + gS.player.shield);
+gS.player.shield = 0.5; gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false;
+check('耐久 0.5 也有减伤（归零前一直有效）', gS.player.reducePct('contact') === 95);
+gS.player.shield = 0;
+check('耐久归零后才是没有减伤', gS.player.reducePct('contact') === 0);
+gS.player.shield = 100;
+
 /* 「防音の符」：+60 耐久、+12 效率（封顶 100） */
 const gSW = new KUP.Game(canvas);
 gSW.start({ char: 'kaf', area: 'area0', seed: 93 });

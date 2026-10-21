@@ -11,15 +11,17 @@ window.KUP = window.KUP || {};
    *   强度系数 k   ＝ 保护效率 / 满值（v0.18.4：效率与耐久分开；效率 88/100）
    *   查表基础值 b ＝ C.SHIELD.REDUCE[类型]
    *   减伤        ＝ base × (SCALE_OFF + SCALE_MUL × k)     （满值 k=1 时精确等于 b；HARD_CAP 封顶）
-   *   贴靠特例：被光束/轰炸打穿（taint）或**持续贴靠已失效**（touchT≤0 且 touchUsed）
-   *            或总耐久 < 满值 × TOUCH_UNIT ⇒ 0%。
+   *   贴靠特例：被光束/轰炸打穿（taint）或**持续贴靠已失效**（touchT≤0 且 touchUsed）⇒ 0%。
+   *   ★ v0.18.5（人类 2026-10-22「应是不为0就有减伤效果」）：**删掉**旧门槛
+   *     「总耐久 < 满值 × TOUCH_UNIT 就完全不挡」——耐久只剩 1 也照样有减伤，
+   *     只有**耐久真正归零**时才没有减伤。
    * p 可为玩家实例；缺 shieldTotal 时返回 0。 */
   KUP.shieldReducePct = (p, kind) => {
     const S = C.SHIELD, RU = S.REDUCE || {};
     const total = p && p.shieldTotal ? p.shieldTotal() : 0;
-    if (total <= 0) return 0;
+    if (total <= 0) return 0;                       // 只有打空才是"没有减伤"
     if (kind === 'contact') {
-      if (p.shieldTaintT > 0 || p.shieldTouchUsed || total < S.AURA_MAX * S.TOUCH_UNIT) return 0;
+      if (p.shieldTaintT > 0 || p.shieldTouchUsed) return 0;
     }
     const base = RU[kind] !== undefined ? RU[kind] : RU.contact;
     /* v0.18.4：减伤只看**保护效率**（玩家实例有 shieldEfficiency 时），
@@ -158,16 +160,16 @@ window.KUP = window.KUP || {};
     }
     /* ---------- 护盾减伤结算（v0.14 减伤膜 ＋ v0.18.3 会被打薄）----------
      * kind：contact／ring／field／bomb／beam（未知名按 contact 处理）
-     * 返回实际扣到生命的伤害；**护盾强度按挡下的伤害被扣减**（先扣临时膜层，再扣本体），
-     * 因此连续挨打会把膜打薄、减伤随之下降；脱战后自动回满（见 update 的 shieldRegenT）。
+     * 返回实际扣到生命的伤害；**护盾耐久按挡下的伤害被扣减**（先扣临时膜层，再扣本体），
+     * 减伤比例只看"保护效率"，**耐久 > 0 就一直有效**；只有耐久归零才没有减伤，
+     * 脱战后自动回满（见 update 的 shieldRegenT）。
      * 贴靠膜：挡下第一击后 TOUCH_ARM 秒内失效（要持续贴靠才算"挡开"），
      * 被光束/轰炸打穿后 TAINT_T 秒内也失效 —— 被围住时不是无敌，而是争取脱身时间。 */
     applyShield(dmg, kind) {
       const S = C.SHIELD;
       const total = this.shieldTotal();
       if (total <= 0 || dmg <= 0) return dmg;
-      if (kind === 'contact' &&
-          (this.shieldTaintT > 0 || this.shieldTouchUsed || total < S.AURA_MAX * S.TOUCH_UNIT)) return dmg;
+      if (kind === 'contact' && (this.shieldTaintT > 0 || this.shieldTouchUsed)) return dmg;
       const pct = KUP.shieldReducePct(this, kind) / 100;
       const blocked = dmg * pct;
       if (kind === 'contact') { this.shieldTouchT = S.TOUCH_ARM; this.shieldTouchUsed = true; }
