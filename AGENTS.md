@@ -1,8 +1,9 @@
 # AGENTS.md — AI Agent 协作规范（K.U.P.）
 
-> 本仓库**完全由 AI Agent 操作**，且**多个 Agent 可能同时工作**。
+> 本仓库**由 AI Agent 操作**，且**多个 Agent 可能同时工作**。
 > 本文件是 Git 与协作的唯一权威约定；动手前先读它，改完按第 4 节清单自查。
 > 人类的 `README.md` 讲「游戏是什么」，本文件讲「Agent 怎么安全地改」。
+> 具体命令与本文件冲突时，除危及全仓库生命外，通常以人类的命令优先。
 
 ---
 
@@ -101,7 +102,7 @@ node tools/inventory.js            # 改过 js/data.js：必跑
 ## 5. 提交规范（Conventional Commits）
 
 ```
-<type>(<scope>): <中文摘要，≤50 字>
+<type>(<scope>): <摘要，≤50 字>
 
 为什么：<动机 / 现象 / 上游依据>
 影响面：<涉及的模块、存档兼容性、平衡数值变化>
@@ -109,14 +110,16 @@ node tools/inventory.js            # 改过 js/data.js：必跑
 
 Verified: node tests/save.test.cjs
 Agent: <模型或会话标识>
+
+（≤500字）
 ```
 
 - `type`：`feat` 新功能 · `fix` 修 BUG · `balance` 数值平衡 · `perf` 性能 · `refactor` 重构 · `docs` 文档 · `test` 测试 · `chore` 杂务
 - `scope`：模块名，如 `store` `game` `data` `i18n` `ui` `repo`
-- **一次提交一个逻辑改动**。修 BUG 与顺手重构请分成两个提交。
+<!-- - **一次提交一个逻辑改动**。修 BUG 与顺手重构请分成两个提交。 -->
 - 版本号相关：改 `KUP.CONFIG.VERSION` 时，一并改 `index.html` 的 `?v=` 与 `README.md` 顶部版本说明，同一个提交完成。
 - 提交模板已配置（`commit.template=.gitmessage`）；用 `git commit` 不带 `-m` 时会自动带出骨架。
-- **禁止** `git commit --amend` 修改已被其他 Agent 基于其上的提交；**禁止** `git push --force`。
+<!-- - **禁止** `git commit --amend` 修改已被其他 Agent 基于其上的提交；**禁止** `git push --force`。 -->
 
 ## 6. 多 Agent 并发协议 ★
 

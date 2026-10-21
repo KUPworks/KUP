@@ -44,7 +44,7 @@ window.KUP = window.KUP || {};
     const autoQ = q.get('auto');
     if (autoQ === 'first') game.debug.autoPick = 0;
     else if (autoQ === 'last') game.debug.autoPick = 2;
-    game.debug.gem = q.get('gem');                    // 周期生成音片类型
+    game.debug.gem = q.get('gem');                    // 周期生成片段类型
     game.debug.ult = q.get('ult') === '1';            // 开局即充满浄化の歌（验证大招）
     game.debug.recruit = q.get('recruit') === '1';    // 调试：临时解锁全部招募（角色/同伴）
     game.debug.w = q.get('w');                        // 调试：追加初始武器（逗号分隔，如 toss,bomb,mine）

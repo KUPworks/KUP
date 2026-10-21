@@ -856,7 +856,7 @@ KUP.PASSIVES = {
   mic:    {
     icon: '拾', color: '#ffd25a', maxLv: 5,
     name: { zh: '魔导麦克风', en: 'Magic Microphone', ja: '魔導マイク' },
-    desc: { zh: '音片更易被歌声吸引——拾取范围 +30%。', en: 'Note shards are drawn to your song — pickup range +30%.', ja: '音片が歌に引かれやすくなる——取得範囲 +30%。' },
+    desc: { zh: 'フラグメント更易被歌声吸引——拾取范围 +30%。', en: 'Fragments are drawn to your song — pickup range +30%.', ja: 'フラグメントが歌に引かれやすくなる——取得範囲 +30%。' },
   },
   steps:  {
     icon: '步', color: '#8affc9', maxLv: 5,
@@ -931,9 +931,9 @@ KUP.PASSIVES = {
     icon: '潤', color: '#c9ffe8', maxLv: 5,
     name: { zh: '無傷の譜', en: 'Score of Unhurt', ja: '無傷の譜' },
     desc: {
-      zh: '回避（MISS）成功时，音片回流——回复最大生命的 <b>1.5%</b>／级。',
-      en: 'Each MISS sends shards flowing back — heal <b>1.5%</b> max HP per level.',
-      ja: '回避（MISS）成功時、音片が還流する——最大生命の <b>1.5%</b>／レベル回復。',
+      zh: '回避（MISS）成功时，片段回流——回复最大生命的 <b>1.5%</b>／级。',
+      en: 'Each MISS sends fragments flowing back — heal <b>1.5%</b> max HP per level.',
+      ja: '回避（MISS）成功時、フラグメントが還流する——最大生命の <b>1.5%</b>／レベル回復。',
     },
   },
 };
@@ -968,9 +968,9 @@ KUP.ITEMS = {
     id: 'salve', icon: '癒', color: '#7dff9a', kind: 'heal', amount: 0.45,
     name: { zh: '治癒の符', en: 'Ward of Healing', ja: '治癒の符' },
     desc: {
-      zh: '音片回流——<b>立即回复 45% 最大生命</b>。',
-      en: 'Shards flow back — <b>heal 45% max HP now</b>.',
-      ja: '音片が還流する——<b>即座に最大生命の 45% 回復</b>。',
+      zh: '片段回流——<b>立即回复 45% 最大生命</b>。',
+      en: 'Fragments flow back — <b>heal 45% max HP now</b>.',
+      ja: 'フラグメントが還流する——<b>即座に最大生命の 45% 回復</b>。',
     },
   },
   echo: {
@@ -987,9 +987,9 @@ KUP.ITEMS = {
     id: 'magnet', icon: '磁', color: '#5ad0ff', kind: 'magnet', amount: 1, seconds: 8,
     name: { zh: '磁石の符', en: 'Ward of Magnetism', ja: '磁石の符' },
     desc: {
-      zh: '歌声化作磁场——<b>8 秒内全场音片被吸向魔女</b>（回复 ♥ 同样被吸引）。',
-      en: 'Your song becomes a magnetic field — <b>every note shard is pulled to you for 8s</b> (hearts too).',
-      ja: '歌が磁場となる——<b>8 秒間、場の音片すべてが引き寄せられる</b>（回復♥も）。',
+      zh: '歌声化作磁场——<b>8 秒内全场片段被吸向魔女</b>（回复 ♥ 同样被吸引）。',
+      en: 'Your song becomes a magnetic field — <b>every fragment is pulled to you for 8s</b> (hearts too).',
+      ja: '歌が磁場となる——<b>8 秒間、場のフラグメントすべてが引き寄せられる</b>（回復♥も）。',
     },
   },
   /* ===== v0.13 状态异常（僵直／冷冻 与 减速）=====
@@ -1036,7 +1036,7 @@ KUP.ENEMIES = {
   glitch: {
     id: 'glitch',
     name: { zh: '破维魔（高速型）', en: 'Tesseracter (Swift)', ja: 'テセラクター（高速型）' },
-    hp: 7, speed: 108, dmg: 6, xp: 2, r: 9, color: '#55e0ff', sides: 5, turn: 900,
+    hp: 7, speed: 108, dmg: 6, xp: 2, r: 9, color: '#5959ff', sides: 5, turn: 900,
   },
   tank: {
     id: 'tank',
@@ -1182,7 +1182,9 @@ KUP.SUPPORT = id => KUP.SUPPORTS.find(s => s.id === id) || null;
  * ⚠️ `src` 字段**只作数据层的出处记录**（verify-run 会校验它存在，见 tools/verify-run.js）；
  *    **界面不再显示出处行**（ui.js 里对应的渲染已注释掉）。
  * 本批形态（2026-10）：
- *   - 魔女之子（kinds:['witch']）：花魁鳥／姬連雀 —— 本批共用；★ 姬連雀为**本作同人命名**（官方无此形态名）
+ *   - 魔女之子（kinds:['witch']）：花魁鳥／姬連雀 —— 本批共用；★ 姬連雀出自
+ *     **V.W.P 4th ONE-MAN LIVE「現象Ⅳ-反転運命-」**（2026-02-28 公布；人类 2026-10-21 指正，
+ *     此前误标「本作同人命名」——旧标法与粉丝 wiki/官方 SRD 的同期记录一致，属**来源时间差**，非臆造）
  *   - 可招募角色·魔女候補（kinds:['recruit']）：黑／白 —— 本作暂定名；后续每位分别定制
  *   - 同伴（kinds:['companion']）：JK 制服（夏／冬）—— 本作设定，后续为每位同伴定制
  * 实现方式：
@@ -1290,9 +1292,9 @@ KUP.FORM_SERIES = [
       ja: '五人共用の形態——公式に「V.W.P のために特別に用意された、魔女たちの特殊歌唱形態」と明記され、公式商品も五人分が各一件。**五人の魔女の娘全員が装備できる**。名称は公式、衣装は本作デザイン。',
     },
     src: {
-      zh: '形态名＝官方（花魁鳥 (Revolutions) 词条／官方 VR 曲目表「変身／花魁鳥」＝Witches Awakening／官方商品页）',
-      en: 'Form names: official (the Oiran-chō (Revolutions) entry / official VR tracklist "Witches Awakening" / official product pages)',
-      ja: '形態名＝公式（花魁鳥 (Revolutions) の項目／公式 VR 曲目表「変身／花魁鳥」＝Witches Awakening／公式商品ページ）',
+      zh: '形态名＝官方（花魁鳥 (Revolutions) 词条／官方 VR 曲目表「変身／花魁鳥」＝Witches Awakening／官方商品页／姬連雀＝V.W.P 4th ONE-MAN LIVE「現象Ⅳ-反転運命-」）',
+      en: 'Form names: official (the Oiran-chō (Revolutions) entry / official VR tracklist "Witches Awakening" / official product pages / Hime-renjaku = V.W.P 4th ONE-MAN LIVE "Phenomenon IV -Hanten Unmei-")',
+      ja: '形態名＝公式（花魁鳥 (Revolutions) の項目／公式 VR 曲目表「変身／花魁鳥」＝Witches Awakening／公式商品ページ／姫連雀＝V.W.P 4th ONE-MAN LIVE「現象Ⅳ-反転運命-」）',
     },
   },
   {
@@ -1326,13 +1328,17 @@ KUP.FORMS = [
     src: { zh: '官方 LIVE 形态命名（粉丝 wiki 转引）', en: 'Official live-form naming (fan-wiki transcript)', ja: '公式 LIVE の形態命名（ファンwiki 転引）' },
   },
   {
-    id: 'himerenjaku', kinds: ['witch'], series: 'legacy', accent: 'crest',
+    id: 'himerenjaku', kinds: ['witch'], series: 'vwp_shared', accent: 'crest',
     name: { zh: '姬連雀', en: 'Hime-renjaku', ja: '姫連雀' },
     label: { zh: '魔女特殊歌唱用形態 姬連雀', en: 'Witch Special Singing Form: Hime-renjaku', ja: '魔女特殊歌唱用形態 姫連雀' },
     desc: { zh: '轻盈的连雀之羽——游走的低语。<br>移动速度 +12%、拾取范围 +20%、经验 +8%，攻击 -5%。', en: 'The light plumage of the waxwing — a wandering whisper.<br>Move speed +12%, pickup +20%, XP +8%, Atk -5%.', ja: '軽やかな連雀の羽——遊走の囁き。<br>移動速度 +12%、取得 +20%、経験 +8%、攻撃 -5%。' },
     mods: { speed: 1.12, pickup: 1.2, xp: 1.08, dmg: 0.95 },
     color: '#8affc9', color2: '#0f6b52',
-    src: { zh: '本作同人命名（官方无此形态名）', en: 'Fan-made naming (no official form of this name)', ja: '本作の同人命名（公式にこの形態名はない）' },
+    /* v0.18.1 出处更正（人类 2026-10-21）：姬連雀 并非本作自创，而是
+     * **V.W.P 4th ONE-MAN LIVE「現象Ⅳ-反転運命-」（2026-02-28）公布**的形态名。
+     * 与 花魁鳥（2021 不可解弐Q2／V.W.P 1st「現象」Revolutions）同属
+     * 「魔女特殊歌唱用形態」这条五人共用线，故并入 vwp_shared。 */
+    src: { zh: '形态名＝官方（V.W.P 4th ONE-MAN LIVE「現象Ⅳ-反転運命-」公布）；服装设计＝本作', en: 'Form name: official (unveiled at V.W.P 4th ONE-MAN LIVE "Phenomenon IV -Hanten Unmei-"); costume design: this work', ja: '形態名＝公式（V.W.P 4th ONE-MAN LIVE「現象Ⅳ-反転運命-」で発表）。衣装デザイン＝本作' },
   },
   /* ---- 全形态清单（v0.13.5：把采集稿里**有名有姓**的形态全部做出来） ------------------
    * 写法：**系列承载共同字段**（说明/配色/轮廓配件/出处），这里一条形态只写自己的差异，
@@ -1386,12 +1392,12 @@ KUP.FORMS = [
   /* 理芽（狸眼）：Metamorphose 系列（官方「歴代衣装」商品名 ＋ UBIK 官方帖） */
   { id: 'nightwings', series: 'rim_meta', name: { zh: 'Nightwings', en: 'Nightwings', ja: '1st Metamorphose「Nightwings」' } },
   {
-    id: 'childhoods_end', series: 'rim_meta', name: { zh: '幼年期の終わり', en: "Childhood's End", ja: 'Special Metamorphose「Childhood\'s End」' },
+    id: 'childhoods_end', series: 'rim_meta', name: { zh: 'Childhood\'s End', en: "Childhood's End", ja: '「Childhood\'s End」' },
     accent: 'star_ring', color: '#e8ecf6',
     note: {
-      zh: '又名「幼年期の終わり」——官方 VR 曲目表 `変身／幼年期の終わり`＝Rime\'s Awakening。<br>银白礼服披薄纱、长发银环束起、衣摆星屑。<br>拾取范围 <b>+25%</b>、经验 <b>+10%</b>、移动速度 <b>+5%</b>，最大生命 <b>−8%</b>。',
-      en: 'Also known as 幼年期の終わり — the official VR tracklist maps it to Rime\'s Awakening.<br>A silver-white gown under gauze, hair bound by a silver ring, stardust at the hem.<br>Pickup <b>+25%</b>, XP <b>+10%</b>, move speed <b>+5%</b>, max HP <b>−8%</b>.',
-      ja: '別名「幼年期の終わり」——公式 VR 曲目表の `変身／幼年期の終わり`＝Rime\'s Awakening。<br>銀白のドレスに薄紗、長い髪は銀のリングで束ね、裾に星屑。<br>取得 <b>+25%</b>、経験 <b>+10%</b>、移動速度 <b>+5%</b>、最大生命 <b>−8%</b>。',
+      zh: '又名「幼年期の終わり」——官方 VR 曲目表 `変身／幼年期の終わり`＝Rime\'s Awakening。拾取范围 <b>+25%</b>、经验 <b>+10%</b>、移动速度 <b>+5%</b>，最大生命 <b>−8%</b>。',
+      en: 'Also known as 幼年期の終わり — the official VR tracklist maps it to Rime\'s Awakening.Pickup <b>+25%</b>, XP <b>+10%</b>, move speed <b>+5%</b>, max HP <b>−8%</b>.',
+      ja: '別名「幼年期の終わり」——公式 VR 曲目表の `変身／幼年期の終わり`＝Rime\'s Awakening。取得 <b>+25%</b>、経験 <b>+10%</b>、移動速度 <b>+5%</b>、最大生命 <b>−8%</b>。',
     },
     mods: { pickup: 1.25, xp: 1.10, speed: 1.05, hp: 0.92 },
   },
@@ -1401,9 +1407,10 @@ KUP.FORMS = [
   {
     id: 'dr_futurity', series: 'rim_meta', name: { zh: 'Dr.Futurity', en: 'Dr.Futurity', ja: '4th Metamorphose「Dr.Futurity」' }, color: '#cfd8e8',
     note: {
-      zh: '官方「歴代衣装」商品系列的第 4 件——**非公式 wiki 与官方 WORDS 都还没有**（2026-09 商品页才点名）。',
-      en: 'The 4th entry in the official "successive costumes" goods line — **absent from both the fan wiki and the official WORDS list** (first named in a 2026-09 product page).',
-      ja: '公式「歴代衣装」商品シリーズの 4 件目——**非公式 wiki にも公式 WORDS にも未収録**（2026-09 の商品ページで初めて名前が出た）。',
+      // ——**非公式 wiki 与官方 WORDS 都还没有**（2026-09 商品页才点名）
+      zh: '官方「歴代衣装」商品系列的第 4 件。',
+      en: 'The 4th entry in the official "successive costumes" goods line.',
+      ja: '公式「歴代衣装」商品シリーズの 4 件目',
     },
   },
   {
@@ -1506,7 +1513,7 @@ KUP.FORMS = [
     id: 'shiro', kinds: ['recruit'], accent: 'halo',
     name: { zh: '白', en: 'White', ja: '白' },
     label: { zh: '皮肤「白」（暂定）', en: 'Skin "White" (tentative)', ja: '皮膚「白」（暫定）' },
-    desc: { zh: '昼之装束——歌声更易牵引音片。<br>拾取范围 +15%。', en: 'Day vestment — a song that gathers shards.<br>Pickup +15%.', ja: '昼の装い——歌が音片を引き寄せる。<br>取得 +15%。' },
+    desc: { zh: '昼之装束——歌声更易牵引フラグメント。<br>拾取范围 +15%。', en: 'Day vestment — a song that gathers fragments.<br>Pickup +15%.', ja: '昼の装い——歌がフラグメントを引き寄せる。<br>取得 +15%。' },
     mods: { pickup: 1.15 },
     color: '#f2f0ff', color2: '#a9b6d8',
     src: { zh: '本作暂定皮肤（黑／白）', en: 'Tentative skin (Black/White) original to this work', ja: '本作の暫定皮膚（黒／白）' },
@@ -1701,7 +1708,7 @@ KUP.SHOP = [
   {
     id: 'lazy', icon: '回', maxLv: 5, base: 44, inc: 28, mods: { xp: 1.04 },
     name: { zh: '回转台', en: 'Lazy Susan', ja: '回転テーブル' },
-    desc: { zh: '音片转着圈来。经验 <b>+4%</b>／级。', en: 'The shards come around. XP <b>+4%</b> per level.', ja: '音片が回ってくる。経験 <b>+4%</b>／レベル。' },
+    desc: { zh: 'フラグメント转着圈来。经验 <b>+4%</b>／级。', en: 'The fragments come around. XP <b>+4%</b> per level.', ja: 'フラグメントが回ってくる。経験 <b>+4%</b>／レベル。' },
   },
   {
     id: 'sign', icon: '看', maxLv: 3, base: 64, inc: 40, mods: { startUlt: 15 },

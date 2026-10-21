@@ -812,7 +812,7 @@ window.KUP = window.KUP || {};
      * walkable 另加 MIN_GAP 间隙，是**生成/传送落点**专用语义）。 */
     freeAt(x, y, r) { return !this.collideCircle(x, y, r); }
     /* 把实体挪到最近的「圆心可站立」点（更新循环末尾兜底；找不到才消除）。
-     * 敌人/音片生成处已走 walkable 落点，正常不会触发；这是极端 seed 的保险。 */
+     * 敌人/片段生成处已走 walkable 落点，正常不会触发；这是极端 seed 的保险。 */
     walkableNearest(e) {
       const A = C.ARENA;
       for (let rad = C.CITY.GRID; rad <= A; rad += C.CITY.GRID) {
@@ -940,7 +940,7 @@ window.KUP = window.KUP || {};
       for (const w of p.weapons) w.update(dt, this);
       this.director(dt);
       this._tickSpace(dt);   // v0.18 不可解空間：延迟展开／触发体击破后退回／錯乱改写
-      // 调试：?gem=heal 周期生成指定音片（验证 HP 恢复第二路径）
+      // 调试：?gem=heal 周期生成指定片段（验证 HP 恢复第二路径）
       if (this.debug.gem) {
         this._gemT = (this._gemT || 0) - dt;
         if (this._gemT <= 0) {
@@ -1174,12 +1174,36 @@ window.KUP = window.KUP || {};
       }
     }
 
+    /* 掉落「片段」。
+     * v0.18.1（人类 2026-10-21「上限改为 240px 方格内 160 个，超当前格上限再合并」）：
+     *   ① 配额改**按空间格**——每 240px 方格里最多 GEM_CELL_CAP(160) 个，超出则合并；
+     *   ② 合并**只并进 xp 片段**（旧版随机挑，挑到回复 ♥ 片段时会因 `type !== 'xp'`
+     *      直接丢弃那笔经验 ⇒ 表现成「打怪不再掉经验」的隐性 bug）；
+     *   ③ 优先并进**本格内**的片段（经验堆在附近、玩家看得见），本格没有才退回全场；
+     *   ④ 全场只有回复 ❤/♥ 片段这种极端情况，宁可短暂超配额也要新建，绝不吞经验；
+     *   ⑤ MAX_GEMS(480) 只是全局兜底，防止玩家长期不捡导致实体爆炸。
+     * 随机数：每次掉落最多消费 1 次（先计数、再取第 k 个），消耗量与旧版同级。 */
     dropGem(x, y, xp) {
       const val = Math.max(1, Math.round(xp * this.mods.dropRate));
-      if (this.gems.length >= C.MAX_GEMS) {
-        const g = this.gems[(U.rng() * this.gems.length) | 0];
-        if (g.type === 'xp') g.xp += val;
-        return;
+      const cell = C.GEM_CELL, cap = C.GEM_CELL_CAP;
+      const gx = Math.floor(x / cell), gy = Math.floor(y / cell);
+      const sameCell = g => !g.dead && g.type === 'xp' &&
+        Math.floor(g.x / cell) === gx && Math.floor(g.y / cell) === gy;
+      const anyXp = g => !g.dead && g.type === 'xp';
+      let cnt = 0;
+      for (const g of this.gems) if (sameCell(g)) cnt++;
+      if (cnt >= cap || this.gems.length >= C.MAX_GEMS) {
+        /* 合并目标：优先本格 xp 片段，其次全场 xp 片段 */
+        let pool = cnt > 0 ? sameCell : anyXp, total = 0;
+        for (const g of this.gems) if (pool(g)) total++;
+        if (total > 0) {
+          let k = (U.rng() * total) | 0;
+          for (const g of this.gems) {
+            if (!pool(g)) continue;
+            if (k-- === 0) { g.xp += val; return; }
+          }
+        }
+        /* 没有任何 xp 片段：照常新建（宁可超配额，也不丢经验） */
       }
       this.gems.push(new KUP.Gem(x, y, val));
     }
@@ -1367,7 +1391,7 @@ window.KUP = window.KUP || {};
       if (dc > 0 && U.rng() < dc) {
         this.addText(p.x, p.y - 24, KUP.I18N.t('hud.dodge'), '#c9ffe8', 14);
         KUP.Audio.sfx('select');
-        /* 「無傷の譜」：回避成功时回流音片回血 */
+        /* 「無傷の譜」：回避成功时回流片段回血 */
         if (p.missHeal > 0 && p.hp < p.maxhp) {
           const heal = Math.max(1, Math.round(p.maxhp * p.missHeal));
           p.hp = Math.min(p.maxhp, p.hp + heal);

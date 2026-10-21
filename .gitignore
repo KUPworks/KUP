@@ -45,3 +45,6 @@ desktop.ini
 .env.*
 *.pem
 *.key
+
+# --- 本地开发文档 ---
+AGENTS.md

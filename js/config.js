@@ -8,7 +8,10 @@ KUP.CONFIG = {
   PLAYER_HIT_CD: 0.55,    // 玩家受击无敌帧
   PICKUP_BASE: 70,        // 基础拾取半径
   MAX_ENEMIES: 220,
-  MAX_GEMS: 160,
+  MAX_GEMS: 480,          // 片段**全局兜底**（真正生效的是下面按格的配额）
+  GEM_CELL: 240,          // v0.18.1：片段按 240px 方格分格配额
+  GEM_CELL_CAP: 160,      //   每格最多 160 个，超出后在本格内合并（不再新建）
+  GEM_LIFE: 300,          //   5 分钟未拾取直接消失（不结算经验）
   MAX_TEXTS: 40,
   BOSS_TIME: 240,         // 4:00 Boss 出现（各番街可覆盖 area.bossTime）
   ENRAGE_TIME: 300,       // 5:00 Boss 暴走
@@ -160,7 +163,7 @@ KUP.CONFIG = {
   },
 };
 
-/* 升级所需音片（フラグメント）经验曲线 */
+/* 升级所需片段（フラグメント）经验曲线 */
 KUP.XP_NEXT = l => 3 + l * 3 + Math.floor(Math.pow(l, 1.6));
 
 /* 随时间缩放的难度曲线 */
@@ -211,7 +214,7 @@ KUP.AREAS = [
     role: { zh: '下町', en: 'Downtown', ja: '下町' },
     resident: 'kaf',
     /* 観統衿架：官方英文 CAST 作 `Erika Midoh`、官方中文作「观统 衿架」（⇒ 観統＝姓，Midoh） */
-    faction: { zh: '観統衿架（化歩的姐姐／養育者）', en: 'Her elder sister, Erika Midoh', ja: '観統衿架（化歩の姉／養育者）' },
+    faction: { zh: '観統衿架（エリカ）', en: 'Her elder sister, Erika Midoh', ja: '観統衿架（化歩の姉／養育者）' },
     src: 'regenerate',
     desc: { zh: '高层建筑与复古下町共存，城市中枢的「塔」矗立于此。', en: 'High-rises stand over the old downtown, and the city\'s central "Tower" rises here.', ja: '高層ビル群とレトロな下町が共存し、街の中枢「塔」がそびえ立つ。' },
     chapter: { zh: '魔女の娘 -Witchling-', en: 'Witchling', ja: '魔女の娘 -Witchling-' },
@@ -434,9 +437,9 @@ KUP.SPACES = [
     id: 'dense', weight: 1,
     name: { zh: '過密空間', en: 'Overcrowded Space', ja: '過密空間' },
     desc: {
-      zh: '破维魔成群涌来，但被空间压得更脆——音片掉落也更多。',
-      en: 'Tesseracters swarm in, but the space makes them brittle — more shards drop.',
-      ja: 'テセラクターが群れで押し寄せるが、空間に押し潰されて脆い——音片も増える。',
+      zh: '破维魔成群涌来，但被空间压得更脆——片段掉落也更多。',
+      en: 'Tesseracters swarm in, but the space makes them brittle — more fragments drop.',
+      ja: 'テセラクターが群れで押し寄せるが、空間に押し潰されて脆い——フラグメントも増える。',
     },
     color: '#ff9a5a', mods: { spawnRate: 1.6, enemyHp: 0.85, dropRate: 1.15 },
   },
@@ -474,9 +477,9 @@ KUP.SPACES = [
     id: 'bloom', weight: 1,
     name: { zh: '豊穣空間', en: 'Abundant Space', ja: '豊穣空間' },
     desc: {
-      zh: '音片如雨——拾取与经验大增，代价是敌人更快。',
-      en: 'A rain of shards — pickup and XP soar, but enemies move faster.',
-      ja: '音片の雨——拾取と経験が大きく伸びるが、敵は速くなる。',
+      zh: '片段如雨——拾取与经验大增，代价是敌人更快。',
+      en: 'A rain of fragments — pickup and XP soar, but enemies move faster.',
+      ja: 'フラグメントの雨——拾取と経験が大きく伸びるが、敵は速くなる。',
     },
     color: '#8affc9', mods: { pickup: 1.5, xpGain: 1.2, enemySpeed: 1.15 },
   },

@@ -1198,7 +1198,7 @@ check('瞄准模式切换循环', (() => { const g = new KUP.Game(canvas); g.sta
 
 // 25f. v0.11：经验磁铁（磁石の符）
 check('局内道具磁石の符（经验磁铁）齐备', KUP.ITEMS.magnet && KUP.ITEMS.magnet.kind === 'magnet' && KUP.ITEMS.magnet.seconds > 0 && KUP.ITEMS.magnet.name.zh === '磁石の符');
-/* 无磁铁：拾取半径外的音片不被拉动（只会缓慢漂移） */
+/* 无磁铁：拾取半径外的片段不被拉动（只会缓慢漂移） */
 const gMg = new KUP.Game(canvas);
 gMg.start({ char: 'kaf', area: 'area0', seed: 121 });
 gMg.gems.length = 0;
@@ -1206,8 +1206,8 @@ const gemFar = new KUP.Gem(gMg.player.x + 600, gMg.player.y, 5);
 gMg.gems.push(gemFar);
 for (let i = 0; i < 20; i++) gMg.update(0.02);
 const drift = Math.hypot(gemFar.x - gMg.player.x, gemFar.y - gMg.player.y);
-check('无磁铁：600px 外的音片不被拉动', drift > 400, 'd=' + drift.toFixed(0));
-/* 磁铁激活：全场音片被吸向魔女直至拾取 */
+check('无磁铁：600px 外的片段不被拉动', drift > 400, 'd=' + drift.toFixed(0));
+/* 磁铁激活：全场片段被吸向魔女直至拾取 */
 gMg.gems.length = 0;
 const gemFar2 = new KUP.Gem(gMg.player.x + 600, gMg.player.y, 5);
 gMg.gems.push(gemFar2);
@@ -1215,9 +1215,9 @@ gMg.player.addBuff('magnet', 8, 1);
 check('磁石の符：BUFF 计时激活', gMg.player.buffs.magnet > 0);
 for (let i = 0; i < 20; i++) gMg.update(0.02);
 const dAfter = Math.hypot(gemFar2.x - gMg.player.x, gemFar2.y - gMg.player.y);
-check('磁铁激活：600px 外的音片被吸近', dAfter < 300, '600→' + dAfter.toFixed(0));
+check('磁铁激活：600px 外的片段被吸近', dAfter < 300, '600→' + dAfter.toFixed(0));
 for (let i = 0; i < 40; i++) gMg.update(0.02);
-check('磁铁把远处音片吸到拾取圈内（自动收集）', gemFar2.dead);
+check('磁铁把远处片段吸到拾取圈内（自动收集）', gemFar2.dead);
 const tMg = gMg.player.buffs.magnet;
 check('磁铁计时随时间递减且归零', tMg < 8 && tMg >= 0, 't=' + tMg.toFixed(2));
 /* 选择通路：升级池选磁石の符 → BUFF 生效 */
@@ -1230,6 +1230,42 @@ check('升级池选择磁石の符 → 磁铁生效并回到战斗', gMc.player.
 let mgSeen = false;
 for (let i = 0; i < 200; i++) if (gMc.rollChoices().some(c => c.kind === 'item' && c.id === 'magnet')) mgSeen = true;
 check('磁石の符进入升级池道具桶', mgSeen);
+
+// 25f-2. v0.18.1：片段掉落的三条新规则（人类 2026-10-21）
+/* ① 每 240px 格配额 160：同格狂掉 200 次 → 只生成 160 个，**总经验不丢**（其余并入） */
+const gCap = new KUP.Game(canvas);
+gCap.start({ char: 'kaf', area: 'area0', seed: 131 });
+gCap.gems.length = 0;
+const capX = 1000, capY = 1000;                       // 固定落在同一格
+for (let i = 0; i < 200; i++) gCap.dropGem(capX, capY, 3);
+const capSum = gCap.gems.reduce((s, g) => s + g.xp, 0);
+check('片段按 240px 格配额：同格 200 次掉落只留 ' + KUP.CONFIG.GEM_CELL_CAP + ' 个',
+  gCap.gems.length === KUP.CONFIG.GEM_CELL_CAP, 'gems=' + gCap.gems.length);
+check('超配额合并后总经验不丢（200×3 全部在场上）', capSum === 600, 'sum=' + capSum);
+/* ② 合并只并进 xp 片段：场上只有回复 ♥ 时不能吞经验（旧版会丢） */
+const gMerge = new KUP.Game(canvas);
+gMerge.start({ char: 'kaf', area: 'area0', seed: 132 });
+gMerge.gems.length = 0;
+gMerge.gems.push(new KUP.Gem(capX, capY, 0, 'heal'));
+for (let i = 0; i < KUP.CONFIG.GEM_CELL_CAP; i++) gMerge.gems.push(new KUP.Gem(capX, capY, 1));
+gMerge.dropGem(capX, capY, 7);                        // 已满格 ⇒ 走合并
+const healUntouched = gMerge.gems[0].type === 'heal' && gMerge.gems[0].xp === 0;
+const xpSum = gMerge.gems.filter(g => g.type === 'xp').reduce((s, g) => s + g.xp, 0);
+check('合并不碰回复 ♥ 片段（旧版会挑到它并吞掉经验）', healUntouched);
+check('超配额的经验确实并进了 xp 片段', xpSum === KUP.CONFIG.GEM_CELL_CAP + 7, 'xp=' + xpSum);
+/* ③ 5 分钟过期消失：life 到点即 dead，且不结算经验 */
+const gLife = new KUP.Game(canvas);
+gLife.start({ char: 'kaf', area: 'area0', seed: 133 });
+gLife.gems.length = 0;
+const gemOld = new KUP.Gem(gLife.player.x, gLife.player.y, 5);
+gemOld.life = 0.05;
+gLife.gems.push(gemOld);
+const xpBefore = gLife.player.xp;
+gLife.update(0.1);
+check('片段 5 分钟过期消失（life 到点即 dead）', gemOld.dead);
+check('过期消失不结算经验', gLife.player.xp === xpBefore);
+check('配置项齐备：格边长/格上限/存活时长',
+  KUP.CONFIG.GEM_CELL === 240 && KUP.CONFIG.GEM_CELL_CAP === 160 && KUP.CONFIG.GEM_LIFE === 300);
 
 // 25g. v0.11：武装解锁——招募前角色武器不入卡池
 check('武器表标注持有角色（5 魔女之子 + 2 候補）', KUP.WEAPONS.note.owner === 'kaf' && KUP.WEAPONS.orbit.owner === 'rim' &&
@@ -1649,7 +1685,7 @@ KUP.META.reset();
   gOK.damageEnemy(gOK.boss, 1e9);
   check('治安战击破 Boss 不结束战斗（state 仍 playing）',
     gOK.state === 'playing' && gOK.boss === null && gOK.kills >= 1);
-  check('治安战击破 Boss 有清场奖励与音片', gOK.gems.length > 0 && gOK.ult.charge >= 40);
+  check('治安战击破 Boss 有清场奖励与片段', gOK.gems.length > 0 && gOK.ult.charge >= 40);
   /* 卵不再是掉落物（v0.17）：治安战不落卵、復興率不被卵污染 */
   const gOE = new KUP.Game(canvas);
   gOE.start({ char: 'kaf', area: 'order', seed: 505 });
@@ -1658,7 +1694,7 @@ KUP.META.reset();
     const el = gOE.spawnEnemy('elite', gOE.player.x + 300, gOE.player.y);
     gOE.killEnemy(el);
   }
-  check('卵不再是掉落物（无 egg 音片），治安战復興率不被污染',
+  check('卵不再是掉落物（无 egg 片段），治安战復興率不被污染',
     gOE.gems.every(g => g.type !== 'egg') && gOE.eggCharge === 0 && KUP.META.total() === 0);
   /* 战斗结束：没有败北，只有「战斗结束」＋治安战成绩 */
   KUP.META.reset();
@@ -2374,12 +2410,12 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   const SER = KUP.FORM_SERIES;
   check('形态系列共 7 个', SER.length === 7, SER.map(s => s.id).join(','));
   const expect = {
-    kaf_singing: 12, rim_meta: 7, haru_matoi: 8, sekai_anima: 5, koko_type: 4, vwp_shared: 2, legacy: 1,
+    kaf_singing: 12, rim_meta: 7, haru_matoi: 8, sekai_anima: 5, koko_type: 4, vwp_shared: 3, legacy: 0,
   };
   const got = {};
   for (const f of KUP.FORMS) if (f.series) got[f.series] = (got[f.series] || 0) + 1;
-  check('各系列形态数符合当前取舍（化歩 12＝17 去枭黑再注释 4 条／狸眼 7／派流 8／世界 5／此処 4／共用 2／自创 1）',
-    SER.every(s => got[s.id] === expect[s.id]),
+  check('各系列形态数符合当前取舍（化歩 12＝17 去枭黑再注释 4 条／狸眼 7／派流 8／世界 5／此処 4／共用 3／自创 0）',
+    SER.every(s => (got[s.id] || 0) === expect[s.id]),
     SER.map(s => s.id + ':' + (got[s.id] || 0) + '/' + expect[s.id]).join(' '));
   check('每条魔女形态都归入系列', KUP.FORMS.filter(f => f.kinds && f.kinds.indexOf('witch') >= 0 && f.id !== 'none').every(f => !!f.series));
   check('系列 id 都是已声明的', KUP.FORMS.every(f => !f.series || SER.some(s => s.id === f.series)));
@@ -2401,7 +2437,7 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
 // 25r-2. 人类的两条取舍：共用形态（花魁鳥・八咫烏）、仅数字/括号区分的变体不做
 {
   const shared = KUP.FORMS.filter(f => f.series === 'vwp_shared');
-  check('花魁鳥・八咫烏等共用形态不绑定角色（char 为空）', shared.every(f => !f.char), shared.map(f => f.id).join(','));
+  check('花魁鳥・八咫烏・姬連雀等共用形态不绑定角色（char 为空）', shared.every(f => !f.char), shared.map(f => f.id).join(','));
   check('共用形态对五位魔女之子都可用',
     ['kaf', 'rim', 'harusaruhi', 'isekaijoucho', 'koko'].every(c => shared.every(f => KUP.formFits(f, 'witch', c))));
   check('共用形态不会漏给魔女候補／同伴（kinds 限定 witch）',
@@ -2450,15 +2486,16 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
 // 25r-4. UI 分组（同一屏内按系列切换，避免"一墙卡"）
 {
   const g = KUP.formGroups('witch', 'kaf');
-  check('分组顺序＝本命系列 → 共用 → 自创，且不含「通常形態」',
-    g.map(x => x.key).join(',') === 'kaf_singing,vwp_shared,legacy' && g.every(x => x.forms.every(f => f.id !== 'none')),
+  check('分组顺序＝本命系列 → 共用（自创系列现为空组，不出现），且不含「通常形態」',
+    g.map(x => x.key).join(',') === 'kaf_singing,vwp_shared' && g.every(x => x.forms.every(f => f.id !== 'none')),
     g.map(x => x.key + ':' + x.forms.length).join(' '));
-  check('化歩一组 12 条、共用 2 条、自创 1 条', g[0].forms.length === 12 && g[1].forms.length === 2 && g[2].forms.length === 1);
+  check('化歩一组 12 条、共用 3 条（花魁鳥・八咫烏・姬連雀）', g[0].forms.length === 12 && g[1].forms.length === 3);
   check('每组都有三语短名（系列按钮用）', g.every(x => x.short && x.short.zh && x.short.en && x.short.ja),
     g.map(x => x.key).join(','));
-  check('此処的分组＝此処 4／共用 3／自创 1', (() => {
+  check('此処的分组＝此処 4／共用 3', (() => {
     const k = KUP.formGroups('witch', 'koko');
-    return k[0].key === 'koko_type' && k[0].forms.length === 4 && k.length === 3;
+    return k[0].key === 'koko_type' && k[0].forms.length === 4 && k.length === 2 &&
+      k[1].key === 'vwp_shared' && k[1].forms.length === 3;
   })());
   check('魔女候補／同伴没有系列分组（UI 因而不显示系列按钮；同伴层暂不登场 ⇒ 0 组）',
     KUP.formGroups('recruit', 'aru').length === 1 && KUP.formGroups('companion', null).length === 0);

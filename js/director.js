@@ -266,9 +266,14 @@ window.KUP = window.KUP || {};
           if (b.t2 <= 0) {
             b.t2 = b.enraged ? 0.5 : 0.68;
             const aim = Math.atan2(p.y - b.y, p.x - b.x);
+            /* v0.18.1（人类 2026-10-21「BOSS 激光武器直接锁定玩家，应该适当降低角速度」）：
+             * 旧值 aimTurn 1.9 rad/s ＝预警 0.3s 内能转约 33°，叠加"发射瞬间已精确指向"，
+             * 读感就是**贴脸锁定**、横向移动也甩不掉。现降到 1.05 rad/s（约 −45%）：
+             * 0.3s 预警只能微调 ~18°，玩家侧移/冲刺明显更容易走出光路；
+             * 站着不动仍大概率被打中（保留"能打中玩家"的设计意图）。 */
             const mk = off => this.dangers.push(new KUP.Danger(b.x, b.y, {
               kind: 'beam', dir: aim + off, len: 620, w: 22, dmg: 13, color: '#b58cff', arm: 0.3,
-              aimAt: { x: b.x, y: b.y }, aimF: 0.55, aimTurn: 1.9,
+              aimAt: { x: b.x, y: b.y }, aimF: 0.55, aimTurn: 1.05,
             }));
             mk(0);
             if (b.enraged) mk(0.34);                 // 第二道：偏移 19°，玩家只需侧移一步

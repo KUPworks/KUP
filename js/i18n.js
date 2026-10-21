@@ -11,7 +11,7 @@ KUP.I18N = {
   dict: {
     /* ---------- 中文 ---------- */
     zh: {
-      'menu.lore': '七年前的大黒寂后奇迹复兴的研究学园都市「神椿市」——<br>如今再度被人类恶意与欲望所生的怪物 <b>破维魔</b> 侵蚀。<br><b>歌即是魔法。</b>唯有五人的 <b>魔女之子</b>——森先化歩、谷置狸眼、朝主派流、夜河世界、輪廻此処——的歌声能够净化它们。<br>观测者啊，用歌声击碎破维魔、收集「音片（フラグメント）」，夺回这条街的和声。',
+      'menu.lore': '七年前的大黒寂后奇迹复兴的研究学园都市「神椿市」——<br>如今再度被人类恶意与欲望所生的怪物 <b>破维魔</b> 侵蚀。<br><b>歌声即魔法。</b>唯有五人的 <b>魔女之子</b>——森先化歩、谷置狸眼、朝主派流、夜河世界、輪廻此処——的歌声能够净化它们。<br>观测者，请用歌声击碎破维魔、收集「片段（フラグメント）」，夺回这条街的和声。',
       'menu.start': '开始净化 ▶',
       'menu.ctrl': 'WASD / 方向键 移动（或按住鼠标） · 自动攻击 · Space 浄化の歌 · Esc 暂停 · M 静音',
       'menu.credit': '非官方同人致敬作品 · Inspired by KAMITSUBAKI STUDIO「神椿市建設中。／神椿市協奏中。」',
@@ -88,7 +88,7 @@ KUP.I18N = {
       'end.stat.form': '形態', 'end.stat.companion': '同伴',
       'end.recruited': '🎉 新同伴/角色加入：{name}',
       'area.resident': '居住的魔女之子：{name}（声 — {cv}）',
-      'area.faction': '势力：{f}',
+      'area.faction': '居民：{f}',
       /* 出处标注已不在界面显示（见上方说明）
       'area.src.regen': '※ 分区与定位出自 REGENERATE 官方页【官方】',
       'area.src.narrative': '※ 出自 NARRATIVE CITYGUIDE 侧分区（本作沿用并标注）',
@@ -223,7 +223,7 @@ KUP.I18N = {
     },
     /* ---------- English ---------- */
     en: {
-      'menu.lore': 'The research academy city "Kamitsubaki City," miraculously rebuilt after the Great Silence (Daikokujaku) — now corroded once more by <b>Tesseracter</b>, monsters born of human malice and desire.<br><b>Song is magic.</b> Only the five <b>witchlings</b> — Kafu Morisaki, Rime Tanioki, Haru Asanushi, Sekai Yorukawa and Koko Rinne — can purify them.<br>Observer — shatter them with song, gather Fragments, and take back the city\'s harmony.',
+      'menu.lore': 'The research academy city "Kamitsubaki City," miraculously rebuilt after the Blackout (Daikokujaku) — now corroded once more by <b>Tesseracter</b>, monsters born of human malice and desire.<br><b>Song is magic.</b> Only the five <b>witchlings</b> — Kafu, Rime, Haru, Sekai and Koko  — can purify them.<br>Observer — shatter them with song, gather Fragments, and take back the city\'s harmony.',
       'menu.start': 'Start Purification ▶',
       'menu.ctrl': 'WASD / Arrow keys to move (or hold mouse) · Auto attack · Space: Song of Purification · Esc pause · M mute',
       'menu.credit': 'Unofficial fan tribute · Inspired by KAMITSUBAKI STUDIO "Kamitsubaki City Constructing. / Kamitsubaki City Concerto."',
@@ -258,7 +258,7 @@ KUP.I18N = {
       'hud.dash': 'Dash', 'hud.dashBtn': 'Dash (Shift)', 'hud.dodge': 'MISS',
       'lu.tag.item': 'ITEM · instant/buff',
       'lu.item.line': 'Item · no passive slot, repeatable',
-      'item.magnet.text': 'Magnet — all shards pulled for {s}s',
+      'item.magnet.text': 'Magnet — all fragments pulled for {s}s',
       'item.freeze.text': 'FROST — all frozen for {s}s',
       'item.slow.text': 'SLOTH — all slowed {p}%',
       'banner.freeze': '❄ FROZEN — every Tesseracter halted',
@@ -428,7 +428,7 @@ KUP.I18N = {
     },
     /* ---------- 日本語 ---------- */
     ja: {
-      'menu.lore': '七年前の大黒寂から奇跡的に復興した研究学園都市「神椿市」——<br>今また人の悪意と欲望より生まれる怪物<b>テセラクター</b>に侵される。<br><b>歌は、魔法。</b>五人の<b>魔女の娘</b>——森先化歩・谷置狸眼・朝主派流・夜河世界・輪廻此処——の歌声だけがテセラクターを浄化できる。<br>観測者よ、歌でテセラクターを撃ち砕き、「音片（フラグメント）」を集め、街の和音を取り戻せ。',
+      'menu.lore': '七年前の大黒寂から奇跡的に復興した研究学園都市「神椿市」——<br>今また人の悪意と欲望より生まれる怪物<b>テセラクター</b>に侵される。<br><b>歌は、魔法。</b>五人の<b>魔女の娘</b>——森先化歩・谷置狸眼・朝主派流・夜河世界・輪廻此処——の歌声だけがテセラクターを浄化できる。<br>観測者よ、歌でテセラクターを撃ち砕き、「片段（フラグメント）」を集め、街の和音を取り戻せ。',
       'menu.start': '浄化開始 ▶',
       'menu.ctrl': 'WASD / 方向キー 移動（マウス長押しでも可） · 自動攻撃 · Space 浄化の歌 · Esc 一時停止 · M ミュート',
       'menu.credit': '非公式ファンメイド · KAMITSUBAKI STUDIO「神椿市建設中。／神椿市協奏中。」へのオマージュ',
@@ -463,7 +463,7 @@ KUP.I18N = {
       'hud.dash': 'ダッシュ', 'hud.dashBtn': 'ダッシュ (Shift)', 'hud.dodge': 'MISS',
       'lu.tag.item': '道具 · 即時/時限',
       'lu.item.line': '道具 · パッシブ枠を使わず、重複可',
-      'item.magnet.text': '磁石 —— {s} 秒、すべての音片を引き寄せる',
+      'item.magnet.text': '磁石 —— {s} 秒、すべてのフラグメントを引き寄せる',
       'item.freeze.text': '凍結 —— {s} 秒、場のテセラクターを凍結',
       'item.slow.text': '鈍足 —— 場のテセラクターを {p}% 減速',
       'banner.freeze': '❄ 凍結 —— テセラクターすべてが停止',

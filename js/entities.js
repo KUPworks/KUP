@@ -774,21 +774,26 @@ window.KUP = window.KUP || {};
     }
   }
 
-  /* ---------- 音片（フラグメント ★：经验 / 回复 / 記憶の卵） ---------- */
+  /* ---------- 片段（フラグメント ★：经验 / 回复 / 記憶の卵） ---------- */
   class Gem {
     constructor(x, y, xp, type) {
       this.x = x; this.y = y; this.xp = xp;
       this.type = type || 'xp';   // xp | heal（v0.17：記憶の卵不再是掉落物）
       this.vx = U.rand(-40, 40); this.vy = U.rand(-40, 40);
       this.t = U.rng() * U.TAU;
+      /* v0.18.1（人类 2026-10-21「五分钟过期直接消失」）：未拾取的片段有存活时间，
+       * 到点直接消失、**不结算经验**——避免玩家不捡时片段无限堆积触发配额合并。 */
+      this.life = C.GEM_LIFE;
       this.dead = false;
     }
     update(dt, game) {
+      this.life -= dt;
+      if (this.life <= 0) { this.dead = true; return; }     // 超时消失（不吞不结算）
       const p = game.player;
       const dx = p.x - this.x, dy = p.y - this.y;
       const d2 = dx * dx + dy * dy;
       /* v0.11 经验磁铁（磁石の符）：激活期间拾取半径近乎全场，
-       * 音片（含回复 ♥／記憶の卵）被强吸向魔女；远处吸力更大，保证能穿越半张图收回。 */
+       * 片段（含回复 ♥／記憶の卵）被强吸向魔女；远处吸力更大，保证能穿越半张图收回。 */
       const magnet = p.buffs && p.buffs.magnet > 0;
       const pr = magnet ? 4200 : p.pickup;
       if (d2 < pr * pr) {
@@ -827,7 +832,7 @@ window.KUP = window.KUP || {};
       } else {
         const big = this.xp >= 10;
         const s = 1 + Math.sin(this.t) * 0.15;
-        ctx.fillStyle = big ? '#ffd25a' : '#5ad0ff';
+        ctx.fillStyle = big ? '#ffd25a' : '#d8f3ff';
         ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 7;
         const r = (big ? 6.5 : 4.5) * s;
         ctx.rotate(Math.PI / 4);
