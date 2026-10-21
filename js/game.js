@@ -377,6 +377,8 @@ window.KUP = window.KUP || {};
       this.dangerNear = false;   // 是否有预警中的敌袭贴近玩家（HUD 提示用）
       this.time = this.debug.t || 0;
       this.kills = 0; this.gemCount = 0;
+      /* v0.18.3 暴击统计（结算屏与测试用） */
+      this.critCount = 0; this.critMax = 0;
       /* v0.13 治安战（无尽关卡）：模式标记 + 程序化波次状态 */
       this.endless = !!(this.area && this.area.endless);
       this.orderWave = 1;
@@ -1116,16 +1118,84 @@ window.KUP = window.KUP || {};
       }
     }
 
-    damageEnemy(e, dmg, kx, ky) {
-      if (e.dead) return;
-      e.hp -= dmg;
+    /* ---------- 伤害结算（唯一入口：玩家武器/弹幕/冲击环/滞留区都走这里） ----------
+     * v0.18.3 暴击：在这里掷一次会心（`U.rng` 属玩法路径，可复现），
+     * 命中后乘角色倍率（Boss 另乘 CONFIG.CRIT.BOSS_MULT）并触发角色专属特效。
+     * opt.noCrit：特效追加伤害等"二手伤害"不得再暴击（避免连锁递归）。 */
+    damageEnemy(e, dmg, kx, ky, opt) {
+      if (e.dead) return 0;
+      opt = opt || {};
+      const p = this.player;
+      let real = dmg, crit = false;
+      if (!opt.noCrit && p && p.critRate > 0 && p.critMult > 1) {
+        if (U.rng() < p.critRate) {
+          crit = true;
+          const bossMul = e.boss ? C.CRIT.BOSS_MULT : 1;
+          real = dmg * Math.max(1, p.critMult * bossMul);
+        }
+      }
+      e.hp -= real;
       e.flash = 0.09;
       if (kx) { e.kx += kx; e.ky += ky; }
       if (this.texts.length < C.MAX_TEXTS) {
-        this.addText(e.x, e.y - e.r - 4, String(Math.round(dmg)),
-          dmg >= 40 ? '#ffd25a' : '#fff', dmg >= 40 ? 15 : 12);
+        if (crit) {
+          this.addText(e.x, e.y - e.r - 10, '会心 ' + Math.round(real), '#ffe27a', 17);
+        } else {
+          this.addText(e.x, e.y - e.r - 4, String(Math.round(real)),
+            real >= 40 ? '#ffd25a' : '#fff', real >= 40 ? 15 : 12);
+        }
       }
+      if (crit) this.onCrit(e, real, kx, ky);
       if (e.hp <= 0) this.killEnemy(e);
+      return real;
+    }
+
+    /* ---------- 会心特效（v0.18.3）----------
+     * 每个角色一个：残响（追加小音波）／冻弦（减速）／破勢（击退）／
+     * 星屑（额外片段）／終結（大招充能）／聖歌（回血）／箭羽（缩短冲刺 CD）。
+     * 全部走"已有系统"，不新增实体类型；数字统计进 stats()。 */
+    onCrit(e, dealt, kx, ky) {
+      const p = this.player, CR = C.CRIT;
+      this.critCount = (this.critCount || 0) + 1;
+      if (dealt > (this.critMax || 0)) this.critMax = dealt;
+      KUP.Audio.sfx('crit');
+      this.shake(2);
+      switch (p.critFx) {
+        case 'echo': {
+          /* 残响：30% 追加伤害（不再暴击）＋ 视觉冲击环 */
+          this.damageEnemy(e, dealt * 0.3, 0, 0, { noCrit: true });
+          this.fx.push(new KUP.Shockwave(e.x, e.y, { r0: 4, r1: 62, dur: 0.24, color: '#ffd25a', width: 3 }));
+          break;
+        }
+        case 'chill':
+          if (e.applySlow) e.applySlow(1.5, 0.55);      // 冻弦：减速 45% 1.5s（取最强来源）
+          break;
+        case 'break': {
+          /* 破勢：沿「玩家→目标」方向击退 160px */
+          const a = Math.atan2(e.y - p.y, e.x - p.x);
+          e.kx += Math.cos(a) * 160; e.ky += Math.sin(a) * 160;
+          break;
+        }
+        case 'star':
+          this.dropGem(e.x, e.y, 2);                     // 星屑：额外 +2 经验片段
+          break;
+        case 'charge':
+          this.ult.charge = Math.min(100, this.ult.charge + 1.5);
+          break;
+        case 'hymn': {
+          const heal = Math.max(1, Math.round(p.maxhp * 0.005));
+          if (p.hp < p.maxhp) {
+            p.hp = Math.min(p.maxhp, p.hp + heal);
+            this.addText(p.x, p.y - 30, '+' + heal, '#ffd8f0', 12);
+          }
+          break;
+        }
+        case 'feather':
+          p.dashCd = Math.max(0, p.dashCd - 0.35);       // 箭羽：冲刺 CD −0.35s
+          break;
+        default: break;
+      }
+      void CR; void kx; void ky;
     }
 
     killEnemy(e) {
@@ -1871,6 +1941,12 @@ window.KUP = window.KUP || {};
         /* v0.13.3：支援物品（取代同伴槽） */
         support: this.support ? this.support.id : null,
         supportName: this.support ? KUP.I18N.tv(this.support.name) : null,
+        /* v0.18.3 暴击：次数、最高单发、当前会心率/倍率/特效 */
+        crits: this.critCount || 0,
+        critMax: Math.round(this.critMax || 0),
+        critRate: this.player ? this.player.critRate : 0,
+        critMult: this.player ? this.player.critMult : 1,
+        critName: this.player && this.player.critName ? KUP.I18N.tv(this.player.critName) : null,
         /* v0.13 治安战：模式标记、波次、点数、治安战最高记录 */
         order: !!this.endless,
         wave: this.orderWave || 1,

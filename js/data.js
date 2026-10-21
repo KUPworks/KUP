@@ -147,6 +147,85 @@ KUP.CHARS = [
 KUP.CHAR = id => KUP.CHARS.find(c => c.id === id) || KUP.CHARS[0];
 KUP.charUnlockText = c => (c.unlock && c.unlock.desc) || null;
 
+/* ---------- 暴击「会心」（v0.18.3）----------
+ * 设计（人类 2026-10-21「设计充分又平衡的暴击系统，包含差异化暴击率、强度、
+ * UI、特殊触发等」）：
+ *   - **差异化的是「手感」不是「总量」**：七位角色的「期望增伤」都被压在
+ *     1.08～1.10 之间（期望 = 1 + 会心率 ×（倍率−1）），谁的数值都不白给；
+ *     区别在「打得勤但单发小」（此処 22%×1.45）↔「偶尔一发爆炸」（派流 8%×2.10）。
+ *   - **特殊触发**：每次会心附带该角色自己的一个特效（见 fx 与 game.onCrit），
+ *     让「会心」在画面上有可读的后果，而不只是一个更大的数字。
+ *   - 会心只作用于**玩家造成的伤害**（`game.damageEnemy` 是唯一入口），
+ *     敌方伤害不会暴击；Boss 的会心倍率另乘 `CONFIG.CRIT.BOSS_MULT`（0.85）。
+ *   - 会心率上限 `CONFIG.CRIT.RATE_CAP`（0.6），倍率上限 `MULT_CAP`（3.0）。 */
+KUP.CRIT = {
+  kaf: {
+    rate: 0.12, mult: 1.75, fx: 'echo', fxColor: '#ffd25a',
+    name: { zh: '残响', en: 'Reverb', ja: '残響' },
+    desc: {
+      zh: '会心时追加一次 <b>30%</b> 伤害的小音波。',
+      en: 'On a critical hit, echo a small wave for <b>30%</b> damage.',
+      ja: '会心時、<b>30%</b> ダメージの小音波を追加。',
+    },
+  },
+  rim: {
+    rate: 0.18, mult: 1.55, fx: 'chill', fxColor: '#8affc9',
+    name: { zh: '冻弦', en: 'Frost String', ja: '凍弦' },
+    desc: {
+      zh: '会心使目标减速 <b>45%</b>，持续 <b>1.5 秒</b>。',
+      en: 'A critical hit slows the target by <b>45%</b> for <b>1.5s</b>.',
+      ja: '会心で対象を <b>45%</b> 減速、<b>1.5 秒</b>。',
+    },
+  },
+  harusaruhi: {
+    rate: 0.08, mult: 2.10, fx: 'break', fxColor: '#ff8a4e',
+    name: { zh: '破勢', en: 'Break', ja: '破勢' },
+    desc: {
+      zh: '会心时把目标击退 <b>160</b> 像素。',
+      en: 'A critical hit knocks the target back <b>160</b>px.',
+      ja: '会心で対象を <b>160</b>px ノックバック。',
+    },
+  },
+  isekaijoucho: {
+    rate: 0.15, mult: 1.65, fx: 'star', fxColor: '#c9a6ff',
+    name: { zh: '星屑', en: 'Stardust', ja: '星屑' },
+    desc: {
+      zh: '会心时额外掉落 1 枚 <b>+2 经验</b> 的片段。',
+      en: 'A critical hit drops an extra <b>+2 XP</b> fragment.',
+      ja: '会心で <b>+2 経験</b> のフラグメントを追加で落とす。',
+    },
+  },
+  koko: {
+    rate: 0.22, mult: 1.45, fx: 'charge', fxColor: '#9fe8ff',
+    name: { zh: '終結', en: 'Finale', ja: '終結' },
+    desc: {
+      zh: '会心时浄化の歌充能 <b>+1.5</b>。',
+      en: 'A critical hit grants <b>+1.5</b> Song charge.',
+      ja: '会心で浄化の歌の充填 <b>+1.5</b>。',
+    },
+  },
+  aru: {
+    rate: 0.10, mult: 1.80, fx: 'hymn', fxColor: '#ffd8f0',
+    name: { zh: '聖歌', en: 'Hymn', ja: '聖歌' },
+    desc: {
+      zh: '会心时回复最大生命的 <b>0.5%</b>。',
+      en: 'A critical hit heals <b>0.5%</b> max HP.',
+      ja: '会心で最大生命の <b>0.5%</b> 回復。',
+    },
+  },
+  asu: {
+    rate: 0.14, mult: 1.60, fx: 'feather', fxColor: '#ffe6a6',
+    name: { zh: '箭羽', en: 'Fletching', ja: '矢羽' },
+    desc: {
+      zh: '会心时冲刺冷却缩短 <b>0.35 秒</b>。',
+      en: 'A critical hit shortens dash cooldown by <b>0.35s</b>.',
+      ja: '会心でダッシュのクールタイムを <b>0.35 秒</b> 短縮。',
+    },
+  },
+};
+KUP.CRIT_OF = id => KUP.CRIT[id] || KUP.CRIT.kaf;
+
+
 /* ---------- ★ 语言相关的显示名／CAST（2026-10 新增） ----------
  * 背景：角色名在数据里是**日文汉字**（`name: '森先 化歩'`），对 zh/ja 界面直接用没问题；
  * 但英文界面若照抄汉字，就成了「英文 UI 里夹汉字」。

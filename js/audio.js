@@ -90,6 +90,11 @@ KUP.Audio = {
       case 'shoot':  this.tone(560, 0.06, 'triangle', 0.05, 300); break;
       case 'laser':  this.tone(1100, 0.1, 'sawtooth', 0.05, 380); break;
       case 'hit':    this.tone(190, 0.05, 'square', 0.04, 120); break;
+      /* v0.18.3 会心：短促上行的双音（与普通 hit 明显区分，不占音乐层） */
+      case 'crit':
+        this.tone(880, 0.05, 'triangle', 0.09, 1320);
+        this.tone(1320, 0.07, 'sine', 0.07, 1760, null, T + 0.045);
+        break;
       case 'pickup': this.tone(760, 0.08, 'sine', 0.05, 1200); break;
       case 'heal':   this.tone(520, 0.14, 'sine', 0.09, 820); break;
       case 'hurt':   this.tone(140, 0.22, 'sawtooth', 0.14, 55); break;

@@ -65,6 +65,8 @@ window.KUP = window.KUP || {};
       this.shieldTouchT = 0; this.shieldTaintT = 0; this.shieldTouchUsed = false;
       /* v0.18.3：护盾会被打薄 → 记录「距上次受伤」的时间，用于脱战恢复 */
       this.shieldRegenT = 0;
+      /* v0.18.3 暴击「会心」：会心率/倍率/专属特效由角色的 KUP.CRIT 决定 */
+      this.critRate = 0; this.critMult = 1; this.critFx = null; this.critName = null;
       this.dodgeChance = 0; this.drainPct = 0; this.retaliateDmg = 0;
       this.regenRate = 0; this.missHeal = 0;   // 持续回血 / 回避成功回血
       /* 局内道具的限时 BUFF（v0.8）：MISS/回血加成；v0.11 追加磁石の符（经验磁铁） */
@@ -110,6 +112,12 @@ window.KUP = window.KUP || {};
       if (this.shieldMax > prevShieldMax) this.shield = this.shieldMax;
       if (this.shield > this.shieldMax) this.shield = this.shieldMax;
       this.shieldTmp = Math.min(C.SHIELD.TEMP_MAX, this.shieldTmp || 0);
+      /* v0.18.3 暴击「会心」：角色表决定会心率/倍率/特效；全局有 RATE_CAP / MULT_CAP 兜底 */
+      const cr = KUP.CRIT_OF(this.def.id);
+      this.critRate = Math.min(C.CRIT.RATE_CAP, Math.max(0, cr.rate || 0));
+      this.critMult = Math.min(C.CRIT.MULT_CAP, Math.max(1, cr.mult || 1));
+      this.critFx = cr.fx || null;
+      this.critName = cr.name || null;
       /* 回避率 = 被动「残响回避」7%/级 ＋ 瓦利斯「常連の勘」3%/级，上限 60% */
       this.dodgeChance = Math.min(0.6, 0.07 * lv('dodge') + (this.shopMods && this.shopMods.dodgeAdd ? this.shopMods.dodgeAdd : 0));
       this.drainPct = 0.006 * lv('drain');

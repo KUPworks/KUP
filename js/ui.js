@@ -29,6 +29,7 @@ window.KUP = window.KUP || {};
         'over-stats', 'win-stats', 'danger', 'hp-bar', 'hp-text', 'lv-num', 'timer', 'kills',
         'weapon-row', 'xp-bar-fill', 'boss-wrap', 'boss-rows', 'vol-slider',
         'shield-row', 'shield-orb', 'shield-num', 'shield-tag', 'dash-pips', 'danger-warn', 'btn-dash', 'buff-row', 'btn-aim',
+        'crit-row', 'crit-mark', 'crit-num', 'crit-tag',
         'area-cards', 'area-detail', 'fukkou-fill', 'fukkou-label',
         'ult-wrap', 'ult-fill', 'ult-label', 'win-sub',
         'companion-strip', 'companion-detail', 'companion-form-wrap', 'companion-form-strip',
@@ -1176,6 +1177,30 @@ window.KUP = window.KUP || {};
         row.classList.toggle('dimmed', p.shieldMax > 0 && p.shield < p.shieldMax * 0.999);
         if (this.els['shield-orb']) this.els['shield-orb'].style.opacity = p.shieldTaintT > 0 ? 0.45 : 1;
       }
+      /* ---- v0.18.3 会心：常驻显示「会心率 × 倍率 · 专属特效」，命中时整行闪一下 ---- */
+      if (this.els['crit-row']) {
+        const csig = Math.round((p.critRate || 0) * 1000) + '/' + Math.round((p.critMult || 1) * 100) + '/' + (p.critFx || '');
+        if (csig !== this.lastCritSig) {
+          this.lastCritSig = csig;
+          if (this.els['crit-num']) {
+            this.els['crit-num'].textContent = Math.round((p.critRate || 0) * 100) + '% ×' +
+              (Math.round((p.critMult || 1) * 100) / 100);
+          }
+          if (this.els['crit-tag']) {
+            this.els['crit-tag'].textContent = p.critName ? KUP.I18N.tv(p.critName) : '';
+          }
+        }
+        /* 命中会心时闪一下（用次数变化检测，不每帧重置） */
+        const ccount = this.game ? (this.game.critCount || 0) : 0;
+        if (this.lastCritCount !== undefined && ccount > this.lastCritCount) {
+          this.els['crit-row'].classList.add('flash');
+          clearTimeout(this._critFlashT);
+          this._critFlashT = setTimeout(() => {
+            if (this.els['crit-row']) this.els['crit-row'].classList.remove('flash');
+          }, 220);
+        }
+        this.lastCritCount = ccount;
+      }
       if (this.els['dash-pips']) {
         const dsig = p.dashCharge + '/' + p.dashMax;
         if (dsig !== this.lastDashSig) {
@@ -1297,6 +1322,11 @@ window.KUP = window.KUP || {};
       /* 形態/皮肤与同伴（结算时确认本局配置；v0.18.2 起本局一定带着具体形态） */
       if (st.formLabel && st.form) {
         html += '<div class="stat"><b>' + st.formLabel + '</b><span>' + KUP.I18N.t('end.stat.form') + '</span></div>';
+      }
+      /* v0.18.3 会心：次数与最高单发（没有会心就不占位） */
+      if (st.crits > 0) {
+        html += '<div class="stat"><b>✦ ' + st.crits + ' · ' + st.critMax + '</b><span>' +
+          KUP.I18N.t('end.stat.crit') + '</span></div>';
       }
       if (st.companion) {
         const skin = st.companionForm !== 'none' ? '（' + st.companionFormLabel + '）' : '';

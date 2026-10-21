@@ -2692,5 +2692,136 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   check('終楽章・箭雨：16 方向放射贯穿箭', gUa.projs.length === 16, 'projs=' + gUa.projs.length);
 }
 
+
+/* ========== v0.18.3：暴击「会心」 ========== */
+{
+  /* 数据表：每个可玩角色都有会心定义，且期望增伤被压在 1.06–1.12（平衡带） */
+  check('每位可玩角色都有会心定义（率/倍率/特效/三语名）',
+    KUP.CHARS.every(c => {
+      const cr = KUP.CRIT[c.id];
+      return cr && cr.rate > 0 && cr.rate <= 0.35 && cr.mult >= 1.3 && cr.mult <= 2.5 &&
+        !!cr.fx && cr.name && cr.name.zh && cr.name.en && cr.name.ja &&
+        cr.desc && cr.desc.zh && cr.desc.en && cr.desc.ja;
+    }));
+  const ev = KUP.CHARS.map(c => 1 + KUP.CRIT[c.id].rate * (KUP.CRIT[c.id].mult - 1));
+  check('会心期望增伤都在 1.06–1.12 之间（差异化手感、不差异化总量）',
+    ev.every(v => v >= 1.06 && v <= 1.12), ev.map(v => v.toFixed(3)).join(' '));
+  check('会心率/倍率有高有低（不是同一个数）',
+    new Set(KUP.CHARS.map(c => KUP.CRIT[c.id].rate)).size >= 5 &&
+    new Set(KUP.CHARS.map(c => KUP.CRIT[c.id].mult)).size >= 5);
+  check('角色表与 CRIT 一一对应（没有多余/缺失）',
+    Object.keys(KUP.CRIT).length === KUP.CHARS.length);
+
+  /* 接线：Player.recompute 把会心带到玩家身上，并受全局上限钳制 */
+  const mkP = id => { const g = new KUP.Game(canvas); g.start({ char: id, area: 'area0', seed: 901 }); return g.player; };
+  check('玩家会心率/倍率＝角色表数值',
+    Math.abs(mkP('kaf').critRate - KUP.CRIT.kaf.rate) < 1e-9 &&
+    Math.abs(mkP('harusaruhi').critMult - KUP.CRIT.harusaruhi.mult) < 1e-9 &&
+    mkP('kaf').critFx === KUP.CRIT.kaf.fx);
+  check('全局上限兜底（率 0.6 / 倍率 3.0）',
+    KUP.CONFIG.CRIT.RATE_CAP === 0.6 && KUP.CONFIG.CRIT.MULT_CAP === 3.0 && KUP.CONFIG.CRIT.BOSS_MULT === 0.85);
+
+  /* 会心翻倍：把率设成 1、倍率 2 → 100 伤害变 200 */
+  const gC1 = new KUP.Game(canvas);
+  gC1.start({ char: 'koko', area: 'area0', seed: 902 });      // 此処的特效不改伤害，便于纯数值断言
+  gC1.player.critRate = 1; gC1.player.critMult = 2;
+  const dummy = gC1.spawnEnemy('elite', gC1.player.x + 200, gC1.player.y);
+  dummy.boss = false; dummy.elite = false; dummy.maxhp = 99999; dummy.hp = 99999;
+  const hp0 = dummy.hp;
+  gC1.damageEnemy(dummy, 100);
+  check('会心命中：伤害 × 倍率（100 → 200）', Math.abs((hp0 - dummy.hp) - 200) < 1e-6, 'loss=' + (hp0 - dummy.hp));
+  check('会心计入统计（次数 / 最高单发）', gC1.critCount === 1 && Math.abs(gC1.critMax - 200) < 1e-6);
+  check('stats 暴露会心字段', (() => { const st = gC1.stats(); return st.crits === 1 && st.critMax === 200 && st.critRate === 1 && st.critMult === 2; })());
+
+  /* 不会心：率设 0 → 原伤害；noCrit 的二手伤害不再暴击 */
+  gC1.player.critRate = 0;
+  const hp1 = dummy.hp;
+  gC1.damageEnemy(dummy, 100);
+  check('会心率 0 → 伤害不变', Math.abs((hp1 - dummy.hp) - 100) < 1e-6);
+  gC1.player.critRate = 1;
+  const hp2 = dummy.hp;
+  gC1.damageEnemy(dummy, 100, 0, 0, { noCrit: true });
+  check('opt.noCrit 的追加伤害不会再暴击', Math.abs((hp2 - dummy.hp) - 100) < 1e-6);
+
+  /* Boss 的会心倍率打折：2.0 → 2.0×0.85 = 1.7 */
+  const gC2 = new KUP.Game(canvas);
+  gC2.start({ char: 'koko', area: 'area0', seed: 903 });   // 无伤害型特效，便于纯数值断言
+  gC2.player.critRate = 1; gC2.player.critMult = 2;
+  const boss = gC2.spawnEnemy('boss0', gC2.player.x + 200, gC2.player.y);
+  const bhp = boss.hp;
+  gC2.damageEnemy(boss, 100);
+  check('Boss 会心倍率 ×0.85（100 → 170）', Math.abs((bhp - boss.hp) - 170) < 1e-6, 'loss=' + (bhp - boss.hp));
+
+  /* 七种专属特效 */
+  const mk = (id, seed) => { const g = new KUP.Game(canvas); g.start({ char: id, area: 'area0', seed }); g.player.critRate = 1; g.player.critMult = 1.5; g.enemies.length = 0; return g; };
+  /* 残响：追加 30% 伤害（总伤害 = 1.5 + 0.45 = 1.95 倍） */
+  const gK = mk('kaf', 904);
+  const eK = gK.spawnEnemy('elite', gK.player.x + 120, gK.player.y);
+  eK.boss = false; eK.elite = false; eK.maxhp = 99999; eK.hp = 99999;
+  const kHp = eK.hp;
+  gK.damageEnemy(eK, 100);
+  check('化歩「残响」：会心追加 30% 伤害', Math.abs((kHp - eK.hp) - 195) < 1e-6, 'loss=' + (kHp - eK.hp));
+  /* 冻弦：减速 45% 1.5s */
+  const gR = mk('rim', 905);
+  const eR = gR.spawnEnemy('noise', gR.player.x + 120, gR.player.y);
+  eR.maxhp = 99999; eR.hp = 99999;
+  gR.damageEnemy(eR, 1);
+  check('狸眼「冻弦」：会心使目标减速 45%／1.5s', Math.abs(eR.slowMul - 0.55) < 1e-9 && eR.slowT > 1.4,
+    'mul=' + eR.slowMul + ' t=' + eR.slowT.toFixed(2));
+  /* 破勢：击退 160 */
+  const gH = mk('harusaruhi', 906);
+  const eH = gH.spawnEnemy('elite', gH.player.x + 120, gH.player.y);
+  eH.boss = false; eH.elite = false; eH.maxhp = 99999; eH.hp = 99999;
+  eH.kx = 0; eH.ky = 0;
+  gH.damageEnemy(eH, 1);
+  check('派流「破勢」：会心击退 160（沿玩家→目标方向）', Math.abs(Math.hypot(eH.kx, eH.ky) - 160) < 1e-6,
+    'k=' + Math.hypot(eH.kx, eH.ky).toFixed(2));
+  /* 星屑：额外掉一枚 +2 经验片段 */
+  const gI = mk('isekaijoucho', 907);
+  const eI = gI.spawnEnemy('elite', gI.player.x + 120, gI.player.y);
+  eI.boss = false; eI.elite = false; eI.maxhp = 99999; eI.hp = 99999;
+  gI.gems.length = 0;
+  gI.damageEnemy(eI, 1);
+  check('世界「星屑」：会心额外掉落 +2 经验片段', gI.gems.length === 1 && gI.gems[0].xp === 2,
+    'gems=' + gI.gems.length + ' xp=' + (gI.gems[0] && gI.gems[0].xp));
+  /* 終結：大招充能 +1.5 */
+  const gKo = mk('koko', 908);
+  const eKo = gKo.spawnEnemy('elite', gKo.player.x + 120, gKo.player.y);
+  eKo.boss = false; eKo.elite = false; eKo.maxhp = 99999; eKo.hp = 99999;
+  gKo.ult.charge = 0;
+  gKo.damageEnemy(eKo, 1);
+  check('此処「終結」：会心充能 +1.5', Math.abs(gKo.ult.charge - 1.5) < 1e-9, 'charge=' + gKo.ult.charge);
+  /* 聖歌：回血 0.5% */
+  const gA = mk('aru', 909);
+  const eA = gA.spawnEnemy('elite', gA.player.x + 120, gA.player.y);
+  eA.boss = false; eA.elite = false; eA.maxhp = 99999; eA.hp = 99999;
+  gA.player.hp = gA.player.maxhp * 0.5;
+  const aHp = gA.player.hp;
+  gA.damageEnemy(eA, 1);
+  check('亜留「聖歌」：会心回复 0.5% 生命', Math.abs((gA.player.hp - aHp) - Math.max(1, Math.round(gA.player.maxhp * 0.005))) < 1e-6,
+    'heal=' + (gA.player.hp - aHp).toFixed(1));
+  /* 箭羽：冲刺 CD −0.35 */
+  const gAs = mk('asu', 910);
+  const eAs = gAs.spawnEnemy('elite', gAs.player.x + 120, gAs.player.y);
+  eAs.boss = false; eAs.elite = false; eAs.maxhp = 99999; eAs.hp = 99999;
+  gAs.player.dashCd = 3;
+  gAs.damageEnemy(eAs, 1);
+  check('阿栖「箭羽」：会心缩短冲刺 CD 0.35s', Math.abs(gAs.player.dashCd - 2.65) < 1e-9, 'cd=' + gAs.player.dashCd);
+
+  /* 确定性：同 seed、同操作 → 会心次数一致（会心走玩法随机流） */
+  const runCrit = () => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'rim', area: 'area0', seed: 911 });
+    g.player.critRate = 0.5;
+    g.player.critMult = 1.5;
+    const e = g.spawnEnemy('elite', g.player.x + 200, g.player.y);
+    e.maxhp = 99999; e.hp = 99999;
+    for (let i = 0; i < 200; i++) g.damageEnemy(e, 1);
+    return g.critCount;
+  };
+  const c1 = runCrit(), c2 = runCrit();
+  check('同 seed 同操作 → 会心次数可复现', c1 === c2 && c1 > 40, c1 + '/' + c2);
+}
+
 console.log(fail === 0 ? '\nALL PASS' : '\n' + fail + ' FAILED');
 process.exit(fail === 0 ? 0 : 1);

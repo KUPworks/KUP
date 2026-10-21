@@ -2,7 +2,7 @@ window.KUP = window.KUP || {};
 
 /* ================= 全局配置 ================= */
 KUP.CONFIG = {
-  VERSION: '0.18.2-forms',
+  VERSION: '0.18.3-crit',
   ARENA: 3000,            // 正方形竞技场边长
   PLAYER_R: 13,
   PLAYER_HIT_CD: 0.55,    // 玩家受击无敌帧
@@ -66,6 +66,13 @@ KUP.CONFIG = {
      * ② 被光束/轰炸打穿后 TAINT_T 秒内完全失效；③ 总强度 < 20 时完全不挡。 */
     SCALE_MUL: 0.52, SCALE_OFF: 0.48,
   },
+  /* ---------- 暴击「会心」（v0.18.3）----------
+   * 每角色的会心率/倍率/特效写在 `KUP.CRIT`（js/data.js），这里只放**全局闸门**：
+   *   RATE_CAP / MULT_CAP：任何加成都不能让会心突破这两条线（平衡兜底）；
+   *   BOSS_MULT：Boss 身上会心倍率打折——Boss 血厚、一场要打很久，
+   *     全额 2.1 倍会让「会心」变成唯一解，故统一 ×0.85；
+   *   MIN_DMG：会心后仍按整数显示，避免 0 伤害跳字。 */
+  CRIT: { RATE_CAP: 0.60, MULT_CAP: 3.0, BOSS_MULT: 0.85 },
   /* 旧的「护盾自动回复」参数已废弃（护盾现在是减伤比率，不存在"回血"），
    * 保留常量只为旧存档/调试脚本兼容，不再被任何逻辑读取。 */
   SHIELD_REGEN_DELAY: 4, SHIELD_REGEN_RATE: 0.35,

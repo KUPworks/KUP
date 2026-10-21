@@ -56,6 +56,8 @@ KUP.I18N = {
       'banner.slow': '鈍足 —— 破维魔的步伐变慢',
       /* v0.14 护盾＝减伤膜：HUD 一行显示强度与对贴靠的减伤（不是第二管血） */
       'hud.shieldPct': '近身减伤 {n}%',
+      /* v0.18.3 会心 */
+      'hud.crit': '会心',
       'hud.shieldTmp': '膜 {s}s',
       'hud.shieldBlock': '盾',
       'banner.ward': '🛡 防音の符 —— 追加 {n} 膜层',
@@ -86,6 +88,7 @@ KUP.I18N = {
       'hud.aimBtn': '瞄准模式 (V)',
       'hud.buffs': '增益',
       'end.stat.form': '形態', 'end.stat.companion': '同伴',
+      'end.stat.crit': '会心（次 · 最高）',
       'end.recruited': '🎉 新同伴/角色加入：{name}',
       'area.resident': '居住的魔女之子：{name}（声 — {cv}）',
       'area.faction': '居民：{f}',
@@ -265,6 +268,7 @@ KUP.I18N = {
       'banner.slow': 'SLOTH — their steps grow heavy',
       /* v0.14 shield = damage-reduction membrane (not a second HP bar) */
       'hud.shieldPct': 'contact -{n}%',
+      'hud.crit': 'CRIT',
       'hud.shieldTmp': 'membrane {s}s',
       'hud.shieldBlock': 'GUARD',
       'banner.ward': '🛡 Ward of Silence — +{n} membrane',
@@ -292,6 +296,7 @@ KUP.I18N = {
       'hud.aimBtn': 'Aim mode (V)',
       'hud.buffs': 'Buffs',
       'end.stat.form': 'Form', 'end.stat.companion': 'Companion',
+      'end.stat.crit': 'CRITS (count · max)',
       'end.recruited': '🎉 New recruit: {name}',
       'area.resident': 'Resident witchling: {name} (CV — {cv})',
       'area.faction': 'Faction: {f}',
@@ -470,6 +475,7 @@ KUP.I18N = {
       'banner.slow': '鈍足 —— テセラクターの歩みが鈍る',
       /* v0.14 シールド＝軽減膜（第二のHPではない） */
       'hud.shieldPct': '近接軽減 {n}%',
+      'hud.crit': '会心',
       'hud.shieldTmp': '膜 {s}秒',
       'hud.shieldBlock': '盾',
       'banner.ward': '🛡 防音の符 —— 膜 +{n}',
@@ -497,6 +503,7 @@ KUP.I18N = {
       'hud.aimBtn': '照準モード (V)',
       'hud.buffs': '強化中',
       'end.stat.form': '形態', 'end.stat.companion': '同行',
+      'end.stat.crit': '会心（回数 · 最大）',
       'end.recruited': '🎉 新たな同行／キャラが加入：{name}',
       'area.resident': '居住の魔女の娘：{name}（声 — {cv}）',
       'area.faction': '勢力：{f}',
