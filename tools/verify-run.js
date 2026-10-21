@@ -815,6 +815,38 @@ check('〈観測〉光束生成时朝玩家（误差 ≤ 单帧转向量 + 1°�
   return Math.abs(KUP.U.angDiff(beam0.dir, want)) <= tol;
 })(), beam0 ? ((KUP.U.angDiff(beam0.dir, Math.atan2(gScan.player.y - bScan.y, gScan.player.x - bScan.x)) * 180 / Math.PI)).toFixed(2) + '°' : 'no beam');
 check('〈観測〉光束带近段预瞄（aimAt/aimF），可由横向移动躲开', !!beam0 && !!beam0.aimAt && beam0.aimF > 0 && beam0.aimF < 1);
+/* v0.18.6（人类 2026-10-22「激光仍然是大角速度追杀玩家，没有前后摇时间」）：
+ * 前摇 0.6s、后摇 ≥1s、追踪角速度 ≤0.5 rad/s、光路更细、伤害下调。 */
+const beamFresh = () => {
+  bScan.t2 = 0.02;
+  gScan.updateBossBehavior(0.02);
+  return gScan.dangers.filter(d => d.kind === 'beam' && !d.armed).pop();
+};
+const bm = beamFresh();
+check('〈観測〉光束前摇 ≥ 0.6s（看得见、躲得开）', !!bm && bm.arm >= 0.6, bm ? 'arm=' + bm.arm : 'no beam');
+check('〈観測〉两发之间有后摇（≥1.0s 才可能下一发）', bScan.t2 >= 1.0, 't2=' + bScan.t2.toFixed(2));
+check('〈観測〉追踪角速度 ≤ 0.5 rad/s（不再贴脸追杀）', !!bm && bm.aimTurn <= 0.5,
+  bm ? 'aimTurn=' + bm.aimTurn : 'no beam');
+check('〈観測〉光路更细、伤害更低（w ≤ 18／dmg ≤ 12）', !!bm && bm.w <= 18 && bm.dmg <= 12,
+  bm ? 'w=' + bm.w + ' dmg=' + bm.dmg : 'no beam');
+/* 追踪量：玩家瞬间换到 Boss 正上方（约 90°），0.5 秒内光束最多转 ~10° */
+if (bm) {
+  const a0 = bm.dir;
+  gScan.player.x = bScan.x; gScan.player.y = bScan.y - 300;
+  for (let i = 0; i < 25; i++) bm.aimStep(0.02, gScan);
+  const turned = Math.abs(KUP.U.angDiff(bm.dir, a0));
+  check('〈観測〉0.5 秒内最多转约 10°（大角度也甩得掉）', turned <= 0.35 * 0.5 + 0.02,
+    (turned * 180 / Math.PI).toFixed(1) + '°');
+}
+/* 暴走：双光束夹角明显（中间留安全缝） */
+const bScanEn = gScan.spawnEnemy('boss4', gScan.player.x - 300, gScan.player.y);
+bScanEn.enraged = true; bScanEn.t2 = 0.02;
+gScan.updateBossBehavior(0.02);
+const pair = gScan.dangers.filter(d => d.kind === 'beam' && !d.armed).slice(-2);
+check('〈観測〉暴走双光束夹角 ≥ 25°（中间有缝）',
+  pair.length === 2 && Math.abs(KUP.U.angDiff(pair[0].dir, pair[1].dir)) >= 25 * Math.PI / 180,
+  pair.length === 2 ? (Math.abs(KUP.U.angDiff(pair[0].dir, pair[1].dir)) * 180 / Math.PI).toFixed(0) + '°' : 'no pair');
+
 
 // 25b. v0.8 机制道具：护盾 / 回避 / 吸血 / 反響 / 冲刺
 check('新增机制型被动（护盾/回避/吸血/反響/疾风）', ['shield', 'dodge', 'drain', 'retaliate', 'dashup'].every(id => KUP.PASSIVES[id]));

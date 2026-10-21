@@ -264,23 +264,27 @@ window.KUP = window.KUP || {};
         case 'scan': {
           b.t2 -= dt;
           if (b.t2 <= 0) {
-            b.t2 = b.enraged ? 0.5 : 0.68;
+            /* v0.18.6（人类 2026-10-22「激光仍然是大角速度追杀玩家，没有前后摇时间」）：
+             * 旧版 0.68s 一发、预警仅 0.3s、瞄准角速度 1.05 rad/s，读感＝**贴脸追杀**：
+             * 光束一出现就已经指着玩家，且几乎不停地再来一发，没有"抬手—停顿"的节奏。
+             * 现在给足**前摇与后摇**：
+             *   ① 前摇 arm 0.6s（玩家有充足时间看到预警线并横移）；
+             *   ② 追踪角速度降到 0.35 rad/s（0.6s 内最多再偏 ~12°，不再"甩不掉"）；
+             *   ③ 后摇＝两发之间至少 1.25s（暴走 0.95s），期间 Boss 不发射；
+             *   ④ 光路更细（22→16px）、伤害 13→11，横向一步就能让开。
+             * 暴走时仍是双光束，但夹角放大到 ~29°（中间留出明显安全缝）。 */
+            b.t2 = b.enraged ? 0.95 : 1.25;
             const aim = Math.atan2(p.y - b.y, p.x - b.x);
-            /* v0.18.1（人类 2026-10-21「BOSS 激光武器直接锁定玩家，应该适当降低角速度」）：
-             * 旧值 aimTurn 1.9 rad/s ＝预警 0.3s 内能转约 33°，叠加"发射瞬间已精确指向"，
-             * 读感就是**贴脸锁定**、横向移动也甩不掉。现降到 1.05 rad/s（约 −45%）：
-             * 0.3s 预警只能微调 ~18°，玩家侧移/冲刺明显更容易走出光路；
-             * 站着不动仍大概率被打中（保留"能打中玩家"的设计意图）。 */
             const mk = off => this.dangers.push(new KUP.Danger(b.x, b.y, {
-              kind: 'beam', dir: aim + off, len: 620, w: 22, dmg: 13, color: '#b58cff', arm: 0.3,
-              aimAt: { x: b.x, y: b.y }, aimF: 0.55, aimTurn: 1.05,
+              kind: 'beam', dir: aim + off, len: 620, w: 16, dmg: 11, color: '#b58cff', arm: 0.6,
+              aimAt: { x: b.x, y: b.y }, aimF: 0.55, aimTurn: 0.35,
             }));
             mk(0);
-            if (b.enraged) mk(0.34);                 // 第二道：偏移 19°，玩家只需侧移一步
+            if (b.enraged) mk(0.5);                  // 第二道：偏移 ~29°，中间留缝
             KUP.Audio.sfx('laser');
           }
           b.minionT -= dt;
-          if (b.minionT <= 0) { b.minionT = 7; this.spawnEnemy('glitch', b.x, b.y); this.spawnEnemy('glitch', b.x, b.y); }
+          if (b.minionT <= 0) { b.minionT = 8; this.spawnEnemy('glitch', b.x, b.y); }
           break;
         }
         /* 〈爆塵〉伍番街：轰炸**压在玩家附近**（而不是远远绕开）＋视野遮蔽
