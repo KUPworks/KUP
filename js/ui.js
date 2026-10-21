@@ -27,9 +27,8 @@ window.KUP = window.KUP || {};
       const ids = ['hud', 'banner', 'char-cards', 'char-detail', 'lu-cards', 'lu-lv', 'best-line',
         'reroll-n', 'btn-reroll', 'btn-banmode', 'lu-hint',
         'over-stats', 'win-stats', 'danger', 'hp-bar', 'hp-text', 'lv-num', 'timer', 'kills',
-        'weapon-row', 'xp-bar-fill', 'boss-wrap', 'boss-rows', 'vol-slider',
+        'weapon-row', 'xp-bar-fill', 'boss-wrap', 'boss-rows', 'vol-slider', 'pause-stats',
         'shield-row', 'shield-orb', 'shield-num', 'shield-tag', 'dash-pips', 'danger-warn', 'btn-dash', 'buff-row', 'btn-aim',
-        'crit-row', 'crit-mark', 'crit-num', 'crit-tag',
         'area-cards', 'area-detail', 'fukkou-fill', 'fukkou-label',
         'ult-wrap', 'ult-fill', 'ult-label', 'win-sub',
         'companion-strip', 'companion-detail', 'companion-form-wrap', 'companion-form-strip',
@@ -193,7 +192,37 @@ window.KUP = window.KUP || {};
       if (g.state !== 'playing') return;
       g.state = 'paused';
       this.showScreen('screen-pause');
+      this.renderPauseStats();
       KUP.Audio.sfx('select');
+    },
+    /* v0.18.4：暂停时显示本局**当前具体状态**（人类 2026-10-21 要求）：
+     * 生命、护盾耐久与减伤、回避率、会心率/会心伤害、等级、所持武器、是否持卵。 */
+    renderPauseStats() {
+      const box = this.els['pause-stats'];
+      const g = this.game;
+      if (!box || !g || !g.player) return;
+      const p = g.player;
+      const row = (label, value, wide) =>
+        '<div class="ps-row' + (wide ? ' wide' : '') + '"><span>' + label + '</span><b>' + value + '</b></div>';
+      const shield = p.shieldMax > 0
+        ? Math.round(p.shield) + ' / ' + Math.round(p.shieldMax) +
+          (p.shieldTmp > 0 ? ' +' + Math.round(p.shieldTmp) : '') +
+          ' · ' + KUP.I18N.t('hud.shieldPct', { n: KUP.shieldReducePct(p, 'contact') })
+        : '—';
+      const weapons = (p.weapons || []).map(w =>
+        KUP.I18N.tv(w.def.name) + ' Lv' + w.lv + (w.evolved ? ' ★' : '')).join(' · ') || '—';
+      const egg = (g.eggCharge || 0) > 0
+        ? KUP.I18N.t('pause.egg.yes', { n: g.eggCharge })
+        : KUP.I18N.t('pause.egg.no');
+      box.innerHTML =
+        row(KUP.I18N.t('pause.hp'), Math.ceil(p.hp) + ' / ' + p.maxhp) +
+        row(KUP.I18N.t('pause.shield'), shield) +
+        row(KUP.I18N.t('pause.dodge'), Math.round(p.effDodge() * 100) + '%') +
+        row(KUP.I18N.t('pause.crit'), Math.round((p.critRate || 0) * 100) + '% · ×' +
+          (Math.round((p.critMult || 1) * 100) / 100)) +
+        row(KUP.I18N.t('pause.level'), 'Lv ' + g.level) +
+        row(KUP.I18N.t('pause.egg'), egg) +
+        row(KUP.I18N.t('pause.weapons'), weapons, true);
     },
     resume() {
       const g = this.game;
@@ -922,10 +951,16 @@ window.KUP = window.KUP || {};
       for (const card of cards) card.classList.toggle('selected', card.dataset.id === id);
       $('btn-depart').disabled = !id;
       const c = KUP.CHARS.find(x => x.id === id);
+      /* v0.18.4：会心率不再常驻 HUD，只在**魔女介绍**里写初始值（人类要求） */
+      const cr = c ? KUP.CRIT_OF(c.id) : null;
+      const critLine = cr
+        ? '<br><span class="detail-weapon">' + KUP.I18N.t('select.crit', {
+            r: Math.round(cr.rate * 100), m: (Math.round(cr.mult * 100) / 100) }) + '</span>'
+        : '';
       this.els['char-detail'].innerHTML = c
         ? KUP.I18N.tv(c.desc) + '<br><span class="detail-weapon">' + KUP.I18N.t('select.detail', {
             w: KUP.I18N.tv(KUP.WEAPONS[c.weapon].name),
-            hp: c.stats.hp, sp: c.stats.speed, dmg: c.stats.dmg }) + '</span>'
+            hp: c.stats.hp, sp: c.stats.speed, dmg: c.stats.dmg }) + '</span>' + critLine
         : KUP.I18N.t('select.default');
       this.showFormStrip(); // 皮肤条随角色类型（魔女之子／魔女候補）变化
     },
@@ -1176,30 +1211,6 @@ window.KUP = window.KUP || {};
         /* 残盾/回盾中：给一个「弱化」标记，避免和满盾看起来一样 */
         row.classList.toggle('dimmed', p.shieldMax > 0 && p.shield < p.shieldMax * 0.999);
         if (this.els['shield-orb']) this.els['shield-orb'].style.opacity = p.shieldTaintT > 0 ? 0.45 : 1;
-      }
-      /* ---- v0.18.3 会心：常驻显示「会心率 × 倍率 · 专属特效」，命中时整行闪一下 ---- */
-      if (this.els['crit-row']) {
-        const csig = Math.round((p.critRate || 0) * 1000) + '/' + Math.round((p.critMult || 1) * 100) + '/' + (p.critFx || '');
-        if (csig !== this.lastCritSig) {
-          this.lastCritSig = csig;
-          if (this.els['crit-num']) {
-            this.els['crit-num'].textContent = Math.round((p.critRate || 0) * 100) + '% ×' +
-              (Math.round((p.critMult || 1) * 100) / 100);
-          }
-          if (this.els['crit-tag']) {
-            this.els['crit-tag'].textContent = p.critName ? KUP.I18N.tv(p.critName) : '';
-          }
-        }
-        /* 命中会心时闪一下（用次数变化检测，不每帧重置） */
-        const ccount = this.game ? (this.game.critCount || 0) : 0;
-        if (this.lastCritCount !== undefined && ccount > this.lastCritCount) {
-          this.els['crit-row'].classList.add('flash');
-          clearTimeout(this._critFlashT);
-          this._critFlashT = setTimeout(() => {
-            if (this.els['crit-row']) this.els['crit-row'].classList.remove('flash');
-          }, 220);
-        }
-        this.lastCritCount = ccount;
       }
       if (this.els['dash-pips']) {
         const dsig = p.dashCharge + '/' + p.dashMax;

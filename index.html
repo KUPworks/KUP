@@ -32,12 +32,6 @@
         <div id="dash-pips" title="冲刺 (Shift)"></div>
         <div id="buff-row"></div>
       </div>
-      <!-- v0.18.3 会心：常驻一行，显示 会心率 × 倍率 · 专属特效 -->
-      <div id="crit-row">
-        <span id="crit-mark" data-i18n="hud.crit">会心</span>
-        <span id="crit-num"></span>
-        <span id="crit-tag"></span>
-      </div>
       <div id="weapon-row"></div>
       <div id="hud-companion" class="hud-companion"></div>
     </div>
@@ -208,6 +202,8 @@
   <div id="screen-pause" class="screen hidden">
     <div class="menu-inner">
       <div class="lu-title" data-i18n="pause.title">一時停止</div>
+      <!-- v0.18.4：暂停时显示本局当前完整状态（人类 2026-10-21 要求） -->
+      <div id="pause-stats" class="pause-stats"></div>
       <div class="pause-box">
         <div class="pause-row"><span data-i18n="pause.vol">音量</span><input id="vol-slider" type="range" min="0" max="100" value="70"></div>
         <div class="pause-row">
@@ -250,19 +246,19 @@
   </div>
 </div>
 
-<script src="js/config.js?v=0.18.3-crit"></script>
-<script src="js/utils.js?v=0.18.3-crit"></script>
+<script src="js/config.js?v=0.18.4-status"></script>
+<script src="js/utils.js?v=0.18.4-status"></script>
 <!-- 存档层：必须在 i18n/audio/meta 之前（它们都经由 KUP.STORE 读写持久化数据） -->
-<script src="js/store.js?v=0.18.3-crit"></script>
-<script src="js/i18n.js?v=0.18.3-crit"></script>
-<script src="js/audio.js?v=0.18.3-crit"></script>
-<script src="js/data.js?v=0.18.3-crit"></script>
-<script src="js/meta.js?v=0.18.3-crit"></script>
-<script src="js/entities.js?v=0.18.3-crit"></script>
-<script src="js/game.js?v=0.18.3-crit"></script>
-<script src="js/director.js?v=0.18.3-crit"></script>
-<script src="js/render.js?v=0.18.3-crit"></script>
-<script src="js/ui.js?v=0.18.3-crit"></script>
-<script src="js/main.js?v=0.18.3-crit"></script>
+<script src="js/store.js?v=0.18.4-status"></script>
+<script src="js/i18n.js?v=0.18.4-status"></script>
+<script src="js/audio.js?v=0.18.4-status"></script>
+<script src="js/data.js?v=0.18.4-status"></script>
+<script src="js/meta.js?v=0.18.4-status"></script>
+<script src="js/entities.js?v=0.18.4-status"></script>
+<script src="js/game.js?v=0.18.4-status"></script>
+<script src="js/director.js?v=0.18.4-status"></script>
+<script src="js/render.js?v=0.18.4-status"></script>
+<script src="js/ui.js?v=0.18.4-status"></script>
+<script src="js/main.js?v=0.18.4-status"></script>
 </body>
 </html>

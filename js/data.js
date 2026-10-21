@@ -951,14 +951,16 @@ KUP.PASSIVES = {
    * 针对「敌对伤害可被躲避」这一诉求：护盾吸收、回避免伤、吸血续航、反響报复、冲刺次数。 */
   /* v0.14：护盾从「先吃伤害的独立血条」改为**减伤膜**——护盾值＝减伤强度（100＝满值），
    * 从不被扣光；各受击类型的减伤见 KUP.CONFIG.SHIELD.REDUCE（贴靠 95%／音波 85%／
-   * 毒区 75%／轰炸 70%／光束 50%）。护盾每级 +22，满值 100 后其余照旧生效（見 recompute）。 */
+   * 毒区 75%／轰炸 70%／光束 50%）。v0.18.4：**耐久**每级 +20（20/40/60/80/100），
+   * **保护效率** 1～4 级＝88（贴靠 89%）、5 级＝100（贴靠 95%）；挡下伤害消耗耐久，
+   * 脱战 3s 后 1.5s 回满。見 recompute / CONFIG.SHIELD.DURA_VALUES。 */
   shield: {
     icon: '盾', color: '#8fd0ff', maxLv: 5,
     name: { zh: '防音护盾', en: 'Soundproof Shield', ja: '防音シールド' },
     desc: {
-      zh: '歌声化作减伤膜——<b>+88 护盾</b>／级（1～4 级同值，第 5 级满值 100）。按受击类型减伤：<b>贴靠 95%</b>、音波 85%、毒区 75%、轰炸 70%、光束 50%。<br>护盾会被挡下的伤害打薄，脱战 <b>3 秒</b>后 <b>1.5 秒</b>内回满。',
-      en: 'Song becomes a damage-reducing membrane — <b>+88 shield</b> per level (levels 1–4 equal; level 5 reaches 100). Reduction by hit type: <b>contact 95%</b>, rings 85%, fields 75%, bombs 70%, beams 50%.<br>Blocked damage wears the shield down; it refills to full within <b>1.5s</b> after <b>3s</b> unharmed.',
-      ja: '歌が軽減膜となる——<b>+88 シールド</b>／レベル（1〜4 級は同値、5 級で最大 100）。被弾種類ごとに軽減：<b>接触 95%</b>・音波 85%・毒域 75%・爆撃 70%・光条 50%。<br>受け止めたダメージで膜は薄くなり、<b>3 秒</b>無傷なら <b>1.5 秒</b>で全快する。',
+      zh: '歌声化作减伤膜——<b>耐久 +20</b>／级（20/40/60/80/100）。保护效率 1～4 级＝<b>88</b>（贴靠 89%），第 5 级＝<b>100</b>（贴靠 95%）。<br>挡下的伤害会消耗耐久（打空就没减伤），脱战 <b>3 秒</b>后 <b>1.5 秒</b>内回满。',
+      en: 'Song becomes a damage-reducing membrane — <b>+20 durability</b> per level (20/40/60/80/100). Efficiency is <b>88</b> at levels 1–4 (contact 89%) and <b>100</b> at level 5 (contact 95%).<br>Blocked damage drains durability (empty = no reduction); it refills within <b>1.5s</b> after <b>3s</b> unharmed.',
+      ja: '歌が軽減膜となる——<b>耐久 +20</b>／レベル（20/40/60/80/100）。保護効率は 1〜4 級＝<b>88</b>（接触 89%）、5 級＝<b>100</b>（接触 95%）。<br>受け止めたダメージで耐久が減り（尽きると軽減なし）、<b>3 秒</b>無傷なら <b>1.5 秒</b>で全快。',
     },
   },
   dodge: {
@@ -1013,6 +1015,27 @@ KUP.PASSIVES = {
       zh: '回避（MISS）成功时，片段回流——回复最大生命的 <b>1.5%</b>／级。',
       en: 'Each MISS sends fragments flowing back — heal <b>1.5%</b> max HP per level.',
       ja: '回避（MISS）成功時、フラグメントが還流する——最大生命の <b>1.5%</b>／レベル回復。',
+    },
+  },
+  /* v0.18.4 会心成长（人类 2026-10-21「由更低期望分别增加概率与倍率」）：
+   * 两张卡**各自只加一项**，期望都低于标准「力量 +12%」——率约 +3%/级（边际递减），
+   * 倍率约 +2.4%/级（与率互相放大）；两者都受 CONFIG.CRIT 的 RATE_CAP / MULT_CAP 约束。 */
+  flint: {
+    icon: '鋭', color: '#ffe27a', maxLv: 5,
+    name: { zh: '鋭音', en: 'Sharpened Tone', ja: '鋭音' },
+    desc: {
+      zh: '把歌声压成刃——<b>会心率 +4%</b>／级。',
+      en: 'Hone the song into a blade — <b>+4% crit chance</b> per level.',
+      ja: '歌を刃に研ぐ——<b>会心率 +4%</b>／レベル。',
+    },
+  },
+  heavy: {
+    icon: '重', color: '#ff9a5a', maxLv: 5,
+    name: { zh: '重音', en: 'Heavy Tone', ja: '重音' },
+    desc: {
+      zh: '让会心落得更重——<b>会心伤害 +0.20</b>／级。',
+      en: 'Let critical hits land heavier — <b>+0.20 crit damage</b> per level.',
+      ja: '会心をより重く——<b>会心ダメージ +0.20</b>／レベル。',
     },
   },
 };

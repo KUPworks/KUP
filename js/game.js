@@ -1150,19 +1150,21 @@ window.KUP = window.KUP || {};
       return real;
     }
 
-    /* ---------- 会心特效（v0.18.3）----------
-     * 每个角色一个：残响（追加小音波）／冻弦（减速）／破勢（击退）／
-     * 星屑（额外片段）／終結（大招充能）／聖歌（回血）／箭羽（缩短冲刺 CD）。
-     * 全部走"已有系统"，不新增实体类型；数字统计进 stats()。 */
+    /* ---------- 会心结算（v0.18.3；v0.18.4 按人类要求**注释掉所有特殊触发**）----------
+     * 目前只保留：统计（次数/最高单发）、会心音效与轻微震屏。
+     * 原先按角色分派的七种特效（残响/冻弦/破勢/星屑/終結/聖歌/箭羽）**整段注释保留**，
+     * 将来若要恢复（或换成"按武器"的触发），在这里重新接线即可；注意仍须遵守
+     * "触发伤害不再会心（noCrit）"与"一次伤害最多触发一次"的纪律。 */
     onCrit(e, dealt, kx, ky) {
-      const p = this.player, CR = C.CRIT;
+      const p = this.player;
       this.critCount = (this.critCount || 0) + 1;
       if (dealt > (this.critMax || 0)) this.critMax = dealt;
       KUP.Audio.sfx('crit');
       this.shake(2);
+      /* ---- 特殊触发（已注释，保留代码与参数） ----
       switch (p.critFx) {
         case 'echo': {
-          /* 残响：30% 追加伤害（不再暴击）＋ 视觉冲击环 */
+          // 残响：30% 追加伤害（不再暴击）＋ 视觉冲击环
           this.damageEnemy(e, dealt * 0.3, 0, 0, { noCrit: true });
           this.fx.push(new KUP.Shockwave(e.x, e.y, { r0: 4, r1: 62, dur: 0.24, color: '#ffd25a', width: 3 }));
           break;
@@ -1171,7 +1173,7 @@ window.KUP = window.KUP || {};
           if (e.applySlow) e.applySlow(1.5, 0.55);      // 冻弦：减速 45% 1.5s（取最强来源）
           break;
         case 'break': {
-          /* 破勢：沿「玩家→目标」方向击退 160px */
+          // 破勢：沿「玩家→目标」方向击退 160px
           const a = Math.atan2(e.y - p.y, e.x - p.x);
           e.kx += Math.cos(a) * 160; e.ky += Math.sin(a) * 160;
           break;
@@ -1195,7 +1197,8 @@ window.KUP = window.KUP || {};
           break;
         default: break;
       }
-      void CR; void kx; void ky;
+      ---- 特殊触发结束 ---- */
+      void p; void e; void kx; void ky;
     }
 
     killEnemy(e) {

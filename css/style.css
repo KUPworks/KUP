@@ -257,8 +257,21 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .lu-hint { margin-top: 20px; font-size: 12px; color: #776fae; letter-spacing: .12em; }
 
 /* ============ 暂停/结算 ============ */
-.pause-box { margin: 18px auto 0; width: 300px; text-align: left; }
-.pause-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; font-size: 14px; color: #c9c2ee; }
+/* v0.18.4：暂停界面的本局状态面板（生命/护盾/回避/会心/等级/武器/卵） */
+.pause-stats {
+  margin: 14px auto 0; width: min(640px, 92%); text-align: left;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px;
+  font-size: 13px; color: #cfc8f2;
+}
+.pause-stats .ps-row {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 5px 10px; border-radius: 8px;
+  background: rgba(120, 90, 220, .12); border: 1px solid rgba(160, 130, 255, .18);
+}
+.pause-stats .ps-row b { color: #fff; font-variant-numeric: tabular-nums; font-weight: 700; }
+.pause-stats .ps-row span { color: #9f96c8; font-size: 12px; }
+.pause-stats .ps-row.wide { grid-column: 1 / -1; }
+.pause-box { margin: 18px auto 0; width: 300px; text-align: left; }.pause-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; font-size: 14px; color: #c9c2ee; }
 #vol-slider { width: 160px; accent-color: #b58cff; }
 .end-title { font-size: clamp(38px, 7vw, 60px); font-weight: 800; letter-spacing: .12em; }
 .end-title.lose { color: #ff5a7a; text-shadow: 0 0 30px rgba(255,60,100,.55); }
@@ -456,23 +469,6 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 /* v0.18.3：护盾会被打薄 → 残盾时整体变暗，和满盾一眼可分 */
 #shield-row.dimmed { color: #8fd0ff; opacity: .72; text-shadow: 0 0 6px rgba(143,208,255,.5); }
 #shield-row.dimmed #shield-orb { filter: saturate(.5); }
-/* v0.18.3 会心：常驻一行（会心率 × 倍率 · 专属特效） */
-#crit-row {
-  display: flex; align-items: center; gap: 6px; margin-top: 3px;
-  font-size: 12px; font-weight: 700; color: #ffe27a; letter-spacing: .03em;
-  text-shadow: 0 0 8px rgba(255,210,90,.7);
-}
-#crit-row #crit-mark {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
-  font-size: 10px; letter-spacing: 0; color: #241a00; white-space: nowrap;
-  background: radial-gradient(circle at 35% 30%, #fff6c8, #ffd25a 60%, #ff9a3c);
-  box-shadow: 0 0 10px rgba(255,210,90,.85);
-}
-#crit-row #crit-num { font-variant-numeric: tabular-nums; }
-#crit-row #crit-tag { font-size: 11px; color: #ffd9a0; font-weight: 600; }
-/* 会心命中时整行闪一下（由 JS 加 .flash 类，0.25s 后移除） */
-#crit-row.flash { color: #fffbe6; text-shadow: 0 0 14px rgba(255,235,160,1); }
 #shield-orb {
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; border-radius: 50%; font-size: 10px; color: #0a0618;
