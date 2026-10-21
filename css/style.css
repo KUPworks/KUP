@@ -453,6 +453,9 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 }
 #shield-row.hidden { display: none; }
 #shield-row.tainted { color: #ffb25a; text-shadow: 0 0 8px rgba(255,140,90,.8); }
+/* v0.18.3：护盾会被打薄 → 残盾时整体变暗，和满盾一眼可分 */
+#shield-row.dimmed { color: #8fd0ff; opacity: .72; text-shadow: 0 0 6px rgba(143,208,255,.5); }
+#shield-row.dimmed #shield-orb { filter: saturate(.5); }
 #shield-orb {
   display: inline-flex; align-items: center; justify-content: center;
   width: 18px; height: 18px; border-radius: 50%; font-size: 10px; color: #0a0618;

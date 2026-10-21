@@ -412,11 +412,11 @@ KUP.META.addTickets(45);
 check('復興率 55% + 45 票 招募地邑阿栖', KUP.META.payRecruit('asu') && KUP.META.isCharUnlocked('asu'));
 
 // 11c. 皮肤（形態）：通用形态 ＋ 系列化全量形态（v0.13.5）；黑／白（魔女候補）；JK 制服（同伴）
-check('魔女形态：通用形态仍在（花魁鳥／姬連雀）且已系列化（7 系列；化歩可选 16 条——4 条按人类要求注释保留）',
-  ['none', 'ouranchou', 'himerenjaku'].every(id => KUP.formsFor('witch', 'kaf').some(f => f.id === id)) &&
-  KUP.FORM_SERIES.length === 7 && KUP.formsFor('witch', 'kaf').length === 16,
+check('魔女形态：共用形态（花魁鳥／姬連雀）已系列化（7 系列；化歩可选 14 条＝11＋共用 3；v0.18.2 取消通常形態）',
+  ['ouranchou', 'himerenjaku', 'yatagarasu'].every(id => KUP.formsFor('witch', 'kaf').some(f => f.id === id)) &&
+  KUP.FORM_SERIES.length === 7 && KUP.formsFor('witch', 'kaf').length === 14,
   String(KUP.formsFor('witch', 'kaf').length) + ' 条 / ' + KUP.FORM_SERIES.length + ' 系列');
-check('魔女候補皮肤＝黑／白', KUP.formsFor('recruit').map(f => f.id).join(',') === 'none,kuro,shiro');
+check('魔女候補皮肤＝黑／白（v0.18.2 起没有「通常形態」）', KUP.formsFor('recruit').map(f => f.id).join(',') === 'kuro,shiro');
 /* ★ 出处等级记在**数据层** `src`（界面上已不显示，见 js/ui.js selectForm 的注释）；
  *   这里断言它存在，是为了守住 docs/lore/README.md 铁律 1「每条设定都要能回答是官方还是自编」。 */
 check('形態带官方命名法与出处标注（数据层 src）', KUP.FORM('ouranchou').label.zh.indexOf('魔女特殊歌唱用形態') === 0 && !!KUP.FORM('ouranchou').src && !!KUP.FORM('himerenjaku').src);
@@ -438,8 +438,8 @@ const pWax = new KUP.Player(KUP.CHAR('kaf'), KUP.modsFor('none'), { form: KUP.FO
 check('姬連雀：速度 +12% / 拾取 +20%',
   Math.abs(pWax.speed - pBase.speed * 1.12) < 1e-9 && Math.abs(pWax.pickup - pBase.pickup * 1.2) < 1e-9);
 const pKuro = new KUP.Player(KUP.CHAR('aru'), KUP.modsFor('none'), { form: KUP.FORM('kuro') });
-const pAruNone = new KUP.Player(KUP.CHAR('aru'), KUP.modsFor('none'), {});
-check('招募角色皮肤「黑」：攻击 +6%', Math.abs(pKuro.dmgMult - pAruNone.dmgMult * 1.06) < 1e-9);
+const pAruBase = new KUP.Player(KUP.CHAR('aru'), KUP.modsFor('none'), { form: KUP.NO_FORM });
+check('招募角色皮肤「黑」：攻击 +6%（基线＝無皮膚）', Math.abs(pKuro.dmgMult - pAruBase.dmgMult * 1.06) < 1e-9);
 const pComp = new KUP.Player(KUP.CHAR('kaf'), KUP.modsFor('none'), { recruit: KUP.COMPANION('ciel'), perk: KUP.COMPANION('ciel').perk, recruitForm: KUP.FORM('shiro') });
 check('同伴 perk（拾取/经验）与皮肤「白」并入数值',
   Math.abs(pComp.pickup - pBase.pickup * 1.2 * 1.15) < 1e-9 && Math.abs(pComp.xpMult - pBase.xpMult * 1.15) < 1e-9);
@@ -818,40 +818,50 @@ check('〈観測〉光束带近段预瞄（aimAt/aimF），可由横向移动躲
 
 // 25b. v0.8 机制道具：护盾 / 回避 / 吸血 / 反響 / 冲刺
 check('新增机制型被动（护盾/回避/吸血/反響/疾风）', ['shield', 'dodge', 'drain', 'retaliate', 'dashup'].every(id => KUP.PASSIVES[id]));
-/* v0.14：护盾＝**减伤膜**，不是第二管血（人类 2026-10-17）。
- * 旧断言（"护盾先于生命吸收、溢出到生命、自动回复"）描述的是第二管血，已整段替换。 */
+/* v0.14：护盾＝**减伤膜**（不是第二管血）；v0.18.3（人类 2026-10-21）：
+ *   ① 数值提高——1～4 级一律 88（原「倒数第二级」），第 5 级仍满值 100；
+ *   ② 护盾会**被挡下的伤害打薄**（先扣「防音の符」的临时膜层，再扣本体）；
+ *   ③ 脱战 REGEN_DELAY(3s) 后在 REGEN_TIME(1.5s) 内自动回满。 */
 const gS = new KUP.Game(canvas);
 gS.start({ char: 'kaf', area: 'area0', seed: 91 });
 gS.player.addPassive('shield');
-check('护盾建立（+22/级，满值 100）', gS.player.shieldMax === 22 && gS.player.shield === 22);
+check('护盾建立（1 级＝88＝原倒数第二级的数值）', gS.player.shieldMax === 88 && gS.player.shield === 88,
+  'max=' + gS.player.shieldMax + ' cur=' + gS.player.shield);
 const hpS = gS.player.hp;
-gS.hurtPlayer(100, 'contact');
-/* 1 级护盾 = 22 强度 → 贴靠减伤 56%（强度曲线 base × (0.48 + 0.52k)） */
-const lossContact = hpS - gS.player.hp;
-check('贴靠受击按强度减伤（22 强度 → 56%，只掉 44）', Math.abs(lossContact - 44) < 0.01, 'loss=' + lossContact.toFixed(2));
-check('护盾**不会被扣掉**（不是第二管血）', gS.player.shield === 22, 'sh=' + gS.player.shield);
+gS.hurtPlayer(30, 'contact');
+/* 88 强度 → k=0.88 → 贴靠 89% → 挡下 26.7、只掉 3.3 */
+check('88 强度贴靠减伤 89%（30 点只掉 3.3）', Math.abs((hpS - gS.player.hp) - 3.3) < 0.05,
+  'loss=' + (hpS - gS.player.hp).toFixed(2));
+check('护盾被打薄（88 − 26.7 ≈ 61.3，不是"永不减少的比率"）', Math.abs(gS.player.shield - 61.3) < 0.2,
+  'sh=' + gS.player.shield.toFixed(2));
 gS.player.hitT = 0; gS.player.shieldTouchUsed = false;   // 当作"重新贴靠"再打一发光束
 const hpBeam0 = gS.player.hp;
 gS.hurtPlayer(100, 'beam');
-check('光束受击按类型减伤（beams 基础 50%，22 强度 → 44% → 掉 56）',
-  Math.abs(Math.round(hpBeam0 - gS.player.hp) - 56) <= 1, 'loss=' + (hpBeam0 - gS.player.hp).toFixed(2));
+/* 61.3 强度 → k≈0.61 → 光束 40% → 挡下 40、掉 60 */
+check('光束受击按类型减伤（61 强度 → 40% → 掉 60）',
+  Math.abs(Math.round(hpBeam0 - gS.player.hp) - 60) <= 1, 'loss=' + (hpBeam0 - gS.player.hp).toFixed(2));
 check('光束打穿 → 贴靠膜失灵（taint 自动生效）', gS.player.shieldTaintT > 0, 'taint=' + gS.player.shieldTaintT.toFixed(2));
-gS.player.addPassive('shield'); gS.player.addPassive('shield'); gS.player.addPassive('shield'); gS.player.addPassive('shield');
-check('护盾随等级提高（22/级，钳到满值 100）', gS.player.shieldMax === 100, 'sh=' + gS.player.shieldMax);
-/* 满值护盾：光束减伤 = 50%（HARD_CAP 95% 不触发），贴靠 = 95% */
-gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false;
-check('减伤百分比与表一致（满值：贴靠 95%）', gS.player.reducePct('contact') === 95, 'pct=' + gS.player.reducePct('contact'));
+/* 1～4 级同值、第 5 级满值 100：连升到 5 级后 shieldMax=100 且升级直接补满 */
+gS.player.addPassive('shield'); gS.player.addPassive('shield'); gS.player.addPassive('shield');
+check('护盾 1～4 级同值（第 4 级仍是 88）', gS.player.shieldMax === 88, 'max=' + gS.player.shieldMax);
+gS.player.addPassive('shield');
+check('第 5 级给满值 100（升级时直接补满）', gS.player.shieldMax === 100 && gS.player.shield === 100,
+  'max=' + gS.player.shieldMax + ' cur=' + gS.player.shield);
+/* 前两次受击留下了贴靠失效与 taint，先清掉再验满值减伤 */
+gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false; gS.player.shieldTouchT = 0;
+check('满值护盾：贴靠 95%', gS.player.reducePct('contact') === 95, 'pct=' + gS.player.reducePct('contact'));
 check('减伤百分比按类型：光束 50%／轰炸 70%／毒区 75%／音波 85%',
   gS.player.reducePct('beam') === 50 && gS.player.reducePct('bomb') === 70 &&
   gS.player.reducePct('field') === 75 && gS.player.reducePct('ring') === 85,
   [gS.player.reducePct('beam'), gS.player.reducePct('bomb'), gS.player.reducePct('field'), gS.player.reducePct('ring')].join('/'));
-check('强度不足时按比例打折（22 强度 → 56%、45 → 68%、满值 → 95%）', (() => {
+check('强度不足时按比例打折（88 → 89%、61 → 76%、40 → 65%、满值 → 95%）', (() => {
   /* reducePct 是只读函数：直接构造探针对象，不碰真实玩家（不破坏上面的状态） */
   const probe = s => ({ shieldTotal: () => s, shieldTaintT: 0, shieldTouchUsed: false });
-  const a = KUP.shieldReducePct(probe(22), 'contact');
-  const b = KUP.shieldReducePct(probe(45), 'contact');
-  const c = KUP.shieldReducePct(probe(100), 'contact');
-  return a === 56 && b === 68 && c === 95;
+  const a = KUP.shieldReducePct(probe(88), 'contact');
+  const b = KUP.shieldReducePct(probe(61), 'contact');
+  const c = KUP.shieldReducePct(probe(40), 'contact');
+  const d = KUP.shieldReducePct(probe(100), 'contact');
+  return a === 89 && b === 76 && c === 65 && d === 95;
 })());
 /* 贴靠膜要**持续贴靠**：第二击（同一窗口内）不再减伤 → 被围住时不是无敌 */
 gS.state = 'playing';
@@ -865,7 +875,8 @@ gS.player.hitT = 0;
 gS.hurtPlayer(100, 'contact');
 check('贴靠膜只挡一次：连续接触的第二击照常扣血（不是无敌）',
   Math.abs(Math.round(hpTouch1 - gS.player.hp) - 100) <= 1, 'loss=' + (hpTouch1 - gS.player.hp).toFixed(1));
-/* 脱离接触 TOUCH_ARM 秒后贴靠膜恢复 */
+/* 脱离接触 TOUCH_ARM 秒后贴靠膜恢复（先把被打薄的盾补满，只看贴靠判定） */
+gS.player.shield = gS.player.shieldMax; gS.player.shieldTaintT = 0;
 gS.player.update(KUP.CONFIG.SHIELD.TOUCH_ARM + 0.05, gS);
 check('脱离接触后贴靠膜恢复', gS.player.reducePct('contact') === 95, 'touchUsed=' + gS.player.shieldTouchUsed);
 /* 被光束打穿 → 贴靠膜失灵 TAINT_T 秒 */
@@ -874,11 +885,32 @@ gS.hurtPlayer(10, 'beam');
 check('光束打穿后贴靠膜失灵（taint）', gS.player.shieldTaintT > 0 && gS.player.reducePct('contact') === 0,
   'taint=' + gS.player.shieldTaintT.toFixed(2));
 gS.player.shieldTaintT = 0;
-/* 护盾不再是"回血量"：等待很久也不会变（旧版 4s 后回复） */
-const shFixed = gS.player.shield;
-for (let i = 0; i < 200; i++) gS.update(0.05);
-check('护盾不随时间回复/掉血（不是血条口径）', gS.player.shield === shFixed && gS.player.shieldTmpT === 0,
+/* 打空：单次伤害超过剩余强度时扣到 0，不会变成负数 */
+gS.player.shield = 12; gS.player.shieldTmp = 0; gS.player.shieldTouchUsed = false; gS.player.hitT = 0;
+gS.hurtPlayer(400, 'beam');
+check('护盾打空后归零（不会负值）且此后不再减伤', gS.player.shield === 0 && gS.player.reducePct('beam') === 0,
   'sh=' + gS.player.shield);
+/* 恢复：脱战 3 秒内不回、之后 1.5 秒回满 */
+gS.player.shield = 10; gS.player.shieldRegenT = 0; gS.player.shieldTaintT = 0;
+for (let i = 0; i < 40; i++) gS.player.update(0.05, gS);        // 2.0s
+check('脱战 3 秒内不回盾', Math.abs(gS.player.shield - 10) < 1e-6, 'sh=' + gS.player.shield.toFixed(1));
+for (let i = 0; i < 60; i++) gS.player.update(0.05, gS);        // 再 3.0s（3.0–4.5s 内回满）
+check('脱战 3 秒后 1.5 秒内回满', gS.player.shield === 100, 'sh=' + gS.player.shield.toFixed(1));
+/* 恢复期间再受伤 → 重新从 0 计时 */
+gS.player.shield = 20; gS.player.shieldRegenT = 0;
+for (let i = 0; i < 50; i++) gS.player.update(0.05, gS);        // 2.5s（还没到 3s）
+gS.player.hitT = 0; gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false;
+const shMid = gS.player.shield;
+gS.hurtPlayer(2, 'ring');                                        // 掉一点
+check('受伤会打断恢复计时', gS.player.shieldRegenT === 0, 't=' + gS.player.shieldRegenT.toFixed(2));
+for (let i = 0; i < 20; i++) gS.player.update(0.05, gS);        // 1s，仍不足 3s
+check('打断后的 3 秒内仍不回复', gS.player.shield < shMid + 8, 'sh=' + gS.player.shield.toFixed(1));
+/* 「防音の符」的临时膜层优先被消耗 */
+gS.player.shield = 100; gS.player.shieldTmp = 60; gS.player.shieldTmpT = 30;
+gS.player.hitT = 0; gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false;
+gS.hurtPlayer(50, 'ring');
+check('临時の膜层先被打薄（本体护盾不动）', gS.player.shieldTmp < 60 && gS.player.shield === 100,
+  'tmp=' + gS.player.shieldTmp.toFixed(1) + ' sh=' + gS.player.shield);
 /* 回避：概率回避（把概率设为 1 验证通路） */
 const gDo = new KUP.Game(canvas);
 gDo.start({ char: 'kaf', area: 'area0', seed: 92 });
@@ -929,9 +961,9 @@ gU.castUltimate();
 check('浄化の歌清除敌方攻击（Danger）', gU.dangers.every(d => d.dead));
 
 // 25c. 同伴皮肤＝JK 制服：v0.13.7 起**注释保留**（同伴层暂不登场，内容在 data.js 里注释掉）
-check('同伴皮肤：JK 制服已按人类要求注释保留（不在 FORMS 里，只留 none）',
-  KUP.formsFor('companion').map(f => f.id).join(',') === 'none');
-check('魔女候补皮肤仍为黑／白', KUP.formsFor('recruit').map(f => f.id).join(',') === 'none,kuro,shiro');
+check('同伴皮肤：JK 制服已按人类要求注释保留（不在 FORMS 里；v0.18.2 起同伴层没有可选形态）',
+  KUP.formsFor('companion').length === 0);
+check('魔女候补皮肤仍为黑／白', KUP.formsFor('recruit').map(f => f.id).join(',') === 'kuro,shiro');
 check('JK 制服（注释保留）确实不在 FORMS 里',
   !KUP.FORMS.some(f => f.id === 'jk_summer') && !KUP.FORMS.some(f => f.id === 'jk_winter'));
 
@@ -2393,7 +2425,7 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   check('彩季被标为暂不登场（retired）', ciel.retired === true);
   check('出击界面可见的同伴为空（彩季不出现）', KUP.companionsActive().length === 0);
   check('同伴的 JK 制服以注释形式保留（不再进 FORMS，恢复时取消注释即可）',
-    KUP.formsFor('companion').every(f => f.id === 'none'));
+    KUP.formsFor('companion').length === 0);
   KUP.META.ensure().companions = ['ciel'];            // 旧存档里已解锁的彩季
   KUP.META.setCompanion('ciel');
   check('retired 的同伴不可被选（旧存档也不会自动带上）', KUP.META.ensure().companion === null);
@@ -2410,11 +2442,11 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   const SER = KUP.FORM_SERIES;
   check('形态系列共 7 个', SER.length === 7, SER.map(s => s.id).join(','));
   const expect = {
-    kaf_singing: 12, rim_meta: 7, haru_matoi: 8, sekai_anima: 5, koko_type: 4, vwp_shared: 3, legacy: 0,
+    kaf_singing: 11, rim_meta: 7, haru_matoi: 8, sekai_anima: 5, koko_type: 4, vwp_shared: 3, legacy: 0,
   };
   const got = {};
   for (const f of KUP.FORMS) if (f.series) got[f.series] = (got[f.series] || 0) + 1;
-  check('各系列形态数符合当前取舍（化歩 12＝17 去枭黑再注释 4 条／狸眼 7／派流 8／世界 5／此処 4／共用 3／自创 0）',
+  check('各系列形态数符合当前取舍（化歩 11＝17 去枭黑+雛鳥黑再注释 4 条／狸眼 7／派流 8／世界 5／此処 4／共用 3／自创 0）',
     SER.every(s => (got[s.id] || 0) === expect[s.id]),
     SER.map(s => s.id + ':' + (got[s.id] || 0) + '/' + expect[s.id]).join(' '));
   check('每条魔女形态都归入系列', KUP.FORMS.filter(f => f.kinds && f.kinds.indexOf('witch') >= 0 && f.id !== 'none').every(f => !!f.series));
@@ -2465,22 +2497,22 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   check('带数值的魔女形态恰为「覚醒／戦闘形態」8 条（其余形态纯外观）',
     withMods.join(',') === expect.join(','), withMods.join(','));
   const probe = (char, form) => { const g = new KUP.Game(canvas); g.start({ char, area: 'area0', seed: 831, form }); return g.player; };
-  const baseK = probe('kaf', 'none');
+  const baseK = probe('kaf', 'hinadori');   // 纯外观形态作基准（通常形態已取消）
   check('花魁鳥 Revolutions 已注释保留（不生效、不可选）', !KUP.FORMS.some(f => f.id === 'ouranchou_rev') &&
     KUP.formsFor('witch', 'kaf').every(f => f.id !== 'ouranchou_rev'));
-  const baseKo = probe('koko', 'none'), yata = probe('koko', 'yatagarasu');
+  const baseKo = probe('koko', 'bellatrix'), yata = probe('koko', 'yatagarasu');
   check('八咫烏生效：攻击 ×1.08／范围 ×1.10',
     Math.abs(yata.dmgMult - baseKo.dmgMult * 1.08) < 1e-6 && Math.abs(yata.areaMult - baseKo.areaMult * 1.10) < 1e-6);
-  const baseH = probe('harusaruhi', 'none'), kumo = probe('harusaruhi', 'kumonryu');
+  const baseH = probe('harusaruhi', 'matoi_tanchou'), kumo = probe('harusaruhi', 'kumonryu');
   check('九紋龍生效：生命 ×1.15／范围 ×1.08', Math.abs(kumo.maxhp - Math.round(baseH.maxhp * 1.15)) <= 1);
   const pure = probe('kaf', 'fukurou');
-  check('纯外观形态不改变任何数值（梟＝与通常形態同值）',
+  check('纯外观形态不改变任何数值（梟＝与基准形态同值）',
     Math.abs(pure.dmgMult - baseK.dmgMult) < 1e-6 && pure.maxhp === baseK.maxhp && Math.abs(pure.areaMult - baseK.areaMult) < 1e-6);
   /* 专属绑定仍然成立 */
   check('专属形态对别的魔女之子仍不可用',
     !KUP.formFits(KUP.FORM('aogara'), 'witch', 'koko') && !KUP.formFits(KUP.FORM('ubik'), 'witch', 'kaf'));
   const cross = probe('koko', 'ubik');
-  check('跨角色形态被拒并回落通常形態', cross.form.id === 'none', cross.form.id);
+  check('跨角色形态被拒并回落该角色的默认形态', cross.form.id === 'bellatrix', cross.form.id);
 }
 
 // 25r-4. UI 分组（同一屏内按系列切换，避免"一墙卡"）
@@ -2489,7 +2521,7 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   check('分组顺序＝本命系列 → 共用（自创系列现为空组，不出现），且不含「通常形態」',
     g.map(x => x.key).join(',') === 'kaf_singing,vwp_shared' && g.every(x => x.forms.every(f => f.id !== 'none')),
     g.map(x => x.key + ':' + x.forms.length).join(' '));
-  check('化歩一组 12 条、共用 3 条（花魁鳥・八咫烏・姬連雀）', g[0].forms.length === 12 && g[1].forms.length === 3);
+  check('化歩一组 11 条、共用 3 条（花魁鳥・八咫烏・姬連雀）', g[0].forms.length === 11 && g[1].forms.length === 3);
   check('每组都有三语短名（系列按钮用）', g.every(x => x.short && x.short.zh && x.short.en && x.short.ja),
     g.map(x => x.key).join(','));
   check('此処的分组＝此処 4／共用 3', (() => {
@@ -2499,7 +2531,7 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   })());
   check('魔女候補／同伴没有系列分组（UI 因而不显示系列按钮；同伴层暂不登场 ⇒ 0 组）',
     KUP.formGroups('recruit', 'aru').length === 1 && KUP.formGroups('companion', null).length === 0);
-  check('「全部」＝该角色可选的全部形态数（化歩 16 条）', KUP.formsFor('witch', 'kaf').length === 16,
+  check('「全部」＝该角色可选的全部形态数（化歩 14 条）', KUP.formsFor('witch', 'kaf').length === 14,
     String(KUP.formsFor('witch', 'kaf').length));
 }
 

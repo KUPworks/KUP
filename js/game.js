@@ -530,17 +530,22 @@ window.KUP = window.KUP || {};
         console.warn('[KUP] 支援物品 ' + this.run.support + ' 尚未解锁（瓦利斯 · 培养・招募），本局不带支援。');
         this.run.support = null;
       }
-      /* 形態/皮肤必须与角色类型匹配（witch / recruit），否则回落通常形態 */
+      /* 形態/皮肤必须与角色类型匹配（witch / recruit），否则回落到该角色的**默认形态**
+       * （v0.18.2：不再有「通常形態」——魔女之子用自己系列的第一件，魔女候補用白） */
       const charKind = KUP.charKind(charDef);
-      let form = KUP.FORM(this.run.form);
-      if (!KUP.formFits(form, charKind, charDef.id)) {
-        console.warn('[KUP] 形態 ' + form.id + ' 不适用于 ' + charKind
-          + (form.char ? '（专属形态：' + form.char + '）' : '') + '，回落通常形態。');
-        this.run.form = 'none';
-        form = KUP.FORM('none');
+      let form = this.run.form && this.run.form !== 'none' ? KUP.FORM(this.run.form) : null;
+      if (!form || !KUP.formFits(form, charKind, charDef.id)) {
+        if (form) {
+          console.warn('[KUP] 形態 ' + form.id + ' 不适用于 ' + charKind
+            + (form.char ? '（专属形态：' + form.char + '）' : '') + '，回落默认形态。');
+        }
+        form = KUP.defaultForm(charDef.id);
       }
-      let companionForm = KUP.FORM(this.run.companionForm);
-      if (!KUP.formFits(companionForm, 'companion')) { this.run.companionForm = 'none'; companionForm = KUP.FORM('none'); }
+      this.run.form = form.id;
+      let companionForm = this.run.companionForm && this.run.companionForm !== 'none'
+        ? KUP.FORM(this.run.companionForm) : KUP.NO_FORM;
+      if (!KUP.formFits(companionForm, 'companion')) companionForm = KUP.NO_FORM;
+      this.run.companionForm = companionForm.id;
       this.applyRun(true); // 重设随机流 + 生成本局街区布景
 
       const def = charDef;
@@ -1380,7 +1385,8 @@ window.KUP = window.KUP || {};
     /* ---------- 受伤结算（v0.8：回避 → 护盾 → 生命；v0.14：护盾改**减伤膜**） ----------
      * kind ＝ 伤害类型（contact／ring／field／bomb／beam），决定护盾的减伤比例。
      * 护盾**不是第二管血**：它按类型给减伤（贴靠 95%／音波 85%／毒区 75%／轰炸 70%／
-     * 光束 50%），只减少扣到生命的伤害，护盾值/膜层从不被"扣空"，也没有"回血"。 */
+     * 光束 50%），只减少扣到生命的伤害。v0.18.3 起护盾**会被挡下的伤害打薄**，
+     * 打空后暂时没有减伤，脱战 3 秒后在 1.5 秒内回满（不是第二管血，也不提供回血）。 */
     hurtPlayer(d, kind) {
       const p = this.player;
       if (p.invuln || p.hitT > 0) return;
@@ -1401,13 +1407,15 @@ window.KUP = window.KUP || {};
         return;
       }
       let rest = d;
-      /* 护盾（减伤膜）：按类型减伤，**不扣除护盾值本身**。
+      /* 护盾（减伤膜）：按类型减伤，并**按挡下的伤害打薄**（v0.18.3）。
        * kind 缺省（旧调用/调试）＝ contact —— 调 hurtPlayer(20) 仍会走贴靠膜。 */
       if (p.shieldTotal && p.shieldTotal() > 0) {
         const before = rest;
         rest = p.applyShield(rest, k);
         const blocked = Math.round(before - rest);
         if (blocked > 0) this.addText(p.x, p.y - 40, '🛡 -' + blocked, '#7dffe0', 12);
+      } else {
+        p.shieldRegenT = 0;   // 没有护盾可挡也算"挨打"：恢复计时重新开始
       }
       if (rest > 0) {
         p.hp -= rest;

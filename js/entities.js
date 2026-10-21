@@ -34,14 +34,16 @@ window.KUP = window.KUP || {};
       opt = opt || {};
       this.def = def;
       this.mods = mods || {};       // 本局规则修正乘数（KUP.modsFor），由 Game.start 注入
-      /* 皮膚＝「形態」：魔女之子的特殊歌唱用形態 + 魔女候補（同伴）皮膚「黑／白」 */
-      this.form = opt.form || KUP.FORM('none');
+      /* 皮膚＝「形態」：魔女之子的特殊歌唱用形態 + 魔女候補（同伴）皮膚「黑／白」
+       * v0.18.2（人类 2026-10-21）：取消「通常形態」——没指定形态时直接落到该角色的
+       * **第一件形态**（魔女候補＝白），所以 `this.form` 永远是一个真实形态。 */
+      this.form = opt.form || KUP.defaultForm(def.id);
       this.recruit = opt.recruit || null;
-      this.recruitForm = opt.recruitForm || KUP.FORM('none');
+      this.recruitForm = opt.recruitForm || KUP.NO_FORM;   // 同伴层无皮肤时用内部占位
       this.perk = opt.perk || null;   // 同伴 perk（gather 型在此结算；regen 型由 game.update 计时）
       this.shopMods = opt.shopMods || null; // 瓦利斯局外强化（小幅永久强化）
-      this.color = this.form.id !== 'none' ? this.form.color : def.color;
-      this.color2 = this.form.id !== 'none' ? this.form.color2 : def.color2;
+      this.color = this.form.color || def.color;
+      this.color2 = this.form.color2 || def.color2;
       this.x = C.ARENA / 2; this.y = C.ARENA / 2;
       this.r = C.PLAYER_R;
       this.base = Object.assign({}, def.stats);
@@ -61,6 +63,8 @@ window.KUP = window.KUP || {};
       this.shieldTmpT = 0;   // 膜层剩余秒数（到期归零 → 护盾回到被动给的那一层）
       this.shieldCharge = 0; this.shieldHitFx = 0;
       this.shieldTouchT = 0; this.shieldTaintT = 0; this.shieldTouchUsed = false;
+      /* v0.18.3：护盾会被打薄 → 记录「距上次受伤」的时间，用于脱战恢复 */
+      this.shieldRegenT = 0;
       this.dodgeChance = 0; this.drainPct = 0; this.retaliateDmg = 0;
       this.regenRate = 0; this.missHeal = 0;   // 持续回血 / 回避成功回血
       /* 局内道具的限时 BUFF（v0.8）：MISS/回血加成；v0.11 追加磁石の符（经验磁铁） */
@@ -95,11 +99,15 @@ window.KUP = window.KUP || {};
       this.pickup = C.PICKUP_BASE * (1 + 0.3 * lv('mic')) * m('pickup') * fm('pickup') * gatherPickup * sm('pickup');
       this.xpMult = b.xp * (1 + 0.15 * lv('stream')) * fm('xp') * gatherXp * sm('xp'); // 经验另由 mods.xpGain 在 addXP 结算
       /* ---- 机制型被动（v0.8） ---- */
-      /* v0.14 护盾＝减伤强度：升级时把**新增的护盾值**直接加到当前护盾上（旧版是"回满"），
-       * 因为护盾已不是一条会被扣空的血条，不存在"补满"的概念；上限＝C.SHIELD.AURA_MAX。 */
+      /* v0.18.3 护盾（人类 2026-10-21）：1～4 级一律 88（原倒数第二级），5 级满值 100；
+       * 护盾**会被打薄**（见 applyShield），脱战 REGEN_DELAY 秒后在 REGEN_TIME 秒内回满。
+       * 升级时直接把护盾补到新上限（既然会消耗，"补满"现在是合理的正反馈）。 */
       const prevShieldMax = this.shieldMax || 0;
-      this.shieldMax = Math.min(C.SHIELD.AURA_MAX, Math.round(C.SHIELD.AURA_LEVEL * lv('shield')));
-      if (this.shieldMax > prevShieldMax) this.shield = Math.min(this.shieldMax, (this.shield || 0) + (this.shieldMax - prevShieldMax));
+      const shLv = lv('shield');
+      const shTable = C.SHIELD.AURA_VALUES || [];
+      this.shieldMax = shLv <= 0 ? 0
+        : Math.min(C.SHIELD.AURA_MAX, shTable[Math.min(shLv, shTable.length) - 1] || C.SHIELD.AURA_LEVEL * shLv);
+      if (this.shieldMax > prevShieldMax) this.shield = this.shieldMax;
       if (this.shield > this.shieldMax) this.shield = this.shieldMax;
       this.shieldTmp = Math.min(C.SHIELD.TEMP_MAX, this.shieldTmp || 0);
       /* 回避率 = 被动「残响回避」7%/级 ＋ 瓦利斯「常連の勘」3%/级，上限 60% */
@@ -127,9 +135,10 @@ window.KUP = window.KUP || {};
     }
     /* 护盾总强度（护盾值＋膜层）——只决定**减伤比例**，不是血量 */
     shieldTotal() { return (this.shield || 0) + (this.shieldTmp || 0); }
-    /* ---------- 护盾减伤结算（v0.14）----------
+    /* ---------- 护盾减伤结算（v0.14 减伤膜 ＋ v0.18.3 会被打薄）----------
      * kind：contact／ring／field／bomb／beam（未知名按 contact 处理）
-     * 返回实际扣到生命的伤害；**不修改护盾值本身**，只记「能量」用于显示。
+     * 返回实际扣到生命的伤害；**护盾强度按挡下的伤害被扣减**（先扣临时膜层，再扣本体），
+     * 因此连续挨打会把膜打薄、减伤随之下降；脱战后自动回满（见 update 的 shieldRegenT）。
      * 贴靠膜：挡下第一击后 TOUCH_ARM 秒内失效（要持续贴靠才算"挡开"），
      * 被光束/轰炸打穿后 TAINT_T 秒内也失效 —— 被围住时不是无敌，而是争取脱身时间。 */
     applyShield(dmg, kind) {
@@ -143,6 +152,15 @@ window.KUP = window.KUP || {};
       if (kind === 'contact') { this.shieldTouchT = S.TOUCH_ARM; this.shieldTouchUsed = true; }
       /* 光束/轰炸**打穿**膜层：贴靠膜失灵 TAINT_T 秒（其它类型的减伤照旧） */
       if (kind === 'beam' || kind === 'bomb') this.shieldTaintT = S.TAINT_T;
+      /* v0.18.3：挡下多少就消耗多少强度（先临时膜层、再护盾本体；
+       * 单次伤害超过剩余强度时最多扣到 0，不会变成负数） */
+      let use = blocked * (S.CONSUME || 1);
+      if (this.shieldTmp > 0) {
+        const t = Math.min(this.shieldTmp, use);
+        this.shieldTmp -= t; use -= t;
+      }
+      if (use > 0) this.shield = Math.max(0, this.shield - use);
+      this.shieldRegenT = 0;                       // 受伤即打断恢复计时
       this.shieldCharge = U.clamp(this.shieldCharge + blocked, 0, 100);
       this.shieldHitFx = 0.35;
       return dmg - blocked;
@@ -230,8 +248,8 @@ window.KUP = window.KUP || {};
       /* 残影寿命 */
       for (const gh of this.ghosts) gh.age += dt;
       this.ghosts = this.ghosts.filter(gh => gh.age < 0.3).slice(-10);
-      /* 护盾（v0.14）：减伤膜的计时——贴靠膜的持续判定、被打穿的失灵时间、
-       * 显示用能量的衰减。护盾值/膜层**不会**随时间"回复"或"被扣"（不是血条）。 */
+      /* 护盾（v0.18.3）：贴靠膜的持续判定、被打穿的失灵时间、显示用能量衰减，
+       * 以及**脱战自动回满**——受伤后 REGEN_DELAY 秒内不恢复，之后 REGEN_TIME 秒回满。 */
       this.noHitT += dt;
       if (this.shieldTouchT > 0) {
         this.shieldTouchT -= dt;
@@ -239,6 +257,16 @@ window.KUP = window.KUP || {};
       }
       if (this.shieldTaintT > 0) this.shieldTaintT -= dt;
       if (this.shieldTmpT > 0) { this.shieldTmpT -= dt; if (this.shieldTmpT <= 0) { this.shieldTmpT = 0; this.shieldTmp = 0; } }
+      /* v0.18.3：护盾恢复（只恢复本体，不恢复「防音の符」的临时膜层） */
+      if (this.shieldMax > 0 && this.shield < this.shieldMax) {
+        this.shieldRegenT += dt;
+        const S = C.SHIELD;
+        if (this.shieldRegenT >= S.REGEN_DELAY) {
+          this.shield = Math.min(this.shieldMax, this.shield + (this.shieldMax / S.REGEN_TIME) * dt);
+        }
+      } else if (this.shieldMax > 0) {
+        this.shieldRegenT = 0;   // 满值时保持计时归零：一旦受伤立即进入 3 秒延迟
+      }
       if (this.shieldCharge > 0) this.shieldCharge = Math.max(0, this.shieldCharge - 100 * dt / C.SHIELD.DECAY_T);
       if (this.shieldHitFx > 0) this.shieldHitFx -= dt;
       // 移动拖尾

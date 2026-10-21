@@ -302,7 +302,7 @@ section('9. 结构校验：手改存档被过滤/钳制');
   const bunMax = KUP.SHOP_ITEM('bun').maxLv;
   eq(d.shop.bun, bunMax, '商店等级被钳制到 maxLv(' + bunMax + ')');
   eq(d.shop.nope, undefined, '未知商店项被丢弃');
-  eq(d.form, 'none', '非法皮肤回落 none');
+  eq(d.form, null, '非法皮肤回落 null（v0.18.2 取消通常形態，启动时取默认形态）');
   eq(d.companion, null, '非法同伴回落 null');
   eq(d.best.time, 120, '字符串时间被归一化为数字');
   eq(d.best.kills, 30, '字符串击杀数被归一化为数字');

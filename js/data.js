@@ -877,9 +877,9 @@ KUP.PASSIVES = {
     icon: '盾', color: '#8fd0ff', maxLv: 5,
     name: { zh: '防音护盾', en: 'Soundproof Shield', ja: '防音シールド' },
     desc: {
-      zh: '歌声化作减伤膜——<b>+22 护盾</b>／级（满值 100）。按受击类型减伤：<b>贴靠 95%</b>、音波 85%、毒区 75%、轰炸 70%、光束 50%。',
-      en: 'Song becomes a damage-reducing membrane — <b>+22 shield</b> per level (max 100). Reduction by hit type: <b>contact 95%</b>, rings 85%, fields 75%, bombs 70%, beams 50%.',
-      ja: '歌が軽減膜となる——<b>+22 シールド</b>／レベル（最大 100）。被弾種類ごとに軽減：<b>接触 95%</b>・音波 85%・毒域 75%・爆撃 70%・光条 50%。',
+      zh: '歌声化作减伤膜——<b>+88 护盾</b>／级（1～4 级同值，第 5 级满值 100）。按受击类型减伤：<b>贴靠 95%</b>、音波 85%、毒区 75%、轰炸 70%、光束 50%。<br>护盾会被挡下的伤害打薄，脱战 <b>3 秒</b>后 <b>1.5 秒</b>内回满。',
+      en: 'Song becomes a damage-reducing membrane — <b>+88 shield</b> per level (levels 1–4 equal; level 5 reaches 100). Reduction by hit type: <b>contact 95%</b>, rings 85%, fields 75%, bombs 70%, beams 50%.<br>Blocked damage wears the shield down; it refills to full within <b>1.5s</b> after <b>3s</b> unharmed.',
+      ja: '歌が軽減膜となる——<b>+88 シールド</b>／レベル（1〜4 級は同値、5 級で最大 100）。被弾種類ごとに軽減：<b>接触 95%</b>・音波 85%・毒域 75%・爆撃 70%・光条 50%。<br>受け止めたダメージで膜は薄くなり、<b>3 秒</b>無傷なら <b>1.5 秒</b>で全快する。',
     },
   },
   dodge: {
@@ -1310,13 +1310,6 @@ KUP.FORM_SERIES = [
   },
 ];
 KUP.FORMS = [
-  {
-    id: 'none', kinds: null, accent: 'none',
-    name: { zh: '通常形態', en: 'Standard Form', ja: '通常形態' },
-    label: { zh: '不指定（通常形態）', en: 'Standard (no form)', ja: '指定なし（通常形態）' },
-    desc: { zh: '不指定特殊歌唱用形態。', en: 'No special singing form equipped.', ja: '特殊歌唱用形態を指定しない。' },
-    mods: {},
-  },
   /* ---- 魔女之子（witch） ---- */
   {
     id: 'ouranchou', kinds: ['witch'], series: 'vwp_shared', accent: 'plume',
@@ -1351,7 +1344,8 @@ KUP.FORMS = [
    * ⚠️ 采集稿标「名称不明」的按原样写「名称不明」，**不替它取名**。 */
   /* 花譜（化歩）：官方 WORDS 全表 ＋ 2025-2026 新衣装 梟／梟黒 */
   { id: 'hinadori', series: 'kaf_singing', name: { zh: '雏鸟', en: 'Hinadori', ja: '雛鳥（ひなどり）' }, accent: 'sparrow_wing', color: '#7fe0c0' },
-  { id: 'hinadori_kuro', series: 'kaf_singing', name: { zh: '雏鸟黑', en: 'Hinadori Kuro', ja: '雛鳥黑（ひなどり くろ）' }, accent: 'sparrow_wing', color: '#4a4a63' },
+  // 2026-10-21 人类要求「注释掉雏鸟黑」——本批不上线（内容一字未删，恢复只需去掉 //）
+  // { id: 'hinadori_kuro', series: 'kaf_singing', name: { zh: '雏鸟黑', en: 'Hinadori Kuro', ja: '雛鳥黑（ひなどり くろ）' }, accent: 'sparrow_wing', color: '#4a4a63' },
   { id: 'hoshigarasu', series: 'kaf_singing', name: { zh: '星鸦', en: 'Hoshigarasu', ja: '星鴉（ほしがらす）' } },
   { id: 'ruribitaki', series: 'kaf_singing', name: { zh: '琉璃鹟', en: 'Ruribitaki', ja: '瑠璃鶲（るりびたき）' }, color: '#5ec8d8' },
   {
@@ -1569,7 +1563,24 @@ KUP.FORMS = [
     f.seriesName = s.name;                               // 出击界面按系列分组时用
   }
 })();
-KUP.FORM = id => KUP.FORMS.find(f => f.id === id) || KUP.FORMS[0];
+/* v0.18.2：**取消「通常形態」**（人类 2026-10-21）——每位魔女之子直接使用自己系列的
+ * **第一件**形态（化歩＝雏鸟／狸眼＝Nightwings／派流＝纏 其ノ壱 -丹頂-／世界＝AnemoneⅠ／
+ * 此処＝type-1st Bellatrix），魔女候補（亜留／阿栖）统一用**白**。
+ * `KUP.NO_FORM` 只是**内部占位**（同伴层没有皮肤、以及旧存档里 form:'none' 的兼容），
+ * **不会再出现在任何选择界面**，也不会被 `formsFor()` 返回。 */
+KUP.NO_FORM = {
+  id: 'none', accent: 'none', color: null, color2: null, mods: {},
+  name: { zh: '無皮膚', en: 'No skin', ja: '皮膚なし' },
+  label: { zh: '無皮膚', en: 'No skin', ja: '皮膚なし' },
+  desc: { zh: '', en: '', ja: '' },
+};
+KUP.FORM = id => (id === 'none' ? KUP.NO_FORM : (KUP.FORMS.find(f => f.id === id) || null));
+/* 角色的默认形态（v0.18.2）：魔女候補＝白；其余＝该角色系列的第一件形态 */
+KUP.defaultForm = charId => {
+  if (charId === 'aru' || charId === 'asu') return KUP.FORM('shiro');
+  const own = KUP.FORMS.find(f => f.char === charId);
+  return own || KUP.FORM('shiro') || KUP.FORMS[0];
+};
 /* 形态是否适用于某持有者（kinds 为 null ＝ 通用；char 为 null ＝ 不绑定具体角色）
  * kind: 'witch'（魔女之子）| 'recruit'（魔女候補）| 'companion'（同伴）
  * charId: 具体角色 id（可省）——带 `char` 的形态只属于该角色，换角色即不可用 */

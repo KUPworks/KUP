@@ -14,9 +14,9 @@ window.KUP = window.KUP || {};
     selectedChar: null,
     selectedArea: null,
     selectedCompanion: null,
-    selectedCompanionForm: 'none',
+    selectedCompanionForm: null,
     selectedSupport: null,          // v0.13.3：支援物品（取代同伴槽）
-    selectedForm: 'none',
+    selectedForm: null,             // v0.18.2：没有「通常形態」，未选时落到该角色的第一形态
     lastWeaponSig: '',
     els: {},
     _bannerT: 0,
@@ -780,7 +780,8 @@ window.KUP = window.KUP || {};
       const wrap = this.els['companion-form-wrap'];
       const strip = this.els['companion-form-strip'];
       if (!wrap || !strip) return;
-      const show = !!this.selectedCompanion;
+      /* v0.18.2：同伴皮肤层暂无可用形态（「通常形態」已取消）⇒ 直接隐藏 */
+      const show = !!this.selectedCompanion && KUP.formsFor('companion').length > 0;
       wrap.classList.toggle('hidden', !show);
       if (!show) return;
       strip.innerHTML = '';
@@ -793,7 +794,7 @@ window.KUP = window.KUP || {};
         const card = document.createElement('div');
         card.className = 'mini-card' + (this.selectedCompanionForm === f.id ? ' selected' : '');
         card.dataset.id = f.id;
-        card.style.setProperty('--c', f.id === 'none' ? (comp ? comp.color : '#8fd0ff') : f.color);
+        card.style.setProperty('--c', f.color);
         card.innerHTML = '<div class="mini-name">' + KUP.I18N.tv(f.name) + '</div>' +
           '<div class="mini-sub">' + KUP.I18N.tv(f.label) + '</div>';
         card.addEventListener('click', () => { KUP.Audio.sfx('select'); this.selectCompanionForm(f.id); });
@@ -806,7 +807,7 @@ window.KUP = window.KUP || {};
       KUP.META.setCompanionForm(this.selectedCompanionForm);
       const strip = this.els['companion-form-strip'];
       if (strip) for (const card of strip.children) card.classList.toggle('selected', card.dataset.id === this.selectedCompanionForm);
-      const f = KUP.FORM(this.selectedCompanionForm);
+      const f = KUP.FORM(this.selectedCompanionForm) || KUP.NO_FORM;
       /* 同伴皮肤的出处行不再显示（同 selectForm，见该处说明） */
       this.els['companion-form-detail'].innerHTML = KUP.I18N.tv(f.desc);
     },
@@ -823,14 +824,25 @@ window.KUP = window.KUP || {};
       const c = this.selectedChar ? KUP.CHAR(this.selectedChar) : null;
       const kind = c ? KUP.charKind(c) : 'witch';
       const list = KUP.formsFor(kind, c ? c.id : null);
+      /* v0.18.2：取消「通常形態」——没有记录/记录失效时，直接落到该角色的默认形态
+       * （魔女之子＝自己系列的第一件，魔女候補＝白） */
       if (!list.some(f => f.id === this.selectedForm)) {
-        this.selectedForm = 'none';
-        KUP.META.setForm('none');
+        const d = c ? KUP.defaultForm(c.id) : null;
+        this.selectedForm = d ? d.id : null;
+        /* 只有真的选了角色才落盘；没选角色时只是预览，不要把某个形态写进存档 */
+        if (this.selectedForm && c && KUP.META) KUP.META.setForm(this.selectedForm);
       }
       const groups = KUP.formGroups(kind, c ? c.id : null);
       /* 当前显示的系列：默认＝本命系列（第一组）；角色/类型一变就重新落到第一组 */
       if (this.formGroupKey && !groups.some(g => g.key === this.formGroupKey)) this.formGroupKey = null;
       if (!this.formGroupKey) this.formGroupKey = groups.length ? groups[0].key : null;
+      /* v0.18.2：选中的形态可能在「共用」组（如花魁鳥）——切到它所在的系列，
+       * 否则卡片列表里看不到任何高亮，玩家会以为没选中 */
+      const inKey = k => (k === '__all' ? list : (groups.find(g => g.key === k) || { forms: list }).forms);
+      if (this.selectedForm && !inKey(this.formGroupKey).some(f => f.id === this.selectedForm)) {
+        const g2 = groups.find(g => g.forms.some(f => f.id === this.selectedForm));
+        if (g2) this.formGroupKey = g2.key;
+      }
       const chips = this.els['form-chips'];
       if (chips) {
         chips.innerHTML = '';
@@ -860,27 +872,31 @@ window.KUP = window.KUP || {};
           ? KUP.I18N.t(kind === 'recruit' ? 'form.title.recruit' : 'form.title.witch', { name: KUP.shortOf(c) })
           : KUP.I18N.t('form.title');
       }
-      /* 通常形態永远在第一格（不属于任何系列） */
-      const ordered = [KUP.FORM('none')].concat(cur.filter(f => f.id !== 'none'));
-      for (const f of ordered) {
-        const isNone = f.id === 'none';
+      /* v0.18.2：不再有「通常形態」占位卡——列表里每一项都是真实形态 */
+      for (const f of cur) {
         const card = document.createElement('div');
         card.className = 'mini-card' + (this.selectedForm === f.id ? ' selected' : '');
         card.dataset.id = f.id;
-        card.style.setProperty('--c', isNone ? (c ? c.color : '#7a7398') : f.color);
-        card.innerHTML = '<div class="mini-name">' + KUP.I18N.tv(f.name) + '</div>' +
-          (isNone ? '<div class="mini-sub">' + KUP.I18N.tv(f.label) + '</div>' : '');
+        card.style.setProperty('--c', f.color);
+        card.innerHTML = '<div class="mini-name">' + KUP.I18N.tv(f.name) + '</div>';
         card.addEventListener('click', () => { KUP.Audio.sfx('select'); this.selectForm(f.id); });
         strip.appendChild(card);
       }
       this.selectForm(this.selectedForm);
     },
     selectForm(id) {
-      this.selectedForm = id || 'none';
-      KUP.META.setForm(this.selectedForm);
+      const c = this.selectedChar ? KUP.CHAR(this.selectedChar) : null;
+      const kind = c ? KUP.charKind(c) : 'witch';
+      const list = KUP.formsFor(kind, c ? c.id : null);
+      if (!id || !list.some(f => f.id === id)) {
+        id = c ? KUP.defaultForm(c.id).id : (list[0] ? list[0].id : null);
+      }
+      this.selectedForm = id;
+      if (id && this.selectedChar && KUP.META) KUP.META.setForm(id);
       const strip = this.els['form-strip'];
       if (strip) for (const card of strip.children) card.classList.toggle('selected', card.dataset.id === this.selectedForm);
       const f = KUP.FORM(this.selectedForm);
+      if (!f) return;
       /* ★ 2026-10：**形態的出处标注不再显示给玩家**（人类要求）。
        *   出处仍保存在数据层 `f.src`，并被 tools/verify-run.js 校验存在；
        *   玩家只看到形态名与效果。需要恢复时取消下一行注释即可：
@@ -893,6 +909,14 @@ window.KUP = window.KUP || {};
       if (id && !KUP.META.isCharUnlocked(id)) id = null;
       this.selectedChar = id || null;
       this.formGroupKey = null;          // v0.13.5：换角色 → 皮肤栏回到该角色的本命系列
+      /* v0.18.2：取消「通常形態」后，**换角色即回到该角色的第一形态**
+       * （魔女之子＝自己系列的第一件，魔女候補＝白）；玩家之后仍可自由改选。 */
+      if (id) {
+        this.selectedForm = KUP.defaultForm(id).id;
+        if (KUP.META) KUP.META.setForm(this.selectedForm);
+      } else {
+        this.selectedForm = null;
+      }
       const cards = this.els['char-cards'].children;
       for (const card of cards) card.classList.toggle('selected', card.dataset.id === id);
       $('btn-depart').disabled = !id;
@@ -1122,18 +1146,24 @@ window.KUP = window.KUP || {};
           row.appendChild(d);
         }
       }
-      /* ---- v0.8 生存机制 HUD：护盾（v0.14 改减伤膜） / 冲刺充能 / 敌袭警告 ---- */
+      /* ---- v0.8 生存机制 HUD：护盾（v0.14 减伤膜／v0.18.3 会被打薄） / 冲刺充能 / 敌袭警告 ---- */
       if (this.els['shield-row']) {
-        /* 护盾**独立一行**：显示总强度（护盾＋膜层）与当前对**贴靠**的减伤百分比，
-         * 不再占用血条——护盾不是第二管血，没有"被打掉多少"这件事。 */
+        /* 护盾**独立一行**：显示 `当前/上限` 强度与当前对**贴靠**的减伤百分比。
+         * v0.18.3 起护盾会被挡下的伤害打薄、脱战回满，所以必须同时给出上限，
+         * 玩家才知道"现在是满盾还是残盾"。 */
         const total = p.shieldTotal ? p.shieldTotal() : 0;
         const row = this.els['shield-row'];
         row.classList.toggle('hidden', total <= 0);
-        const sig = Math.round(total) + '/' + Math.round(p.shieldTmpT || 0) + '/' + (p.shieldTaintT > 0 ? 1 : 0);
+        const sig = Math.round(total) + '/' + Math.round(p.shieldMax || 0) + '/' +
+          Math.round(p.shieldTmpT || 0) + '/' + (p.shieldTaintT > 0 ? 1 : 0);
         if (sig !== this.lastShieldSig) {
           this.lastShieldSig = sig;
           const cf = KUP.shieldReducePct(p, 'contact');
-          if (this.els['shield-num']) this.els['shield-num'].textContent = Math.round(total);
+          if (this.els['shield-num']) {
+            this.els['shield-num'].textContent = p.shieldMax > 0
+              ? Math.round(p.shield) + '/' + Math.round(p.shieldMax) + (p.shieldTmp > 0 ? '+膜' : '')
+              : Math.round(total);
+          }
           if (this.els['shield-tag']) {
             const pct = KUP.I18N.t('hud.shieldPct', { n: cf });
             this.els['shield-tag'].textContent = (p.shieldTmp > 0)
@@ -1142,6 +1172,8 @@ window.KUP = window.KUP || {};
           }
         }
         row.classList.toggle('tainted', p.shieldTaintT > 0);
+        /* 残盾/回盾中：给一个「弱化」标记，避免和满盾看起来一样 */
+        row.classList.toggle('dimmed', p.shieldMax > 0 && p.shield < p.shieldMax * 0.999);
         if (this.els['shield-orb']) this.els['shield-orb'].style.opacity = p.shieldTaintT > 0 ? 0.45 : 1;
       }
       if (this.els['dash-pips']) {
@@ -1262,8 +1294,8 @@ window.KUP = window.KUP || {};
           '<div class="stat"><b>' + (st.score || 0) + '</b><span>' + KUP.I18N.t('end.stat.score') + '</span></div>' +
           '<div class="stat"><b>' + st.witch + '</b><span>' + KUP.I18N.t('end.stat.witch') + '</span></div>';
       }
-      /* 形態/皮肤与同伴（结算时确认本局配置） */
-      if (st.formLabel && st.form !== 'none') {
+      /* 形態/皮肤与同伴（结算时确认本局配置；v0.18.2 起本局一定带着具体形态） */
+      if (st.formLabel && st.form) {
         html += '<div class="stat"><b>' + st.formLabel + '</b><span>' + KUP.I18N.t('end.stat.form') + '</span></div>';
       }
       if (st.companion) {

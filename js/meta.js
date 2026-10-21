@@ -115,8 +115,8 @@ window.KUP = window.KUP || {};
         mod: typeof d.lastRun.mod === 'string' ? d.lastRun.mod : null,
         seed: int(d.lastRun.seed, 0),
         companion: typeof d.lastRun.companion === 'string' ? d.lastRun.companion : null,
-        form: typeof d.lastRun.form === 'string' ? d.lastRun.form : 'none',
-        companionForm: typeof d.lastRun.companionForm === 'string' ? d.lastRun.companionForm : 'none',
+        form: typeof d.lastRun.form === 'string' ? d.lastRun.form : null,
+        companionForm: typeof d.lastRun.companionForm === 'string' ? d.lastRun.companionForm : null,
         at: int(d.lastRun.at, 0),
       };
     }
@@ -146,9 +146,11 @@ window.KUP = window.KUP || {};
       companions: companions,
       supports: supports,
       shop: shop,
-      form: forms.some(f => f.id === d.form) ? d.form : 'none',
+      /* v0.18.2：取消「通常形態」——未选/旧档里的 'none' 一律归 null，
+       * 由 Game.start 落到该角色的默认形态（魔女之子＝第一形态／魔女候補＝白） */
+      form: forms.some(f => f.id === d.form) ? d.form : null,
       companion: compsAll.some(c => c.id === d.companion) ? d.companion : null,
-      companionForm: forms.some(f => f.id === d.companionForm) ? d.companionForm : 'none',
+      companionForm: forms.some(f => f.id === d.companionForm) ? d.companionForm : null,
       /* 支援物品的当前选择：必须是已知且**已解锁**的（未解锁视为没带） */
       support: (supAll.some(s => s.id === d.support) && supports.indexOf(d.support) >= 0) ? d.support : null,
       best: best,
@@ -446,7 +448,7 @@ window.KUP = window.KUP || {};
       d.lastRun = {
         char: cfg.char || null, area: cfg.area || null, mod: cfg.mod || null,
         seed: int(cfg.seed, 0), companion: cfg.companion || null,
-        form: cfg.form || 'none', companionForm: cfg.companionForm || 'none',
+        form: cfg.form || null, companionForm: cfg.companionForm || null,
         at: Date.now(),
       };
       this.save();
@@ -578,14 +580,23 @@ window.KUP = window.KUP || {};
     },
 
     /* ---------- 皮肤/形態选择（外观，非关键 → 合并写） ---------- */
-    setForm(id) { if (KUP.FORMS.some(f => f.id === id)) { this.ensure().form = id; this.saveSoon(); } },
+    /* v0.18.2：'none'/未知 id 一律存 null（= 用默认形态），不再保存「通常形態」 */
+    setForm(id) {
+      const d = this.ensure();
+      const next = (id && KUP.FORMS.some(f => f.id === id)) ? id : null;
+      if (d.form !== next) { d.form = next; this.saveSoon(); }
+    },
     setCompanion(id) {
       const d = this.ensure();
       /* retired 的同伴（如 v0.13.3 起暂不登场的彩季詩得）不可被选 */
       d.companion = (id && KUP.companionsActive().some(c => c.id === id) && this.isCompanionUnlocked(id)) ? id : null;
       this.saveSoon();
     },
-    setCompanionForm(id) { if (KUP.FORMS.some(f => f.id === id)) { this.ensure().companionForm = id; this.saveSoon(); } },
+    setCompanionForm(id) {
+      const d = this.ensure();
+      const next = (id && KUP.FORMS.some(f => f.id === id)) ? id : null;
+      if (d.companionForm !== next) { d.companionForm = next; this.saveSoon(); }
+    },
     /* 支援物品选择（v0.13.3）：必须已解锁，否则视为不带 */
     setSupport(id) {
       const d = this.ensure();
