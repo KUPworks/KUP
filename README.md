@@ -17,7 +17,7 @@
 |---|---|
 | 装起来玩、看懂玩法、想改点东西 | **本文件** |
 | 知道**已经做了什么、接下来要做什么** | [DESIGN.md](DESIGN.md) |
-| 知道**怎么开发**（协作规范、提交、测试） | [AGENTS.md](AGENTS.md) |
+| 知道**怎么开发**（协作规范、提交、测试） | `AGENTS.md`（本机工作区文件，**不入库**，只在开发机上） |
 | 查**世界观设定**（考据、术语、出处） | **[docs/lore/README.md](docs/lore/README.md)** |
 
 ---
@@ -473,7 +473,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 2. **不要把官方素材（图片/音频）放进仓库** —— 官方 GUIDELINES 禁止直接使用官方素材；本项目的程序化绘制/合成是刻意为之（见 [docs/lore/worldview.md](docs/lore/worldview.md) §13）。
 3. **不要引入 npm / 打包器 / 框架** —— 零依赖是项目核心约束。新增**运行时依赖**属于破坏性设计决定，必须先确认。
 
-> 改完提交前跑一遍：`node tools/verify-run.js`（玩法）＋ `node tests/save.test.cjs`（存档）＋ `node tools/check-html.js`（HTML 结构）。完整清单见 [AGENTS.md](AGENTS.md) §4。
+> 改完提交前跑一遍：`node tools/verify-run.js`（玩法）＋ `node tests/save.test.cjs`（存档）＋ `node tools/check-html.js`（HTML 结构）。完整清单见 `AGENTS.md` §4（本机工作区文件，不在仓库里）。
 
 ---
 
