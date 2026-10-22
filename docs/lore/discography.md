@@ -28,33 +28,34 @@
 | **【本仓库考据】** | 本仓库 `docs/lore/research/` 已收录并标过源的材料 |
 
 > ★ **本文档不新造任何设定。** 曲名、日期、版本名照抄；推不出结论的写「未取得」，不补全、不猜测。
+> ⚠️ **本文档只登记原创曲与含原创曲的发行。** 翻唱曲与纯翻唱现场专辑**不登记**（2026-10-22 决定，口径见 §7.3 第 8 条）。
 
 ---
 
 ## 1. 一页统计
 
-> **「官方条目」**＝官方 DISCOGRAPHY 中属于该主体的行数（同作品多版本分别计）；**「平台条目」**＝网易云艺人页的发行总数（含单曲，数值明显偏大，因其把每张配信单曲都算一条）；**「原创曲」**＝萌百逐曲表去重后的条数（含合唱/合作）。
+> **「官方条目」**＝官方 DISCOGRAPHY 中属于该主体、**且不含翻唱**的行数（同作品多版本分别计）；**「平台条目」**＝网易云艺人页的发行总数（含单曲，数值明显偏大）；**「原创曲」**＝萌百逐曲表去重并**剔除翻唱**后的条数（含合唱/合作）。
 
 | 主体 | 定位 | 官方条目 | 其中专辑类 | 平台条目 | 原创曲 |
 |---|---|---|---|---|---|
 | **V.W.P** | 五人组合 | 17 | 1（＋《覚醒》《反転》；《繁殖》为派生曲专辑，见 §2.2） | 38 | 28 |
-| **花譜** | 成员 | 46 | 16 | 72 | 77 |
-| **理芽** | 成员 | 30 | 5 | 48 | 29 |
-| **春猿火** | 成员 | 37 | 9 | 48 | 22 |
-| **ヰ世界情緒** | 成员 | 35 | 9 | 64 | 50 |
-| **幸祜** | 成员 | 14 | 4 | 38 | 26 |
+| **花譜** | 成员 | 45 | 15 | 72 | 75 |
+| **理芽** | 成员 | 28 | 3 | 48 | 29 |
+| **春猿火** | 成员 | 33 | 5 | 48 | 21 |
+| **ヰ世界情緒** | 成员 | 32 | 6 | 64 | 50 |
+| **幸祜** | 成员 | 13 | 3 | 38 | 26 |
 | **心世紀** | 少革组合 | 29 | 1 | 8 | 未取得逐曲表 |
 | **罪十罰** | 少革组合 | 28 | 1 | 7 | 未取得逐曲表 |
 | **VALIS** | 深脊界组合 | 28 | 0（专辑未进官方列表） | 41 | 22 |
 | **CIEL** | 成员 | 3 | 0 | 32 | 9 |
-| **明透** | 成员 | 25 | 0 | 43 | 24 |
-| **存流** | 成员（已毕业） | 7 | 0 | 12 | 10 |
-| **琶舞** | 成员 | 7 | 0 | 13 | 4 |
+| **明透** | 成员 | 23 | 0 | 43 | 24 |
+| **存流** | 成员（已毕业） | 6 | 0 | 12 | 10 |
+| **琶舞** | 成员 | 6 | 0 | 13 | 4 |
 | **空爽** | CIEL×Sooda | 0（未进官方列表） | 0 | 4 | 未取得逐曲表 |
 
 **几个一眼可见的事实**
 
-- **花譜的发行量最大**：官方 46 条、平台 72 条；专辑多为 **α／β／γ 三版本**（α／β 曲目相同、封面特典不同，γ 为全曲 Remix）。
+- **花譜的发行量最大**：官方 45 条、平台 72 条；专辑多为 **α／β／γ 三版本**（α／β 曲目相同、封面特典不同，γ 为全曲 Remix）。
 - **V.W.P 的曲目有官方三分类**（系譜曲／派生曲／拡声曲），见 §2.2——**官方定义，不是粉丝归纳**。
 - **ヰ世界情緒的原创曲最多**（50 条），集中在 2020 年「物語りのワルツ」期。
 - **近两年供曲最密的是少革两团**：心世紀 29 条＋罪十罰 28 条（含两团**共用的合作发行**，同一张会在两列各计一次，**故不能简单相加**）。
@@ -226,7 +227,6 @@
 | 2019-12-25 | [観測γ](https://kamitsubaki.jp/discography/kaf/340/) | Remix Album |
 | 2020-07-22 | [花と解答-ブラッククローバー Edition-](https://kamitsubaki.jp/discography/kaf/356/) | 2nd EP |
 | 2020-07-22 | [花と解答-オリジナルEdition-](https://kamitsubaki.jp/discography/kaf/354/) | 2nd EP |
-| 2020-08-19 | [I SCREAM LIVE](https://kamitsubaki.jp/discography/kaf/357/) | Cover Live Album |
 | 2020-11-25 | [魔法β](https://kamitsubaki.jp/discography/kaf/367/) | 2nd Album |
 | 2020-11-25 | [魔法α](https://kamitsubaki.jp/discography/kaf/366/) | 2nd Album |
 | 2021-12-22 | [魔法γ](https://kamitsubaki.jp/discography/kaf/1037/) | Remix Album |
@@ -242,10 +242,7 @@
 | 平台日期 | 标题 | 曲数 | 平台类型 |
 |---|---|---|---|
 | 2026-05-26 | 深愛 | 15 | 专辑 |
-| 2026-01-13 | I SCREAM LIVE4 - Cover Live Album - | 20 | 专辑 |
 | 2025-07-15 | 寓話γ | 13 | 专辑 |
-| 2024-10-29 | I SCREAM LIVE3 | 21 | 专辑 |
-| 2023-09-26 | I SCREAM LIVE2 | 31 | 专辑 |
 | 2020-10-06 | 愛と花 | 4 | EP |
 | 2020-06-30 | 戸惑いテレパシー | 5 | EP |
 | 2019-06-27 | 夜が降り止む前に | 4 | EP |
@@ -268,13 +265,13 @@
 | 2026-02-10 | やっと君の誕生日を忘れた | Single | 平台 |
 | 2026-02-03 | 世惑い子 (Chinese Ver.) | Single | 平台 |
 | 2026-02-03 | それを世界と言うんだね (Chinese Ver.) | Single | 平台 |
-| 2026-01-14 | [I SCREAM LIVE 4](https://findmestore.thinkr.jp/products/avcd-000-63827) | CD | FINDME |
 | 2025-11-25 | ユーフォーを見にいこう | Single | 平台 |
 | 2025-10-28 | キャンディーゲリラ | Single | 平台 |
 | 2025-10-14 | ありふれてたい | Single | 平台 |
 | 2025-09-03 | 光 | Single | 平台 |
 | 2025-08-19 | ひとえに壊れて | Single | 平台 |
 | 2025-07-15 | 寓話γ | 专辑 | 平台 |
+| 2025-06-24 | Story Tellers | Single | 平台 |
 
 ### 原创曲
 
@@ -291,7 +288,6 @@
 | 2019-08-01 | そして花になる |  |
 | 2019-08-06 | quiz |  |
 | 2019-08-14 | 夜行バスにて |  |
-| 2019-09-07 | 命に嫌われている （Prayer Ver.） |  |
 | 2019-09-12 | 不可解 |  |
 | 2019-09-17 | Re:HEROINES |  |
 | 2019-09-24 | エリカ |  |
@@ -314,7 +310,6 @@
 | 2020-11-24 | 帰り路 |  |
 | 2020-11-24 | まほう feat. 理芽 【不可解弐Q1Live Ver.】 | 合唱曲 |
 | 2020-12-30 | 雛鳥 with ヰ世界情緒 【不可解弐Q1Live Ver.】 | 合唱曲 |
-| 2021-01-03 | 命に嫌われている。 with 春猿火 【不可解弐Q1Live Ver.】 | 合唱曲 |
 | 2021-03-18 | ソレカラ |  |
 | 2021-03-24 | アイスクリーム feat. 花譜 |  |
 | 2021-05-19 | 例えば |  |
@@ -366,18 +361,14 @@
 
 | 发行日 | 标题 | 官方类型 |
 |---|---|---|
-| 2021-03-24 | [CHOCOLATE LIVE](https://kamitsubaki.jp/discography/rim/379/) | Cover Live Album |
 | 2021-07-21 | [NEW ROMANCER](https://kamitsubaki.jp/discography/rim/703/) | 1st Album |
 | 2023-09-20 | [imagine](https://kamitsubaki.jp/discography/guiano/2646/) | Album |
 | 2023-12-06 | [NEW ROMANCER2](https://kamitsubaki.jp/discography/rim/2863/) | Album |
-| 2024-02-14 | [CHOCOLATE LIVE2](https://kamitsubaki.jp/discography/rim/3170/) | Cover Live Album |
 
 ### 平台补录（官方**专辑**列表之外的专辑/EP，含翻唱与 Remix，【平台】）
 
 | 平台日期 | 标题 | 曲数 | 平台类型 |
 |---|---|---|---|
-| 2026-04-28 | CHOCOLATE LIVE4 | 20 | 专辑 |
-| 2025-04-22 | CHOCOLATE LIVE3 | 22 | 专辑 |
 | 2022-11-27 | Singularity Live | 25 | 专辑 |
 
 
@@ -389,16 +380,11 @@
 |---|---|---|---|
 | 2026-10-21 | [ふかいです！（Love Me, Own Me）](https://www.bilibili.com/video/BV1qpnr6cEAf) | 新曲 MV | B站 |
 | 2026-07-31 | モス | Single | 平台 |
-| 2026-04-28 | CHOCOLATE LIVE4 | 专辑 | 平台 |
 | 2025-10-28 | キャンディーゲリラ | Single | 平台 |
 | 2025-08-26 | 閃光だった (Rearranged Ver.) | Single | 平台 |
 | 2025-07-29 | 閃光だった | Single | 平台 |
-| 2025-05-24 | The End of the F***ing World | Single | 平台 |
-| 2025-04-22 | CHOCOLATE LIVE3 | 专辑 | 平台 |
 | 2024-12-10 | 本懐 | Single | 平台 |
 | 2024-09-15 | きみが大人になったんだ | Single | 平台 |
-| 2024-08-30 | デッドライン症候群 | Single | 平台 |
-| 2024-06-01 | 鬼ノ宴 | Single | 平台 |
 | 2024-02-20 | 素的 | Single | 平台 |
 
 ### 原创曲
@@ -443,13 +429,9 @@
 
 | 发行日 | 标题 | 官方类型 |
 |---|---|---|
-| 2021-03-17 | [CREAM PUFF LIVE](https://kamitsubaki.jp/discography/harusaruhi/378/) | Cover Live Album |
 | 2021-10-06 | [心眼](https://kamitsubaki.jp/discography/harusaruhi/824/) | 1st Album |
-| 2022-10-05 | [CREAM PUFF LIVE 2](https://kamitsubaki.jp/discography/harusaruhi/2773/) | Cover Live Album |
-| 2023-10-18 | [CREAM PUFF LIVE 3](https://kamitsubaki.jp/discography/harusaruhi/2710/) | Cover Live Album |
 | 2024-01-24 | [心獣](https://kamitsubaki.jp/discography/harusaruhi/2748/) | 2nd Album |
 | 2025-02-19 | [RULE THE WORLD](https://kamitsubaki.jp/discography/harusaruhi/6054/) | 1st Mini Album |
-| 2025-09-24 | [CREAM PUFF LIVE 4](https://kamitsubaki.jp/discography/harusaruhi/9649/) | Cover Live Album |
 | 2026-02-18 | [SPICE OF LIFE](https://kamitsubaki.jp/discography/harusaruhi/10210/) | 春猿火 Free Verse Mix Album |
 | 2026-06-24 | [GLITCH STAGE](https://kamitsubaki.jp/discography/harusaruhi/10753/) | 春猿火 Remix Album |
 
@@ -467,14 +449,9 @@
 | 日期 | 作品／曲名 | 类型 | 来源 |
 |---|---|---|---|
 | 2026-10-13 | HOLIC | Single | 平台 |
-| 2026-10-01 | JANE DOE | Single | 平台 |
-| 2026-10-01 | 星屑ビーナス | Single | 平台 |
-| 2026-10-01 | 生命線 | Single | 平台 |
 | 2026-06-09 | Deep Invite (TeddyLoid Remix) | Single | 平台 |
 | 2025-05-08 | YONA YONA | Single | 平台 |
 | 2024-12-10 | 本懐 | Single | 平台 |
-| 2024-10-06 | magnet | Single | 平台 |
-| 2024-08-31 | Tell Your World / livetune feat. 初音ミク | Single | 平台 |
 
 ### 原创曲
 
@@ -486,7 +463,6 @@
 | 2020-07-30 | オオゴト |  |
 | 2020-09-28 | 告げ口 |  |
 | 2020-12-09 | 台風の眼 |  |
-| 2021-01-03 | 花譜 × 春猿火 命に嫌われている。 【不可解弐Q1Live Ver.】 | 合唱曲 |
 | 2021-01-27 | 居場所 |  |
 | 2021-06-23 | 覚醒 feat. さなり | 合作曲 |
 | 2021-08-18 | 哀愁さえも仲間 |  |
@@ -511,13 +487,10 @@
 
 | 发行日 | 标题 | 官方类型 |
 |---|---|---|
-| 2021-03-31 | [CANDY LIVE](https://kamitsubaki.jp/discography/isekaijoucho/382/) | Cover Live Album |
 | 2021-12-08 | [創生β](https://kamitsubaki.jp/discography/isekaijoucho/1081/) | 1st Album |
 | 2021-12-08 | [創生α](https://kamitsubaki.jp/discography/isekaijoucho/1036/) | 1st Album |
-| 2023-03-29 | [CANDY LIVE 2](https://kamitsubaki.jp/discography/isekaijoucho/1891/) | Cover Live Album |
 | 2024-03-27 | [色彩β](https://kamitsubaki.jp/discography/isekaijoucho/3472/) | 2nd Album |
 | 2024-03-27 | [色彩α](https://kamitsubaki.jp/discography/isekaijoucho/3471/) | 2nd Album |
-| 2025-12-10 | [CANDY LIVE 3](https://kamitsubaki.jp/discography/isekaijoucho/10458/) | Cover Live Album |
 | 2026-02-25 | [幻視録](https://kamitsubaki.jp/discography/isekaijoucho/10122/) | E.P. |
 | 2026-03-19 | [Virtual Ties 〜ヰ世界情緒夢想曲〜 Theme Songs](https://kamitsubaki.jp/discography/isekaijoucho/11204/) | E.P. |
 
@@ -535,13 +508,8 @@
 
 | 日期 | 作品／曲名 | 类型 | 来源 |
 |---|---|---|---|
-| 2025-09-18 | Silhouette | Single | 平台 |
 | 2025-05-13 | 連れ出してトロイメライ | Single | 平台 |
-| 2025-02-23 | ULTRA C | Single | 平台 |
-| 2025-01-19 | プロポーズ | Single | 平台 |
-| 2024-10-06 | magnet | Single | 平台 |
 | 2024-07-30 | セカイの箱庭 | Single | 平台 |
-| 2024-02-28 | 死ぬのがいいわ | Single | 平台 |
 
 ### 原创曲
 
@@ -606,7 +574,6 @@
 
 | 发行日 | 标题 | 官方类型 |
 |---|---|---|
-| 2021-07-14 | [ARARE LIVE](https://kamitsubaki.jp/discography/koko/704/) | Cover Live Album |
 | 2022-02-23 | [prayer type-B](https://kamitsubaki.jp/discography/koko/1370/) | 1st Album |
 | 2022-02-23 | [prayer type-W](https://kamitsubaki.jp/discography/koko/1368/) | 1st Album |
 | 2025-04-23 | [prayer2](https://kamitsubaki.jp/discography/koko/7253/) | 2nd Album |
@@ -617,7 +584,6 @@
 |---|---|---|---|
 | 2025-12-06 | 破茧之华 | 5 | EP |
 | 2024-11-12 | ClimBinge the Remix | 13 | 专辑 |
-| 2023-03-24 | ARARE LIVE 2 | 21 | 专辑 |
 | 2022-02-22 | prayer | 13 | 专辑 |
 
 **3rd Album「Facets」（2026-08-21，13 曲）曲目**（FINDME 商品页）：共回線／Phantom／僕は願うことをやめたんだ／Kazura／音を鳴らせば／ivory／オレンジ／月時雨／在処／シャングリラ／切り咲く／君と出会う／ネビリア（官方文案称其中 4 曲为新录）
@@ -631,7 +597,6 @@
 |---|---|---|---|
 | 2026-09-22 | 共回線 | Single | 平台 |
 | 2026-08-21 | [Facets](https://findmestore.thinkr.jp/products/ktr-000-0253) | CD | FINDME |
-| 2026-04-25 | 威風堂々 | Single | 平台 |
 | 2026-04-21 | Phantom | Single | 平台 |
 | 2025-12-06 | 破茧之华 | EP | 平台 |
 | 2025-10-21 | 月時雨 | Single | 平台 |
@@ -642,9 +607,8 @@
 | 2025-06-17 | 在処 | Single | 平台 |
 | 2025-05-14 | オレンジ | Single | 平台 |
 | 2024-11-12 | ClimBinge the Remix | 专辑 | 平台 |
-| 2024-11-08 | だから僕は音楽を辞めた | Single | 平台 |
-| 2024-10-04 | Tempest | Single | 平台 |
-| 2024-09-01 | 《Victim of Love》 | Single | 平台 |
+| 2024-02-22 | 私を纏う（LIVE.ver） | Single | 平台 |
+| 2021-12-29 | [prayer](https://findmestore.thinkr.jp/products/幸祜-メモリアルリング-1st-album-prayer) | CD | FINDME |
 
 ### 原创曲
 
@@ -689,9 +653,6 @@
 | 2025-03-25 | ray of hope | 专辑 | 10 | Spiral／0g／ブルーナイトダーリン／アンメルト・アンブレラ／HEAVEN IS GONE／illumina／Shiny／Dazzling／…等 10 曲 |
 | 2025-03-12 | Candle Light LIVE | 专辑 | 11 | スロウリー／Spiral／ライトイヤーズ／モノローグ／オレンジ／アンダーブーケ／アンメルト・アンブレラ／Dazzling／…等 11 曲 |
 | 2024-10-31 | twilight | 专辑 | 7 | アンメルト・アンブレラ／Spiral／ブルーナイトダーリン／illumina／Dazzling／スロウリー - Acoustic Arrange -／ソラゴト - Acoustic Arrange - |
-| 2024-10-31 | サンライトLIVE 3 | 专辑 | 21 | 新宝島 - サンライトLIVE 3 (Cover)／夜撫でるメノウ - サンライトLIVE 3 (Cover)／Season  - サンライトLIVE 3 (Cover)／色香水 - サンライトLIVE 3 (Cover)／戸惑いテレパシー - サンライトLIVE 3 (Cover)／凡人様 - サンライトLIVE 3 (Cover)／怪獣 - サンライトLIVE 3 (Cover)／ミックスナッツ - サンライトLIVE 3 (Cover)／…等 21 曲 |
-| 2023-10-24 | サンライトLIVE 2 | 专辑 | 20 | Overdose - サンライトLIVE 2 (Cover)／STAY TUNE - サンライトLIVE 2 (Cover)／ここで息をして - サンライトLIVE 2 (Cover)／死神 - サンライトLIVE 2 (Cover)／DERO - サンライトLIVE 2 (Cover)／威風堂々 - サンライトLIVE 2 (Cover)／Pleiades - サンライトLIVE 2 (Cover)／マーシャル・マキシマイザー - サンライトLIVE 2 (Cover)／…等 20 曲 |
-| 2023-10-24 | サンライトLIVE | 专辑 | 17 | 真夜中のメリーゴーランド - サンライトLIVE (Cover)／flos - サンライトLIVE (Cover)／カタオモイ - サンライトLIVE (Cover)／白日 - サンライトLIVE (Cover)／CH4NGE - サンライトLIVE (Cover)／MAGIC - サンライトLIVE (Cover)／Boi - サンライトLIVE (Cover)／Surges - サンライトLIVE (Cover)／…等 17 曲 |
 | 2023-04-18 | ASU | 专辑 | 12 | 太陽（Instrumental）／スロウリー／インパーフェクト／オレンジ／ライトイヤーズ／アンダーブーケ／モノローグ／ピアス／…等 12 曲 |
 **2nd Album「ray of hope」（2025-03-25／CD 2025-03-26，10 曲）**：平台曲目见上表；另有 COMPLETE. ver.。
 
@@ -704,11 +665,9 @@
 | 2022-02-15 | [ソラゴト](https://kamitsubaki.jp/discography/asu/2266/) | （无类型标注） |
 | 2022-06-08 | [インパーフェクト](https://kamitsubaki.jp/discography/asu/2269/) | （无类型标注） |
 | 2022-08-31 | [アンダーブーケ](https://kamitsubaki.jp/discography/asu/2271/) | （无类型标注） |
-| 2022-10-21 | [サンライトLIVE](https://kamitsubaki.jp/discography/asu/2273/) | （无类型标注） |
 | 2023-01-18 | [ライトイヤーズ](https://kamitsubaki.jp/discography/asu/2276/) | （无类型标注） |
 | 2023-04-19 | [明透 – 1st Album「ASU」](https://kamitsubaki.jp/discography/asu/2278/) | （无类型标注） |
 | 2023-08-30 | [アンメルト・アンブレラ](https://kamitsubaki.jp/discography/asu/5320/) | （无类型标注） |
-| 2023-10-25 | [Cover live Album「サンライトLIVE 2」](https://kamitsubaki.jp/discography/asu/5323/) | （无类型标注） |
 | 2024-04-24 | [Spiral](https://kamitsubaki.jp/discography/asu/5330/) | （无类型标注） |
 | 2024-06-26 | [ブルーナイトダーリン](https://kamitsubaki.jp/discography/asu/5331/) | （无类型标注） |
 | 2024-08-28 | [Dazzling](https://kamitsubaki.jp/discography/asu/5332/) | （无类型标注） |
@@ -765,11 +724,9 @@
 | 2025-03-25 | ray of hope | 专辑 | 平台 |
 | 2025-03-12 | Candle Light LIVE | 专辑 | 平台 |
 | 2024-12-12 | Bunny Girl | Single | 平台 |
-| 2024-10-31 | サンライトLIVE 3 | 专辑 | 平台 |
 | 2024-10-31 | twilight | 专辑 | 平台 |
 | 2024-08-03 | Traveling | Single | 平台 |
 | 2024-04-08 | 燈 | Single | 平台 |
-| 2023-08-26 | [サンライトLIVE 2](https://findmestore.thinkr.jp/products/5sr-000-0038) | CD | FINDME |
 | 2023-04-19 | [ASU](https://findmestore.thinkr.jp/products/1st-album-asu-1st-album-aru-asu-5sr-000-0019) | CD | FINDME |
 
 > ★ **同名专辑提醒（ASU）**：明透 1st Album 名为 **《ASU》**，存流 1st Album 名为 **《ARU》**，两者**同日（2023-04-18）、同曲数（12）**，但**是两张不同的专辑**（曲目完全不同）。检索时必须带艺人名：「明透 ASU」「存流 ARU」，不要只写 ASU／ARU。
@@ -782,7 +739,6 @@
 
 | 平台日期 | 标题 | 类型 | 曲数 | 曲目（平台） |
 |---|---|---|---|---|
-| 2023-10-24 | むーんらいとLIVE | 专辑 | 14 | 少年よ我に帰れ - むーんらいとLIVE (Cover)／グッバイ宣言 - むーんらいとLIVE (Cover)／いっせーのーで - むーんらいとLIVE (Cover)／ひみつのユーフォー - むーんらいとLIVE (Cover)／神っぽいな - むーんらいとLIVE (Cover)／猫の食卓 - むーんらいとLIVE (Cover)／未確認少女進行形 - むーんらいとLIVE (Cover)／フォニイ - むーんらいとLIVE (Cover)／…等 14 曲 |
 | 2023-04-18 | ARU | 专辑 | 12 | 月（Instrumental）／さよなら／あおいゆめ／あふれる／いんさいどぐるうゔ／まってるよ／れぞんでーとる／しれね／…等 12 曲 |
 
 #### 官方 DISCOGRAPHY 条目
@@ -793,7 +749,6 @@
 | 2022-02-15 | [いんさいどぐるうゔ](https://kamitsubaki.jp/discography/aru/2246/) | （无类型标注） |
 | 2022-04-02 | [まってるよ](https://kamitsubaki.jp/discography/aru/2249/) | （无类型标注） |
 | 2022-07-06 | [あふれる](https://kamitsubaki.jp/discography/aru/2260/) | （无类型标注） |
-| 2022-09-06 | [むーんらいとLIVE](https://kamitsubaki.jp/discography/aru/2252/) | （无类型标注） |
 | 2022-12-28 | [あおいゆめ](https://kamitsubaki.jp/discography/aru/2254/) | （无类型标注） |
 | 2023-04-19 | [存流 – 1st Album「ARU」](https://kamitsubaki.jp/discography/aru/2257/) | （无类型标注） |
 
@@ -842,7 +797,6 @@
 | 平台日期 | 标题 | 类型 | 曲数 | 曲目（平台） |
 |---|---|---|---|---|
 | 2026-03-03 | Holy Night LIVE | 专辑 | 10 | ブルーナイトダーリン／0g／ビターエチュード／HOME (明透×琶舞)／Symbiotic Dominion／捕食者／戯れ／アンメルト・アンブレラ (明透×琶舞×水槽)／…等 10 曲 |
-| 2025-04-30 | THE COVER | EP | 5 | THE COVER 1 Loveit - biz×ZERA feat LOLUET covered by 琶舞.flac／THE COVER 2 MIRROR - Ado covered by 琶舞.flac／THE COVER 3 対象a - anNina covered by 琶舞.flac／THE COVER 4 お呪い - なきそ covered by 琶舞.flac／THE COVER 5 夢をみせて - Cö shu Nie covered by 琶舞.flac |
 **Cover live Album「Dark Night LIVE」（2025-12-25，FINDME）** 为翻唱现场专辑，不计原创曲。
 
 
@@ -854,7 +808,6 @@
 | 2025-09-30 | [戯れ](https://kamitsubaki.jp/discography/bema/8995/) | （无类型标注） |
 | 2025-11-05 | [捕食者](https://kamitsubaki.jp/discography/bema/9000/) | （无类型标注） |
 | 2025-12-24 | [ファーストエイド](https://kamitsubaki.jp/discography/bema/9131/) | （无类型标注） |
-| 2025-12-25 | [Cover live Album「Dark Night LIVE」](https://kamitsubaki.jp/discography/bema/9001/) | （无类型标注） |
 | 2026-05-06 | [月夜にマリアージュ](https://kamitsubaki.jp/discography/bema/10721/) | （无类型标注） |
 | 2026-07-08 | [Alt Skin](https://kamitsubaki.jp/discography/bema/12157/) | （无类型标注） |
 
@@ -872,10 +825,7 @@
 | 日期 | 作品／曲名 | 类型 | 来源 |
 |---|---|---|---|
 | 2026-10-10 | 1314 | Single | 平台 |
-| 2026-08-25 | ギブス | Single | 平台 |
-| 2026-07-31 | Departures 〜あなたにおくるアイの歌/给你的情歌〜 | Single | 平台 |
 | 2026-03-03 | Holy Night LIVE | 专辑 | 平台 |
-| 2025-12-25 | [Dark Night LIVE](https://findmestore.thinkr.jp/products/5sr-000-0101) | CD | FINDME |
 
 > **口径提醒**：琶舞的平台 discography 里大部分是**翻唱单曲**（曲名含 covered by 琶舞），本文的原创曲只取萌百「原创曲」表；EP《THE COVER》整张为翻唱，**不计入原创曲**。《Holy Night LIVE》与明透共有（含合唱曲「HOME」）。
 
@@ -891,8 +841,6 @@ KAMITSUBAKI STUDIO 选拔企划「**神椿市異住定獣課**」中发掘的虚
 | 2024-07-23 | 空想劇 | 专辑 | 13 | introduction／窓を開けて／君の望み、君の願い／眼裏の懐疑／馥郁の街／少年漫画／空より／生活に落ちる／…等 13 曲 |
 | 2023-12-21 | MYSTICAL III | 专辑 | 9 | Let the Mystical Power flow in_9／See the Flowers of Life blooming_9／Let the Mystical Power flow in_10／See the Flowers of Life blooming_10／Let the Mystical Power flow in_11／See the Flowers of Life blooming_11／Let the Mystical Power flow in_12／See the Flowers of Life blooming_12／…等 9 曲 |
 | 2023-12-12 | 空想少女 | EP | 4 | うわのそら／空中散歩／僕たちの群青／空想少女 |
-| 2023-10-03 | STRAWBERRY LIVE 2 | 专辑 | 29 | Vinyl(Live)／MC1(Live)／ド屑(Live)／従属ふりったー(Live)／シカバネーゼ(Live)／コールボーイ(Live)／MC2(Live)／ロミオとシンデレラ(Live)／…等 29 曲 |
-| 2023-02-14 | STRAWBERRY LIVE | 专辑 | 29 | リビングデッド・ユース（Live）／イミテーション（Live）／MC1（Live）／DARKHERO（Live）／CH4NGE（Live）／傷心中（Live）／MC2（Live）／きっと想（Live）／…等 29 曲 |
 | 2022-11-27 | Singularity Live | 专辑 | 25 | 君の望み、君の願い (Live at Virtual, 2022)／少年漫画 (Live at Virtual, 2022)／霞がついてくる (Live at Virtual, 2022)／ディメンション (Live at Virtual, 2022)／マボロシのまち (Live at Virtual, 2022)／生きていく光は (Live at Virtual, 2022)／異星にいこうね (feat. 星界) [Live at Virtual, 2022]／パンドラコール (Live at Virtual, 2022)／…等 25 曲 |
 **2nd ALBUM「晴途」（2026-09-19，13 曲）曲目**（FINDME 商品页）：introduction -晴-／常しなえ／ほしつなぎ／君と旅風／藍色のそら／ろうそく／此処で咲かせて（CIEL solo ver.）／夜空を舞う／月灯り踊る夜に／空白の暈／月の糸／常しなえ (Another ver.)／outroduction -途-
 
@@ -923,16 +871,13 @@ KAMITSUBAKI STUDIO 选拔企划「**神椿市異住定獣課**」中发掘的虚
 
 | 日期 | 作品／曲名 | 类型 | 来源 |
 |---|---|---|---|
-| 2026-10-07 | [STRAWBERRY LIVE3](https://findmestore.thinkr.jp/products/ktr-000-0248) | CD | FINDME |
 | 2026-09-19 | [晴途](https://findmestore.thinkr.jp/products/5sr-000-0114) | CD | FINDME |
 | 2026-03-03 | 再晴 | EP | 平台 |
 | 2025-09-23 | 常しなえ | Single | 平台 |
 | 2024-07-23 | 空想劇 | 专辑 | 平台 |
 | 2023-10-28 | [空想少女](https://findmestore.thinkr.jp/products/5sr-000-0052) | CD | FINDME |
-| 2023-10-04 | [STRAWBERRY LIVE2](https://findmestore.thinkr.jp/products/ktr-000-0117) | CD | FINDME |
-| 2022-11-23 | [STRAWBERRY LIVE](https://findmestore.thinkr.jp/products/ciel-cover-live-album-strawberry-live-ストロベリーライブ) | CD | FINDME |
 
-> **口径提醒**：CIEL 的专辑多为 **Cover Live 专辑**（STRAWBERRY LIVE 系列、Singularity Live），原创专辑是《空想劇》《MYSTICAL III》与 EP《空想少女》《再晴》。
+> **口径提醒**：CIEL 的原创专辑是《空想劇》《晴途》《MYSTICAL III》与 EP《空想少女》《再晴》；翻唱现场专辑与 Singularity Live 不登记。
 
 ## 4. 其他组合
 
@@ -1269,6 +1214,7 @@ KAMITSUBAKI STUDIO 选拔企划「**神椿市異住定獣課**」中发掘的虚
 | 5 | 平台日期普遍比官方早 1 天（如《反転》官方 01-21／平台 01-20） | **以官方日期为准**，平台日期仅在官方缺项时使用 |
 | 6 | 萌百曲名混用简繁（花谱/花譜、异世界情绪/ヰ世界情緒） | **曲名照抄**，艺人名统一用官方日文表记 |
 | 7 | 平台把翻唱单曲（covered by…）与原创曲混在同一 discography | 统计**原创曲时须剔除 cover**；本文原创曲表已不含 cover |
+| 8 | **翻唱曲／纯翻唱现场专辑的登记口径** | **一律不登记**（2026-10-22 用户决定），且**不保留「已剔除目录」**：标题含 cover／covered by／翻唱的曲目、以及各类翻唱现场专辑，均不写入本文档；经用户逐条确认的翻唱也已从各表删除 |
 
 ---
 
