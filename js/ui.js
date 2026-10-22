@@ -306,8 +306,8 @@ window.KUP = window.KUP || {};
             '<div class="area-glyph">' + (a.glyph || a.id.replace('area', '')) + '</div>' +
             '<div class="area-name">' + KUP.I18N.tv(a.name) + '</div>' +
             '<div class="area-role"></div>' +
-            '<div class="area-chapter"></div>' +
             '<div class="area-lock"></div>';
+          /* v0.18.8：番街卡不再重复显示章节名（章节名只出现在开局「Q 発生」横幅） */
           card.addEventListener('click', () => this.selectArea(a.id));
           wrap.appendChild(card);
         }
@@ -324,7 +324,6 @@ window.KUP = window.KUP || {};
         card.classList.toggle('selected', card.dataset.id === id);
         card.classList.toggle('locked', !ok);
         card.classList.toggle('endless', !!a.endless);
-        card.querySelector('.area-chapter').textContent = KUP.I18N.tv(a.chapter);
         /* 治安战：角色行标注「∞ 无尽 · 没有败北」 */
         card.querySelector('.area-role').textContent = a.endless
           ? KUP.I18N.t('area.endless')
@@ -1326,7 +1325,7 @@ window.KUP = window.KUP || {};
         if (rb) rb.textContent = KUP.I18N.t('end.order.retry');
       }
       /* 胜利副标题（v0.15.2：**取消胜利／惨胜的区分**——Boss 暴走后击破也按普通胜利结算，
-       * 副标题固定为 end.win.sub；`end.win.sub.pyrrhic` 词条保留未删，便于随时恢复） */
+       * 副标题固定为 end.win.sub；v0.18.8 起连 `end.win.sub.pyrrhic` 词条也已删除） */
       if (this.els['win-sub'] && win) {
         this.els['win-sub'].textContent = KUP.I18N.t('end.win.sub');
       }

@@ -321,7 +321,6 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
   box-shadow: 0 0 14px color-mix(in srgb, var(--c, #8fd0ff) 55%, transparent);
 }
 .area-name { font-size: 13.5px; font-weight: 700; }
-.area-chapter { font-size: 10.5px; color: var(--c, #8fd0ff); margin-top: 5px; letter-spacing: .06em; }
 .area-lock { font-size: 10.5px; color: #9a90d6; margin-top: 5px; }
 #area-detail { min-height: 52px; font-size: 13px; color: #c9c2ee; line-height: 1.9; margin-top: 4px; }
 #area-detail b { color: var(--c, #8fd0ff); }

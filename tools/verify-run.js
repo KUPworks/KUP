@@ -128,7 +128,10 @@ check('七街区均配独立波次表', KUP.AREAS.every(a => Array.isArray(a.wav
 check('各波次表首行 t=0', KUP.AREAS.every(a => a.waves[0].t === 0));
 
 // 8. 每区章节名（动画各话副标题）与事件
-check('七街区均有章节名', KUP.AREAS.every(a => a.chapter && a.chapter.zh));
+/* v0.18.8：治安战（endless）不设章节名——避免横幅出现「治安戦 · 治安戦 -Order War-」 */
+check('七个番街均有章节名（治安战不设，因其不是章节）',
+  KUP.AREAS.filter(a => !a.endless).every(a => a.chapter && a.chapter.zh) &&
+  !KUP.AREA('order').chapter);
 check('章节名对应动画副标题',
   KUP.AREA('area1').chapter.zh === '悪意 -Malice-' &&
   KUP.AREA('area3').chapter.zh === 'ファミリア -Familiar-' &&
@@ -511,6 +514,12 @@ check('惨胜不再单独结算：现金收入与普通胜利一致', (() => {
   check('showEnd 里 win-sub 固定为 end.win.sub（不再按暴走切换）',
     /win-sub'\]\s*&&\s*win\)[\s\S]{0,300}KUP\.I18N\.t\('end\.win\.sub'\)/.test(uiSrc) &&
     uiSrc.indexOf("KUP.I18N.t('end.win.sub.pyrrhic')") < 0);
+  /* v0.18.8：惨胜副标题词条已彻底删除（不是"保留未删"） */
+  const i18nSrc0 = require('fs').readFileSync('js/i18n.js', 'utf8');
+  check('惨胜副标题词条 end.win.sub.pyrrhic 已从词典删除',
+    i18nSrc0.indexOf('end.win.sub.pyrrhic') < 0);
+  check('番街卡不再渲染章节行（.area-chapter 已移除，章节名只留在 Q 横幅）',
+    uiSrc.indexOf('area-chapter') < 0);
   check('UI 不再提交番街最佳记录（submitBest 不再被 UI 调用）', uiSrc.indexOf('submitBest(') < 0);
   check('菜单最佳记录行隐藏（showBest 里给 best-line 加 hidden）',
     /best-line'\]\.classList\.add\('hidden'\)/.test(uiSrc));

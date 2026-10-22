@@ -2,7 +2,7 @@ window.KUP = window.KUP || {};
 
 /* ================= 全局配置 ================= */
 KUP.CONFIG = {
-  VERSION: '0.18.7-ui',
+  VERSION: '0.18.8-cleanup',
   ARENA: 3000,            // 正方形竞技场边长
   PLAYER_R: 13,
   PLAYER_HIT_CD: 0.55,    // 玩家受击无敌帧
@@ -222,7 +222,8 @@ KUP.WAVES = [
  * 字段：
  *   role 官方定位；resident 居住的魔女之子 id（REGENERATE 官方）；faction 势力（每番街一组织）；
  *   src 'regenerate'（官方定位）| 'narrative'（NARRATIVE 侧，本作沿用）| 'original'（本作模式）；
- *   chapter 关卡章节名（动画各话副标题）；waves 独立波次表；events 章节演出；
+ *   chapter 关卡章节名（动画各话副标题；**治安战属于 endless，不设章节名**，避免
+ *          "治安戦 · 治安戦 -Order War-" 这种重复）；waves 独立波次表；events 章节演出；
  *   theme 地图主题；accent 界面强调色；hue/blocks/win/tone/fog 布景参数。
  * ★ 復興率（KUP.META.THRESHOLDS）解锁下一番街。 */
 KUP.AREAS = [
@@ -406,7 +407,6 @@ KUP.AREAS = [
     faction: { zh: '復興課・治安維持', en: 'Reconstruction Div. — keeping order', ja: '復興課・治安維持' },
     src: 'original',
     desc: { zh: '復興課的治安维持作战——破维魔没有尽头地涌来。这里<b>没有败北</b>，只有「战斗结束」；成绩记入治安战最高记录。', en: 'The Reconstruction Division\'s order-keeping operation — Tesseracters pour in without end. There is <b>no defeat</b> here, only "battle over"; your score is kept as the Order War record.', ja: '復興課の治安維持作戦——テセラクターは際限なく押し寄せる。ここに<b>敗北はない</b>。「戦闘終了」と、治安戦の最高記録だけがある。' },
-    chapter: { zh: '治安戦 -Order War-', en: 'Order War', ja: '治安戦 -Order War-' },
     hue: [40, 95], blocks: 110, win: 0.55, tone: 'rgba(24,16,34,0.92)', fog: 0.08,
     accent: '#ffd25a',
     waves: KUP.WAVES,   // 占位（endless 模式由 director 程序化生成，不读此表）

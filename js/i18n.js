@@ -175,7 +175,6 @@ KUP.I18N = {
       'end.fukkou': '復興率 +{n}%（{t}%）',
       'end.unlocked': '🎉 新番街解锁：{area}',
       'end.stat.revive': '復活',
-      'end.win.sub.pyrrhic': '歌声在暴走之后才抵达——这是惨胜的浄化',
       /* v0.6 局外经济：市民票 / 瓦利斯 / 培养招募 */
       'menu.shop': '🍜 瓦利斯（商店）',
       'shop.title': '歌与中餐店・瓦利斯',
@@ -388,7 +387,6 @@ KUP.I18N = {
       'end.fukkou': 'Restoration +{n}% ({t}%)',
       'end.unlocked': '🎉 New area unlocked: {area}',
       'end.stat.revive': 'Revives',
-      'end.win.sub.pyrrhic': "The song arrived only after the rampage — a pyrrhic purification",
       /* v0.6 meta economy */
       'menu.shop': '🍜 VALIS (Shop)',
       'shop.title': 'Songs & Chinese Cuisine · VALIS',
@@ -600,7 +598,6 @@ KUP.I18N = {
       'end.fukkou': '復興率 +{n}%（{t}%）',
       'end.unlocked': '🎉 新たな番街が解放：{area}',
       'end.stat.revive': '復活',
-      'end.win.sub.pyrrhic': '暴走の後にようやく届いた歌——これは痛み分えの浄化',
       /* v0.6 局外経済：市民票 / 瓦利欺（公式当て字） / 育成・招募 */
       'menu.shop': '🍜 瓦利欺（商店）',
       'shop.title': '歌と中華料理の店・瓦利欺',
