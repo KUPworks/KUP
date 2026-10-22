@@ -9,6 +9,26 @@ window.KUP = window.KUP || {};
   const $ = id => document.getElementById(id);
   const SCREENS = ['screen-menu', 'screen-area', 'screen-select', 'screen-levelup', 'screen-pause', 'screen-over', 'screen-victory', 'screen-shop', 'screen-slots'];
 
+  /* v0.18.7：皮肤「系列按钮」的分组解析（**纯函数**，UI 与回归测试共用）。
+   * 规则：
+   *   ① 当前分组失效（角色/类型换了）→ 回到第一组；
+   *   ② `__all`（全部）是伪分组，永远合法；
+   *   ③ 只有**非手动切换**（keepGroup=false，即换角色/首次渲染）时，
+   *      才自动跳到"选中形态所在的组"；玩家点按钮时 keepGroup=true，
+   *      否则点「共用／全部」会被立刻弹回本命系列（v0.18.7 修的就是这个）。 */
+  KUP.resolveFormGroup = (groups, list, currentKey, formId, keepGroup) => {
+    if (currentKey && currentKey !== '__all' && !groups.some(g => g.key === currentKey)) currentKey = null;
+    if (!currentKey) currentKey = groups.length ? groups[0].key : null;
+    if (!keepGroup && formId) {
+      const formsOf = k => (k === '__all' ? list : (groups.find(g => g.key === k) || { forms: list }).forms);
+      if (!formsOf(currentKey).some(f => f.id === formId)) {
+        const g2 = groups.find(g => g.forms.some(f => f.id === formId));
+        if (g2) currentKey = g2.key;
+      }
+    }
+    return currentKey;
+  };
+
   const UI = {
     game: null,
     selectedChar: null,
@@ -848,7 +868,10 @@ window.KUP = window.KUP || {};
      *   ② 下方只画**当前系列**的卡片，超出可横向滚动（「通常形態」永远在第一格）；
      *   ③ 「共用」「自创」「全部」各一个按钮——全部仍在一屏内，不需要进别的页面。
      * 魔女候補／同伴皮肤没有系列 ⇒ 不显示系列按钮，行为与以前一致。 */
-    showFormStrip() {
+    /* v0.18.7：`keepGroup`＝**玩家手动点了系列按钮**时不要"自动跳回选中形态所在的组"。
+     * 旧实现把自动跳转写在每次渲染里，于是点「共用」「全部」会被立刻弹回「化歩」，
+     * 表现为这两个按钮"点了没反应"。现在只有换角色/首次渲染才自动跳。 */
+    showFormStrip(keepGroup) {
       const strip = this.els['form-strip'];
       if (!strip) return;
       const c = this.selectedChar ? KUP.CHAR(this.selectedChar) : null;
@@ -863,16 +886,8 @@ window.KUP = window.KUP || {};
         if (this.selectedForm && c && KUP.META) KUP.META.setForm(this.selectedForm);
       }
       const groups = KUP.formGroups(kind, c ? c.id : null);
-      /* 当前显示的系列：默认＝本命系列（第一组）；角色/类型一变就重新落到第一组 */
-      if (this.formGroupKey && !groups.some(g => g.key === this.formGroupKey)) this.formGroupKey = null;
-      if (!this.formGroupKey) this.formGroupKey = groups.length ? groups[0].key : null;
-      /* v0.18.2：选中的形态可能在「共用」组（如花魁鳥）——切到它所在的系列，
-       * 否则卡片列表里看不到任何高亮，玩家会以为没选中 */
-      const inKey = k => (k === '__all' ? list : (groups.find(g => g.key === k) || { forms: list }).forms);
-      if (this.selectedForm && !inKey(this.formGroupKey).some(f => f.id === this.selectedForm)) {
-        const g2 = groups.find(g => g.forms.some(f => f.id === this.selectedForm));
-        if (g2) this.formGroupKey = g2.key;
-      }
+      /* 分组解析交给纯函数（v0.18.7）：手动点系列按钮时不会被"自动跳回"弹走 */
+      this.formGroupKey = KUP.resolveFormGroup(groups, list, this.formGroupKey, this.selectedForm, !!keepGroup);
       const chips = this.els['form-chips'];
       if (chips) {
         chips.innerHTML = '';
@@ -886,7 +901,7 @@ window.KUP = window.KUP || {};
             b.addEventListener('click', () => {
               KUP.Audio.sfx('select');
               this.formGroupKey = key;
-              this.showFormStrip();
+              this.showFormStrip(true);               // 手动切换 → 保留这个分组
             });
             chips.appendChild(b);
           };

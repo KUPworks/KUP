@@ -2,7 +2,7 @@ window.KUP = window.KUP || {};
 
 /* ================= 全局配置 ================= */
 KUP.CONFIG = {
-  VERSION: '0.18.6-laser',
+  VERSION: '0.18.7-ui',
   ARENA: 3000,            // 正方形竞技场边长
   PLAYER_R: 13,
   PLAYER_HIT_CD: 0.55,    // 玩家受击无敌帧

@@ -2584,6 +2584,22 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     String(KUP.formsFor('witch', 'kaf').length));
 }
 
+// 25r-5. v0.18.7：皮肤「系列按钮」分组解析（「共用」「全部」可点击）
+{
+  const groups = KUP.formGroups('witch', 'kaf');
+  const list = KUP.formsFor('witch', 'kaf');
+  check('选中的形态不在本命系列 → 首次渲染自动跳到它所在的组',
+    KUP.resolveFormGroup(groups, list, 'kaf_singing', 'ouranchou', false) === 'vwp_shared');
+  check('玩家手动点「共用」→ 保留该组（不会被弹回本命系列）',
+    KUP.resolveFormGroup(groups, list, 'vwp_shared', 'hinadori', true) === 'vwp_shared');
+  check('玩家手动点「全部」→ `__all` 合法且保留（不被当成未知分组清掉）',
+    KUP.resolveFormGroup(groups, list, '__all', 'hinadori', true) === '__all');
+  check('未知分组回落到第一组',
+    KUP.resolveFormGroup(groups, list, 'no_such_group', 'hinadori', false) === 'kaf_singing');
+  check('选中形态就在当前组时不跳组',
+    KUP.resolveFormGroup(groups, list, 'kaf_singing', 'hinadori', false) === 'kaf_singing');
+}
+
 // ===== v0.14：瞄准规则（人类 2026-10-17 的六条反馈）=====
 {
   /* ① 投掷型：向**最近的两个不同敌人**各投一个（不是对着一个撒两个） */
