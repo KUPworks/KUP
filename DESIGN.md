@@ -693,6 +693,293 @@ KUP.DERIVED = [
 
 ---
 
+### 6.15 角色双武器设计细则（v0.20 计划，**本轮只设计、不实现**）
+
+> 人类 2026-10-24：为每位角色按**声优早期原创热门曲**设计两把武器——一把初始、一把带角色标签的「第二武器」，先写 DESIGN 细则，下一条对话开工。
+>
+> **与 §6.9 的兼容（硬约束）**：§6.9 的派生曲配方用 `note`／`orbit`／`bass`／`laser`／`lance`／`prayer`／`follow` 这些**武器 id** 作父武器。因此本细则**一律不改技术 id**：只改显示名／`behavior`／等级表；新武器另起 id。这样 `魔法 = note+orbit` 等 20 条配方不必重写，`?w=` 旧参数也不失效。
+>
+> **一句话版**：7 位角色 × 2 把 = 14 把；每人 `sig.role` 恰为 `starter` + `signature`；第二武器与普通武器同池、同升级规则，只多一个 `sig` 标签供后续系统（派生曲／使魔／角色卡池）查询。
+
+#### 6.15.1 目标与约束
+
+| 维度 | 定稿 |
+|---|---|
+| **数量** | 每位角色恰好 2 把签名武器；魔女之子 5 人 ＋ 魔女候補 2 人 = **14 把** |
+| **角色** | 初始武器＝该角色「系譜曲」代表曲；第二武器＝同一声优另一首早期原创热门曲 |
+| **玩法** | 一把沿用现有模组（仅调参数/换皮），一把尽量用**新模组**兑现歌名意境；不新增实体类，优先扩展现有 `Projectile/Beam/Ring/Zone` |
+| **数据** | 14 把都带 `sig`（角色／曲目／年份／主题／标签）；不新增存档字段，`SAVE.SCHEMA` 不变 |
+| **平衡** | 第二武器是**侧grade**，不是严格上位：同等级期望输出落在初始武器的 **0.85–1.15×**；不靠数值堆强度，靠几何/节奏差异 |
+| **工程** | 5 级 + 覚醒；三语齐全；每把 1 条新回归断言组；不改 `js/data.js`（已删） |
+
+#### 6.15.2 定曲表（14 把）
+
+> 「现有」＝沿用当前武器 id 与行为；「现用改名」＝现有初始武器**保留 id/行为**，只把显示名与曲目元数据改成该曲。`Pilgrim` 在 `docs/lore/discography.md` 未检索到，标 **待核**，先按人类给定曲名设计。
+
+| 角色 | 初始武器（曲／年／id／behavior） | 第二武器（曲／年／id／behavior） | 说明 |
+|---|---|---|---|
+| 森先 化歩（花譜） | **過去を喰らう**／2019／`note`／`devour`（新模组） | **不可解**／2019／`fukakai`（新 id）／`laser`（扩展） | 「わたしの声」不再是可选武器；`note` id 保留给派生曲配方 |
+| 谷置 狸眼（理芽） | **食虫植物**／2020／`orbit`／`orbit`（现有） | **Pilgrim**／待核／`pilgrim`（新 id）／`pilgrim`（新模组） | 初始武器数值不动 |
+| 朝主 派流（春猿火） | **テラ**／2022／`bass`／`bass`（现有） | **百花繚乱**／2022／`hyakka`（新 id）／`petal`（新模组） | 初始武器数值不动 |
+| 夜河 世界（ヰ世界情緒） | **シリウスの心臓**（现用改名）／2020／`laser`／`laser`（扩展） | **ヰ世界の宝石譚**／2021／`housekitan`（新 id）／`toss`（复用） | 中文写作「天狼星的心脏」；光束改四向星芒 |
+| 輪廻 此処（幸祜） | **the last bullet**／2021／`lance`／`lance`（现有） | **白昼夢**／2021／`hakuchuumu`（新 id）／`mirage`（新模组） | 初始武器数值不动 |
+| 天祢 亜留（存流） | **あおいゆめ**（现用改名）／2022／`prayer`／`bass`（扩展） | **さよなら**／2021／`sayonara`（新 id）／`bass`（扩展） | 中文「湛蓝之梦」；初始环带减速 |
+| 地邑 阿栖（明透） | **オレンジ**（现用改名）／2023／`follow`／`lance`（复用） | **虚言**／2022／`kyogen`（新 id）／`mirage`（新模组） | 中文「橙色」；`ソラゴト` 官方中文「虚言」 |
+
+> **映射依据**：标「现有」的三位，其当前初始武器就是该曲；标「现用改名」的三位，当前初始武器（`laser`／`prayer`／`follow`）保留为初始，只换成人类指定的曲名。花譜的当前初始「わたしの声」不在本批定曲内，故 `note` 改名为「過去を喰らう」并换 `devour` 模组——id 不变，派生曲与旧 `?w=note` 仍可用。
+>
+> **与 §6.9.2「先定曲」的关系**：本表是**人类 2026-10-24 指定曲**，优先于 §6.9.2 的通用选曲规则；每条的 `sig.source` 标 `official`（能在 `discography.md` 核到）或 `pending`（`Pilgrim` 待核），不得把待核曲写成官方已确认。
+
+#### 6.15.3 数据契约：`sig` 与查询接口
+
+在 `js/data/weapon.js` 的 `KUP.WEAPONS[*]` 上新增可选字段：
+
+```js
+sig: {
+  char: 'kaf',                  // 归属角色 id（必须与 owner 相同）
+  role: 'starter',              // 'starter' | 'signature'
+  songId: 'kako',               // 曲目短 id（唯一；未来派生曲/图鉴按它查）
+  song: { zh: '吞噬过去', en: 'Devour the Past', ja: '過去を喰らう' },
+  year: 2019,                   // 初出年份（官方 DISCOGRAPHY）
+  source: 'official',           // 'official' | 'human-specified' | 'pending'
+  theme: { zh: '吞噬／成长', en: 'Devour / Growth', ja: '喰らい／成長' },
+  tags: ['kaf', 'kako', 'devour', 'execute', 'growth'], // 角色／曲目／机制标签
+}
+```
+
+- **`role`**：`starter` 与 `signature` 各一把；`starter` 的武器 id 必须等于 `KUP.CHARS[char].weapon`。
+- **`tags`**：至少包含 `char` 与 `songId` 两个标签；其余为机制标签（`devour`／`execute`／`radial`／`echo`…），供后续派生曲、使魔、角色专属卡池按 tag 过滤。
+- **查询接口**（放进 `js/data/weapon.js`，并在 `core.js` audit 登记）：
+  - `KUP.SIG_OF(weaponId)` → `sig` 或 `null`
+  - `KUP.SIG_WEAPONS(charId)` → `[starter, signature]`（按 role 排序）
+  - `KUP.SIG_STARTER(charId)` / `KUP.SIG_SIGNATURE(charId)`
+  - `KUP.SIG_BY_TAG(tag)` → 带该 tag 的武器数组
+- **audit 新增**：每位角色恰有 1 把 `starter` + 1 把 `signature`；`sig.char === owner`；`songId` 全局唯一；`tags` 含 char 与 songId；`starter` id 与 `CHARS[].weapon` 一致；14 把之外不得出现 `role` 非法的 `sig`。
+- **兼容**：不改任何现有武器 id；不改 `CHARS[].weapon`；不改 `run`／存档字段；`?w=` 旧参数（`note`/`laser`/`prayer`/`follow`）继续有效。
+
+#### 6.15.4 模组矩阵（4 新 ＋ 2 扩 ＋ 4 复用）
+
+| 模组 | 状态 | entity | 用于 | 关键参数 | 范围放大 |
+|---|---|---|---|---|---|
+| `devour` | **新** | Projectile | `note`（過去を喰らう） | `cd,dmg,count,stack,exec` | `r` |
+| `pilgrim` | **新** | Projectile → Zone | `pilgrim`（Pilgrim） | `cd,dmg,count,r,trailR,range,life,burstR,tick` | `r,trailR,burstR,range` |
+| `petal` | **新** | Projectile | `hyakka`（百花繚乱） | `cd,dmg,petals,speed,life,curve,pierce,doubleRing` | `r` |
+| `mirage` | **新** | Projectile | `hakuchuumu`（白昼夢）／`kyogen`（虚言） | `cd,dmg,count,pierce,echoes,echoDelay,echoMul,zigzag,decoys,decoyMul` | `r` |
+| `laser` | **扩** | Beam | `laser`（天狼星）／`fukakai`（不可解） | 新增 `beams,spin,chaos,cross,crossMul,pulse` | `len` |
+| `bass` | **扩** | Ring | `bass`（テラ）／`prayer`（湛蓝之梦）／`sayonara`（さよなら） | 新增 `slow,slowSec,echo,echoT,echoMul` | `r` |
+| `orbit` | 复用 | WeaponRuntime.orbs | `orbit`（食虫植物） | 不变 | `r,orbR` |
+| `bass` | 复用 | Ring | `bass`（テラ） | 不变 | `r` |
+| `lance` | 复用 | Projectile | `lance`（the last bullet）／`follow`（orange） | 不变 | `r` |
+| `toss` | 复用 | Toss → Zone | `housekitan`（宝石譚） | 不变 | `r,range` |
+
+> `note` 模组删除（被 `devour` 取代）；`WEAPONS.note.behavior` 改为 `devour`。`laser`／`bass` 的扩展字段必须全部进 `params` 白名单，旧武器不传即保持原行为（零平衡改动）。
+
+#### 6.15.5 逐武器细则
+
+> 格式：`id · 曲名（role／behavior）`；Lv1–Lv5 一行一级，`覚醒` 为进化形态。伤害/冷却单位同现有武器表；`exec`/`chaos`/`echoMul` 等为 0–1 比例。
+
+##### 花譜／森先 化歩（kaf）
+
+**`note` · 過去を喰らう（starter／devour）** — 意境：把「过去」吞下去，越吃越强；残血敌人被直接吞没。
+```
+Lv1  cd1.05 dmg9   count2 stack0.5 exec0.06
+Lv2  cd0.95 dmg11  count3 stack0.6 exec0.08
+Lv3  cd0.90 dmg12  count3 stack0.8 exec0.10
+Lv4  cd0.82 dmg14  count4 stack1.0 exec0.12
+Lv5  cd0.74 dmg16  count5 stack1.2 exec0.15
+覚醒  cd0.56 dmg21  count7 stack1.5 exec0.20   （過去を喰らう -rememory-）
+```
+- 行为：追尾音符；命中伤害 `dmg + stacks×stack`；**击杀**时 `stacks++`（上限 20，超上限改加 1 穿透）；目标生命 ≤ `exec` 且非 Boss → 直接处决，Boss 改为额外 `2×dmg×exec` 伤害。
+- `sig`：`kaf／kako／2019／tags kaf,kako,devour,execute,growth,starter`。
+
+**`fukakai` · 不可解（signature／laser 扩展）** — 意境：无法理解的弹道——星芒乱转、偶尔多出一道「不该存在」的光。
+```
+Lv1  cd2.8 dmg15 beams4 len520 w12 spin0.35 chaos0.00
+Lv2  cd2.6 dmg19 beams4 len560 w14 spin0.40 chaos0.10
+Lv3  cd2.4 dmg22 beams5 len620 w16 spin0.45 chaos0.15
+Lv4  cd2.1 dmg26 beams6 len700 w18 spin0.50 chaos0.25
+Lv5  cd1.9 dmg30 beams6 len760 w20 spin0.60 chaos0.35
+覚醒  cd1.5 dmg38 beams8 len900 w24 spin0.75 chaos0.50   （不可解 -labyrinth-）
+```
+- 行为：每轮以瞄准方向为基准，等角发射 `beams` 道光束；每轮整体旋转 `spin` 弧度（用 `U.rng`，玩法路径可复现）；`chaos` 概率追加一道随机角光束。`area` 只放大 `len`，不加宽。
+- `sig`：`kaf／fukakai／2019／tags kaf,fukakai,paradox,beam,chaos,signature`。
+
+##### 理芽／谷置 狸眼（rim）
+
+**`orbit` · 食虫植物（starter／orbit，现有）** — 数值不动，只更新 `desc` 与 `sig`，去掉「初期武装」以外的过时描述。
+- `sig`：`rim／shokuchuu／2020／tags rim,shokuchuu,orbit,carnivorous,starter`。
+
+**`pilgrim` · Pilgrim（signature／pilgrim）** — 意境：朝圣者一路留下足迹，走到尽头才开花。
+```
+Lv1  cd3.8 dmg12 count1 r24 trailR22 range420 life3.2 burstR90
+Lv2  cd3.4 dmg14 count1 r26 trailR24 range460 life3.6 burstR105
+Lv3  cd3.0 dmg16 count2 r28 trailR26 range500 life4.0 burstR120
+Lv4  cd2.7 dmg18 count2 r30 trailR28 range560 life4.4 burstR135
+Lv5  cd2.4 dmg20 count2 r32 trailR30 range620 life4.8 burstR150
+覚醒  cd2.0 dmg24 count3 r36 trailR34 range700 life5.2 burstR180   （Pilgrim -procession-）
+```
+- 行为：朝最近敌人方向放出一个**慢速**巡礼球（`life` 秒）；每 `0.25s` 在脚下留一个 `trailR` 滞留区（`tick 0.5s`）；到期或撞墙时炸成 `burstR` 大区。场上最多 12 个巡礼区，超出时最旧的消失。
+- `sig`：`rim／pilgrim／null／source pending／tags rim,pilgrim,zone,trail,slow,signature`。
+
+##### 春猿火／朝主 派流（harusaruhi）
+
+**`bass` · テラ（starter／bass，现有）** — 数值不动；`sig`：`harusaruhi／terra／2022／tags harusaruhi,terra,bass,quake,starter`。
+
+**`hyakka` · 百花繚乱（signature／petal）** — 意境：花瓣向四面八方炸开，越乱越美。
+```
+Lv1  cd3.2 dmg8  petals8  speed280 life1.00 curve0.35 pierce1 doubleRing0
+Lv2  cd3.0 dmg9  petals10 speed290 life1.05 curve0.40 pierce1 doubleRing0
+Lv3  cd2.7 dmg10 petals12 speed300 life1.10 curve0.50 pierce2 doubleRing0
+Lv4  cd2.4 dmg12 petals15 speed310 life1.20 curve0.60 pierce2 doubleRing1
+Lv5  cd2.1 dmg14 petals18 speed320 life1.30 curve0.70 pierce3 doubleRing1
+覚醒  cd1.7 dmg18 petals24 speed340 life1.50 curve0.80 pierce4 doubleRing1   （百花繚乱 -千花-）
+```
+- 行为：`petals` 枚花瓣等角散开；每枚以 `curve` 弧度/秒缓慢偏转（同向旋转）；`doubleRing` 在 0.25s 后再放一圈反向花瓣（伤害 60%）。
+- `sig`：`harusaruhi／hyakka／2022／tags harusaruhi,hyakka,petal,radial,pierce,signature`。
+
+##### ヰ世界情緒／夜河 世界（isekaijoucho）
+
+**`laser` · シリウスの心臓（starter／laser 扩展，现用改名）** — 意境：天狼星的心跳——主光束 + 四向星芒，节拍式脉冲。
+```
+Lv1  cd2.6 dmg20 len560 w16 cross0 crossMul0.0 pulse1
+Lv2  cd2.5 dmg26 len580 w20 cross0 crossMul0.0 pulse1
+Lv3  cd2.4 dmg28 len700 w22 cross1 crossMul0.6 pulse1
+Lv4  cd2.2 dmg34 len740 w25 cross1 crossMul0.7 pulse1
+Lv5  cd2.0 dmg38 len800 w26 cross1 crossMul0.8 pulse2
+覚醒  cd1.5 dmg46 len950 w30 cross1 crossMul1.0 pulse2   （シリウスの心臓 -pulse-）
+```
+- 行为：原有「最近敌人/双束」逻辑保留；`cross=1` 时额外向 `aim+90°/180°/270°` 发射三道副光束，伤害为主束的 `crossMul`；`pulse=2` 时 0.2s 后再重复一次主+副光束（第二发 80% 伤害）。
+- `sig`：`isekaijoucho／sirius／2020／tags isekaijoucho,sirius,laser,cross,pulse,starter`。
+
+**`housekitan` · ヰ世界の宝石譚（signature／toss）** — 意境：把异世界的宝石抛进战场，落地成一座折射光的小宝库。
+```
+Lv1  cd2.4 dmg10 count1 r50 range260 fly0.42 life3.2
+Lv2  cd2.2 dmg12 count2 r54 range280 fly0.40 life3.6
+Lv3  cd2.0 dmg14 count2 r60 range300 fly0.38 life4.0
+Lv4  cd1.8 dmg16 count2 r66 range320 fly0.36 life4.4
+Lv5  cd1.6 dmg18 count3 r72 range340 fly0.34 life4.8
+覚醒  cd1.2 dmg24 count4 r84 range380 fly0.32 life5.5   （ヰ世界の宝石譚 -casket-）
+```
+- 行为：完全复用 `toss`（音块→滞留区）；颜色/图标改为宝石；`tick 0.4s`；可选项：P2 加 `refract`（每 1s 向最近敌人折射一道小光束），**本版不做**。
+- `sig`：`isekaijoucho／housekitan／2021／tags isekaijoucho,housekitan,toss,zone,jewel,signature`。
+
+##### 幸祜／輪廻 此処（koko）
+
+**`lance` · the last bullet（starter／lance，现有）** — 数值不动；`sig`：`koko／lastbullet／2021／tags koko,lastbullet,lance,pierce,starter`。
+
+**`hakuchuumu` · 白昼夢（signature／mirage）** — 意境：半梦半醒时，上一秒的枪声从残影里再响一次。
+```
+Lv1  cd1.5 dmg12 count2 pierce1 echoes1 echoDelay0.35 echoMul0.40
+Lv2  cd1.4 dmg14 count3 pierce1 echoes1 echoDelay0.35 echoMul0.45
+Lv3  cd1.3 dmg16 count3 pierce2 echoes1 echoDelay0.30 echoMul0.50
+Lv4  cd1.2 dmg18 count4 pierce2 echoes2 echoDelay0.30 echoMul0.55
+Lv5  cd1.1 dmg20 count4 pierce3 echoes2 echoDelay0.25 echoMul0.60
+覚醒  cd0.8 dmg24 count5 pierce4 echoes3 echoDelay0.20 echoMul0.65   （白昼夢 -lucid-）
+```
+- 行为：每次齐射记录**施放瞬间**的玩家位置与方向；`echoes` 次残影在 `echoDelay×(n+1)` 秒后从该位置重复同方向齐射，伤害 ×`echoMul`。残影不触发新的残影（防递归）。
+- `sig`：`koko／hakuchuumu／2021／tags koko,hakuchuumu,mirage,echo,lance,signature`。
+
+##### 存流／天祢 亜留（aru）
+
+**`prayer` · あおいゆめ（starter／bass 扩展，现用改名）** — 意境：蓝色的梦——温柔地漫开，让敌人慢下来。
+```
+Lv1  cd3.2 dmg18 r150 slow0.75 slowSec0.4 double0
+Lv2  cd3.0 dmg24 r165 slow0.70 slowSec0.5 double0
+Lv3  cd2.7 dmg26 r170 slow0.65 slowSec0.6 double0
+Lv4  cd2.4 dmg32 r200 slow0.60 slowSec0.7 double0
+Lv5  cd2.2 dmg36 r210 slow0.55 slowSec0.8 double1
+覚醒  cd1.6 dmg42 r240 slow0.50 slowSec1.0 double1   （あおいゆめ -deep-）
+```
+- 行为：保留 `bass` 冲击环；命中时 `applySlow(slow, slowSec)`（取最强/最长，与现有状态异常规则一致）。`slow=1` 表示不减速。
+- `sig`：`aru／aoiyume／2022／tags aru,aoiyume,bass,slow,dream,starter`。
+
+**`sayonara` · さよなら（signature／bass 扩展）** — 意境：告别要响两次——第一声标记，第二声才真正道别。
+```
+Lv1  cd4.0 dmg10 r160 echo1 echoT1.4 echoMul1.8 slow0.85 slowSec0.3
+Lv2  cd3.6 dmg12 r170 echo1 echoT1.3 echoMul2.0 slow0.82 slowSec0.3
+Lv3  cd3.2 dmg14 r180 echo1 echoT1.2 echoMul2.2 slow0.80 slowSec0.4
+Lv4  cd2.8 dmg16 r195 echo1 echoT1.1 echoMul2.5 slow0.78 slowSec0.4
+Lv5  cd2.5 dmg18 r210 echo1 echoT1.0 echoMul2.8 slow0.75 slowSec0.5
+覚醒  cd2.0 dmg22 r240 echo1 echoT0.9 echoMul3.4 slow0.70 slowSec0.6   （さよなら -epilogue-）
+```
+- 行为：第一道环只做小伤害并给敌人挂 `markT`；`echoT` 秒后自动放第二道环（`echoMul` 倍伤害）；被标记的敌人在第二环中额外 +30%；标记期间死亡则原地炸一个 `r×0.5` 的小环（不递归）。
+- `sig`：`aru／sayonara／2021／tags aru,sayonara,bass,mark,echo,ring,signature`。
+
+##### 明透／地邑 阿栖（asu）
+
+**`follow` · オレンジ（starter／lance，现用改名）** — 意境：橙色黄昏里连发的箭；轻、快、暖。
+```
+Lv1  cd1.20 dmg12 count2 pierce1
+Lv2  cd1.15 dmg13 count3 pierce1
+Lv3  cd1.10 dmg15 count3 pierce2
+Lv4  cd1.00 dmg17 count4 pierce2
+Lv5  cd0.90 dmg20 count5 pierce3
+覚醒  cd0.70 dmg24 count6 pierce4   （オレンジ -sunset-）
+```
+- 行为：完全复用 `lance`；只改颜色/名字/曲目元数据。`sig`：`asu／orange／2023／tags asu,orange,lance,rapid,starter`。
+
+**`kyogen` · 虚言（signature／mirage）** — 意境：谎言会分身；你看见的每一发都可能是真的。
+```
+Lv1  cd1.6 dmg14 count1 pierce1 zigzag0.30 decoys1 decoyMul0.35
+Lv2  cd1.5 dmg16 count2 pierce1 zigzag0.35 decoys1 decoyMul0.40
+Lv3  cd1.4 dmg18 count2 pierce2 zigzag0.40 decoys2 decoyMul0.45
+Lv4  cd1.3 dmg20 count3 pierce2 zigzag0.50 decoys2 decoyMul0.50
+Lv5  cd1.2 dmg22 count3 pierce3 zigzag0.60 decoys3 decoyMul0.55
+覚醒  cd0.9 dmg28 count4 pierce4 zigzag0.80 decoys4 decoyMul0.60   （虚言 -pandora-）
+```
+- 行为：弹道以 `zigzag` 弧度/秒左右摆动；命中后在**附近另一个敌人**方向生成 `decoys` 枚假弹（伤害 ×`decoyMul`，寿命 0.8s，不再生成假弹）。假弹与真弹共用 `pierce` 计数以外的独立判定。
+- `sig`：`asu／kyogen／2022／tags asu,kyogen,mirage,zigzag,decoy,signature`。
+
+#### 6.15.6 新模组运行时细则
+
+| 模组 | 运行时行为（实现要点） | 复用实体 |
+|---|---|---|
+| `devour` | `Projectile` 追尾；字段 `stacks`（武器实例级，跨轮保留）、`stackCap:20`、`exec`；`game.damageEnemy` 前判 `exec`；击杀回调加 stack。 | `Projectile` + `WeaponRuntime` 实例字段 |
+| `pilgrim` | 慢速 `Projectile`，每 `trailEvery=0.25s` 落一个 `Zone`（`tick 0.5s`）；到期/撞墙生成 `burstR` 大 `Zone`；场上限 12 个巡礼区。 | `Projectile` + `Zone` |
+| `petal` | 等角生成 `petals` 枚 `Projectile`；每枚 `curve` 弧度/秒同向偏转；`doubleRing` 0.25s 后反向再放一圈（60% 伤害）。 | `Projectile` |
+| `mirage` | 齐射时记录 `origin/dirs`；`echoes` 次残影按 `echoDelay` 延迟重放（×`echoMul`）；或命中后生成 `decoys` 枚假弹（×`decoyMul`，`decoyDepth=1` 防递归）。 | `Projectile` + `game` 延迟队列 |
+| `laser` 扩展 | `beams` 等角光束；每轮旋转 `spin`；`chaos` 追加随机角；`cross` 追加 90/180/270° 副束（×`crossMul`）；`pulse` 0.2s 后重复（第二发 80%）。 | `Beam` |
+| `bass` 扩展 | 命中 `applySlow(slow, slowSec)`；`echo` 在 `echoT` 后自动再放一道环（×`echoMul`）；`sayonara` 用标记集合结算。 | `Ring` + `Enemy.markT` |
+
+> 纪律：所有随机（`spin` 初始角、`chaos` 追加角、`decoys` 选目标）必须走 `KUP.U.rng`（玩法路径），**不得在渲染/UI 里掷骰**；新字段必须进 `params` 白名单，旧武器不传即保持原行为。
+
+#### 6.15.7 平衡与验收
+
+| 项 | 验收 |
+|---|---|
+| 覆盖率 | `KUP.CHARS` 的 7 个 id 都能通过 `KUP.SIG_WEAPONS(id)` 拿到 2 把；`starter`/`signature` 各 1 |
+| 绑定 | 14 把 `sig.char === owner`；`starter.id === CHARS[].weapon`；`songId` 唯一 |
+| 数据 | 5 级 + 覚醒；`lvDesc` 5 条三语；`evolved.dmg > Lv5.dmg`；新模组 `base`/`params`/`area` 齐全 |
+| 行为 | 每新模组 ≥1 条断言：devour 叠层/处决、pilgrim 区数上限与 burst、petal 花瓣数/双环、mirage 残影次数/假弹不递归、laser cross 束数、bass slow/echo |
+| 平衡 | 60s 木桩（只带该武器、Lv5）期望 DPS 落在同角色初始武器的 **0.85–1.15×**；觉醒不超过 1.35× |
+| 兼容 | `?w=note/laser/prayer/follow` 仍能开局；`魔法 = note+orbit` 等派生配方父 id 不变；存档 schema 不变 |
+| 回归 | `verify-run` 新增约 **20–24 项**；`check-html`/`inventory` 仍绿；浏览器实测 7 角色各开一局 |
+
+#### 6.15.8 下一条对话开工清单（按顺序）
+
+1. **先读 `git status`**：`js/data/weapon.js` 归本任务；若其它 Agent 正在改它，先等/协调。
+2. `js/data/weapon.js`：
+   - 新增 `WEAPON_MODULES.devour/pilgrim/petal/mirage`；
+   - 扩 `laser`（beams/spin/chaos/cross/crossMul/pulse）与 `bass`（slow/slowSec/echo/echoT/echoMul）；
+   - 改 `WEAPONS.note`（名/behavior/等级/覚醒）、`WEAPONS.laser/prayer/follow`（名/desc/等级微调/覚醒）；
+   - 新增 `fukakai/pilgrim/hyakka/housekitan/hakuchuumu/sayonara/kyogen`；
+   - 加 `sig` 与 `SIG_OF/SIG_WEAPONS/SIG_STARTER/SIG_SIGNATURE/SIG_BY_TAG`；删 `note` 模组。
+3. `js/game.js`：新增 4 个 behavior 分派；`laser`/`bass` 分支加新字段；`devour` 击杀回调；`mirage` 延迟队列；`bass` 标记结算。
+4. `js/entities.js`：只加字段（`stacks`/`markT`/`echo` 等），**不新增实体类**。
+5. `tools/verify-run.js`：覆盖 6.15.7；`core.js` audit 加 `sig` 规则。
+6. `README.md` §2.3 武器表、`DESIGN.md` 本条标 ✅、版本升 `v0.20.0-sig`；`index.html` 的 `?v=` 同步。
+7. 跑 `verify-run`／`save.test`／`check-html`／`inventory`；浏览器 7 角色冒烟。
+
+#### 6.15.9 假设与待确认（开工前人类可一句话改）
+
+1. **「现用改名」的解释**：本稿把 `laser→シリウスの心臓`、`prayer→あおいゆめ`、`follow→オレンジ` 视为「现有初始武器保留角色、只换曲名」；若人类想保留旧名另做第三把，请改。
+2. **花譜的「わたしの声」**：本稿让 `note` 改名「過去を喰らう」，旧曲不再作为武器；若想保留，可把它降为通用/传承武器（不占 14 把名额）。
+3. **`Pilgrim` 曲目元数据**：`discography.md` 未收录，暂标 `source: pending`；开工前补官方出处或确认同名曲。
+4. **`さよなら`／`あおいゆめ` 的角色归属**：本稿按「现有初始保留」把 `prayer` 给 `あおいゆめ`、`sayonara` 作第二把；若人类想反过来（`sayonara` 初始），只需交换两把的 `role` 与等级表。
+5. **「角色相关标签」的形态**：本稿落为 `sig.tags`（字符串数组，可查询）；若人类想要 UI 徽章/卡面角标，另加表现层，不影响数据契约。
+
+---
+
 ## 7. 免责声明
 
 非官方、非商业同人致敬作品。「神椿市建設中。」「神椿市協奏中。」「KAMITSUBAKI STUDIO」「V.W.P」及角色名称权利归属原权利方（KAMITSUBAKI STUDIO／SINKA ANIMATION PROJECT 等）。本作设定解读如与官方有出入，以官方为准。
