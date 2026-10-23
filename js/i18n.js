@@ -69,7 +69,7 @@ KUP.I18N = {
       'area.endlessNote': '※ 治安战：<b>没有败北</b>，只有「战斗结束」；成绩<b>仅</b>记入治安战最高记录（不计復興率、不落記憶の卵）',
       /* ★ 2026-10：番街/形態的**出处标注不再在界面上显示**（ui.js 对应渲染已注释掉）。
        *   出处等级改记在数据层的字段与代码注释里：KUP.AREAS[].src、KUP.FORMS[].src、
-       *   以及 js/config.js / js/data.js 的注释（见 docs/lore/README.md 铁律 1）。
+       *   以及 js/config.js / js/data/ 的注释（见 docs/lore/README.md 铁律 1）。
        *   下列词条保留在此仅作历史参考，未被引用。
       'area.src.original': '※ 本作模式（非官方番街）',
       */

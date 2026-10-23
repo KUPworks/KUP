@@ -1,3 +1,4 @@
+const DATA_FILES = ['js/data/manifest.js'].concat(require(require('path').join(__dirname, '..', 'js', 'data', 'manifest.js')));
 /* 对比脚本（tools/，入库）：建筑实体 solid on/off 确定性模拟对比
  * 同 seed + 同区 + 站桩（玩家不动，升级自动选）90 秒：
  *   kills / hpEnd / deathTime / penEvents（敌人嵌入楼体的采样数，每 0.5s 一次）
@@ -12,7 +13,7 @@ function boot() {
   ctx.document = { addEventListener() {}, hidden: false };
   ctx.localStorage = { _s: {}, getItem(k) { return this._s[k] !== undefined ? this._s[k] : null; }, setItem(k, v) { this._s[k] = String(v); }, removeItem(k) { delete this._s[k]; }, key(i) { return Object.keys(this._s)[i] || null; }, get length() { return Object.keys(this._s).length; } };
   vm.createContext(ctx);
-  for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', 'js/data.js', 'js/meta.js', 'js/entities.js', 'js/game.js', 'js/director.js', 'js/render.js'])
+  for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', ...DATA_FILES, 'js/meta.js', 'js/entities.js', 'js/game.js', 'js/director.js', 'js/render.js'])
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
   const K = ctx.KUP;
   K.Audio = { init() {}, resume() {}, startBGM() {}, stopBGM() {}, sfx() {} };

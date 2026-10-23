@@ -890,7 +890,7 @@
 
 ### 15.7b ★ v0.13 文案对齐（2026-10-17）
 
-按本文档与 `worldview.md §0.5 术语统一表` 通检了 **`js/data.js` / `js/i18n.js` / `js/config.js` / `index.html` 里全部面向玩家的文案**，修掉三类问题：
+按本文档与 `worldview.md §0.5 术语统一表` 通检了 **`js/data/` / `js/i18n.js` / `js/config.js` / `index.html` 里全部面向玩家的文案**，修掉三类问题：
 
 | 类别 | 处理 |
 |---|---|

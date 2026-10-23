@@ -1,3 +1,4 @@
+const DATA_FILES = ['js/data/manifest.js'].concat(require(require('path').join(__dirname, '..', 'js', 'data', 'manifest.js')));
 /* ================= 存档层回归测试（Node，无需浏览器） =================
  *
  * 运行：node tests/save.test.cjs
@@ -59,7 +60,7 @@ function boot(opts) {
   ctx.addEventListener = function () {}; // window.addEventListener 生命周期钩子
   if (o.preload) o.preload(ls);
   vm.createContext(ctx);
-  for (const f of ['js/config.js', 'js/data.js', 'js/store.js', 'js/meta.js']) {
+  for (const f of ['js/config.js', ...DATA_FILES, 'js/store.js', 'js/meta.js']) {
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
   }
   return { ctx, KUP: ctx.KUP, ls };

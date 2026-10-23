@@ -1,3 +1,4 @@
+const DATA_FILES = ['js/data/manifest.js'].concat(require(require('path').join(__dirname, '..', 'js', 'data', 'manifest.js')));
 /* 对比脚本（tools/，入库）：敌人「绕建筑寻路」质量与开销对比。
  * 场景：玩家定在竞技场中心（不移动、不受伤、不开火），40 体敌人在确定性落点生成，
  *       无人干预跑 30 秒 —— 只考察「能不能绕到玩家身边」。
@@ -18,7 +19,7 @@ function boot() {
   ctx.document = { addEventListener() {}, hidden: false };
   ctx.localStorage = { _s: {}, getItem(k) { return this._s[k] !== undefined ? this._s[k] : null; }, setItem(k, v) { this._s[k] = String(v); }, removeItem(k) { delete this._s[k]; }, key(i) { return Object.keys(this._s)[i] || null; }, get length() { return Object.keys(this._s).length; } };
   vm.createContext(ctx);
-  for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', 'js/data.js', 'js/meta.js', 'js/entities.js', 'js/game.js', 'js/director.js', 'js/render.js'])
+  for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', ...DATA_FILES, 'js/meta.js', 'js/entities.js', 'js/game.js', 'js/director.js', 'js/render.js'])
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
   const K = ctx.KUP;
   if (process.env.KUP_LOOK) K.CONFIG.NAV.LOOK = +process.env.KUP_LOOK;   // 临时调参用

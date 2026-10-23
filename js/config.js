@@ -2,7 +2,7 @@ window.KUP = window.KUP || {};
 
 /* ================= 全局配置 ================= */
 KUP.CONFIG = {
-  VERSION: '0.18.8-cleanup',
+  VERSION: '0.19.0-data',
   ARENA: 3000,            // 正方形竞技场边长
   PLAYER_R: 13,
   PLAYER_HIT_CD: 0.55,    // 玩家受击无敌帧
@@ -70,7 +70,7 @@ KUP.CONFIG = {
     SCALE_MUL: 0.52, SCALE_OFF: 0.48,
   },
   /* ---------- 暴击「会心」（v0.18.3）----------
-   * 每角色的会心率/倍率/特效写在 `KUP.CRIT`（js/data.js），这里只放**全局闸门**：
+   * 每角色的会心率/倍率/特效写在 `KUP.CRIT`（js/data/char.js），这里只放**全局闸门**：
    *   RATE_CAP / MULT_CAP：任何加成都不能让会心突破这两条线（平衡兜底）；
    *   BOSS_MULT：Boss 身上会心倍率打折——Boss 血厚、一场要打很久，
    *     全额 2.1 倍会让「会心」变成唯一解，故统一 ×0.85；

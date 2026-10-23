@@ -42,7 +42,7 @@ window.KUP = window.KUP || {};
     }
     stat() { return this.evolved ? this.def.evolved.stats : this.def.levels[this.lv - 1]; }
     /* 模组（behavior）注册表项：几何常数、可用参数键、以及**哪些键随「范围」放大**。
-     * 见 js/data.js KUP.WEAPON_MODULES——加武器/调参/改「范围」生效面都只动那里。 */
+     * 见 js/data/weapon.js KUP.WEAPON_MODULES——加武器/调参/改「范围」生效面都只动那里。 */
     mod() {
       if (!this._mod) this._mod = KUP.MODULE(this.def.behavior) || { id: this.def.behavior, base: {}, area: [], params: [] };
       return this._mod;
@@ -1350,7 +1350,7 @@ window.KUP = window.KUP || {};
 
     /* ---------- 浄化の歌／角色大招（第2话副标题 ★；v0.14：按角色区分）----------
      * 规则（所有角色**共用**）：击破充能满 100 → Space 释放 → 充能清零 → 进入冷却。
-     * 效果（**数据驱动**，见 js/data.js KUP.ULTIMATES）：每个角色一个大招 ——
+     * 效果（**数据驱动**，见 js/data/char.js KUP.ULTIMATES）：每个角色一个大招 ——
      *   kaf 双极谐振（双重冲击环）／rim 静止帧（冻结+回血）／haru 九龍噴火（扇形烈焰）
      *   ／isekaijoucho 星海陷落（减速+滞留区）／koko 终结弹幕（环形贯穿弹幕）
      *   ／aru 救済の聖歌（大回血+长无敌）／asu 終楽章・箭雨（放射箭雨）

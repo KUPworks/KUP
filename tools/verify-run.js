@@ -1,3 +1,4 @@
+const DATA_FILES = ['js/data/manifest.js'].concat(require(require('path').join(__dirname, '..', 'js', 'data', 'manifest.js')));
 /* 一次性验证脚本：run 配置（seed/area/mod）的可复现性、修正乘数接线、
  * v0.4–v0.6 新系统（復興率 / 番街解锁 / 覚醒 / 浄化の歌 / 記憶の卵 / 每区波次与事件 /
  *   角色≠声优 / 招募 / 皮肤 / **市民票与瓦利斯商店** / **新武器组** / **每关卡 Boss**）。
@@ -22,7 +23,7 @@ vm.createContext(ctx);
 /* ui.js 也要加载：`KUP.bossHudRows`（多体 Boss 血条的**纯函数**行模型）在那里定义，
  * 需要在 node 里直接单测。它顶层只做定义、不碰 DOM（DOM 只在 UI.init 里用），
  * 因此加载后仍然用下面的 KUP.UI 桩替换掉真实 UI。 */
-for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', 'js/data.js', 'js/meta.js',
+for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', 'js/data/manifest.js', ...DATA_FILES, 'js/meta.js',
   'js/entities.js', 'js/game.js', 'js/director.js', 'js/render.js', 'js/ui.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), ctx, { filename: f });
 }

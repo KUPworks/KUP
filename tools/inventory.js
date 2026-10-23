@@ -1,3 +1,4 @@
+const DATA_FILES = ['js/data/manifest.js'].concat(require(require('path').join(__dirname, '..', 'js', 'data', 'manifest.js')));
 /* 现状盘点：内容量与可拓展点 */
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const ctx = { console, Math, JSON, performance: { now: () => 0 }, clearTimeout, setTimeout,
@@ -9,7 +10,7 @@ ctx.localStorage = { _s: {}, getItem(k) { return this._s[k] !== undefined ? this
   key(i) { const ks = Object.keys(this._s); return i < ks.length ? ks[i] : null; },
   get length() { return Object.keys(this._s).length; } };
 vm.createContext(ctx);
-for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', 'js/data.js', 'js/meta.js',
+for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', ...DATA_FILES, 'js/meta.js',
   'js/entities.js', 'js/game.js', 'js/director.js', 'js/render.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), ctx, { filename: f });
 }
