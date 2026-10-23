@@ -23,7 +23,7 @@ vm.createContext(ctx);
 /* ui.js 也要加载：`KUP.bossHudRows`（多体 Boss 血条的**纯函数**行模型）在那里定义，
  * 需要在 node 里直接单测。它顶层只做定义、不碰 DOM（DOM 只在 UI.init 里用），
  * 因此加载后仍然用下面的 KUP.UI 桩替换掉真实 UI。 */
-for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', 'js/data/manifest.js', ...DATA_FILES, 'js/meta.js',
+for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', ...DATA_FILES, 'js/meta.js',
   'js/entities.js', 'js/game.js', 'js/director.js', 'js/render.js', 'js/ui.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), ctx, { filename: f });
 }
