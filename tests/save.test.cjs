@@ -3,7 +3,7 @@ const DATA_FILES = ['js/data/manifest.js'].concat(require(require('path').join(_
  *
  * 运行：node tests/save.test.cjs
  *
- * 思路：用 node:vm 把 config.js / data.js / store.js / meta.js 按 index.html 的顺序
+ * 思路：用 node:vm 把 config.js / js/data/（按 manifest 顺序）/ store.js / meta.js 按 index.html 的顺序
  * 装进一个假浏览器上下文（window = 全局自身、可注入的假 localStorage），
  * 然后逐项验证存档层的关键不变量：
  *   1. 首次启动建立默认槽位与默认进度

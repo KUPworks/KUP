@@ -2,7 +2,7 @@
 
 > 非官方同人致敬作品 —— 基于 KAMITSUBAKI STUDIO「神椿市」世界观的**吸血鬼幸存者 like** 游戏。
 > 灵感来自《神椿市建設中。》动画与《神椿市協奏中。》音游。**与官方无任何关联。**
-> 当前版本 **v0.18.8-cleanup** · 零依赖 · 零构建 · 纯 HTML5 Canvas。
+> 当前版本以 [`js/config.js`](js/config.js) 的 `KUP.CONFIG.VERSION` 为准（v0.19 起数据层按域拆分）· 零依赖 · 零构建 · 纯 HTML5 Canvas。
 
 > ⚠️ **本作目前是 DEMO（可玩原型）阶段。**
 > 核心循环已经能玩通，但**内容、数值、存档格式都仍会变**（存档 schema 已多次迁移）。
@@ -447,11 +447,19 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 
 零构建意味着**改完刷新即可生效**（浏览器缓存顽固时用 `Ctrl+F5`）。
 
+> **数据层（v0.19 起）**：`js/data/` 一个玩法概念一个文件——
+> `char`（角色/会心/大招）· `weapon`（模组＋武器）· `passive` · `item` · `enemy`（含 7 体 Boss）·
+> `skin`（形態）· `support`（支援物品/同伴）· `shop`。**加载顺序的唯一真值是
+> [`js/data/manifest.js`](js/data/manifest.js)**：加数据域＝建域文件＋在 manifest 加一条＋在
+> `index.html` 补一行 `<script>`（`node tools/check-html.js` 会核对三者是否一致）。
+> 跨域引用（角色↔武器↔形态↔支援↔Boss↔商店）由 `KUP.DATA.audit()` 在启动时统一校验；
+> `node tools/inventory.js` 会打印模块清单与 audit 结果。域文件之间**不要互相引用**。
+
 | 我想改… | 动这个文件 | 说明 |
 |---|---|---|
-| **数值平衡**（角色/武器/被动/敌人/Boss 血量） | `js/data/weapon.js` | 纯数据表，全部三语 `{zh,en,ja}`。改完跑 `node tools/inventory.js` 看计数 |
+| **数值平衡**（角色/武器/被动/敌人/Boss 血量） | `js/data/*.js`（按域） | 纯数据表，全部三语 `{zh,en,ja}`。改完跑 `node tools/inventory.js` 看计数与 audit |
 | **难度曲线、波次表、番街配置、规则修正** | `js/config.js` | `KUP.CONFIG` / `KUP.AREAS`（七区的定位·势力·Boss·waves·events·theme）/ `KUP.MODIFIERS` |
-| **加角色 / 加武器 / 加被动** | `js/data/weapon.js` → `js/entities.js` → `js/game.js` | 数据表加条目，实体加行为，主循环加接线。加武器要向 `game.js` 的武器分派注册 |
+| **加角色 / 加武器 / 加被动** | `js/data/char.js` / `weapon.js` / `passive.js` → `js/entities.js` → `js/game.js` | 数据表加条目，实体加行为，主循环加接线。加武器要向 `game.js` 的武器分派注册；新域还要登记 `manifest.js` |
 | **武器形状参数（扇形角度 / 刀长 / 圆形波角度）** | `js/data/weapon.js` | 等级表里 `arc`＝扇形角度（**度**）、`len`＝刀长（px）——见 `slash`（近战挥刀）与 `bass`（圆形波，`arc`<360 即定向扇形冲击波） |
 | **武器模组（行为）与「范围」生效面** | `js/data/weapon.js` → `KUP.WEAPON_MODULES` | **模组（behavior）＝实现，具体武器＝数据**：一个模组可被多把武器共用（`bass`＝テラ・ドロップ＋救済の鐘、`lance`＝两把追唱之矢）。模组里写清 `base`（模组级基准值，原先写死在 `game.js` 的常数）、`params`（等级表可用参数键，写错键名会被回归测试当场拦下）、`area`（**哪些参数随「范围」放大**）。加武器＝数据表加一条并指向模组；验证：`KUP.MODULE_OF('bass')` / `KUP.WEAPONS_OF('bass')` |
 | **界面文案（三语）** | `js/i18n.js` | 必须**三语齐全**，缺词静默回落中文 |

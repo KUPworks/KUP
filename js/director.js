@@ -142,7 +142,7 @@ window.KUP = window.KUP || {};
       return U.weightedPick(tiers[Math.min(tiers.length - 1, idx)]);
     },
 
-    /* Boss 行为：按 def.pattern 分派——每番街一体（详见 data.js KUP.BOSSES）。
+    /* Boss 行为：按 def.pattern 分派——每番街一体（详见 js/data/enemy.js 的 KUP.BOSSES）。
      * v0.13：Boss 行为**逐体**处理。
      * 治安战里前一体未被击破就又到点时，会同时存在多体 Boss：旧版只跑 this.boss，
      * 后来者会把前一体「顶掉」（前一体从此不再行动、HUD 也只显示一方），击破旧的一体

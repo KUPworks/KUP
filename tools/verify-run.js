@@ -48,11 +48,28 @@ const mkGame = (area, seed, mod) => {
 };
 const sig = g => JSON.stringify(g.city.blocks.map(b => [Math.round(b.x), Math.round(b.y), Math.round(b.w), b.hue.toFixed(4)]));
 
-let fail = 0;
+let fail = 0, total = 0;
 const check = (name, cond, extra) => {
+  total++;
   console.log((cond ? 'PASS  ' : 'FAIL  ') + name + (extra ? '   ' + extra : ''));
   if (!cond) fail++;
 };
+
+/* ========== v0.19 数据层（manifest / core / audit / 新接口） ========== */
+check('数据层已收口（KUP.DATA.ready）', !!(KUP.DATA && KUP.DATA.ready));
+check('数据域数量与 manifest 一致', KUP.DATA.modules.length === KUP.DATA_MODULES.length && KUP.DATA_MODULES.length === 10,
+  'registered=' + KUP.DATA.modules.length + ' manifest=' + KUP.DATA_MODULES.length);
+check('manifest 每个模块都已注册并提供声明字段',
+  KUP.DATA_MODULES.every(m => KUP.DATA.module(m.id) && (m.provides || []).every(s => KUP.DATA.has(s))));
+check('跨域一致性校验 0 问题', KUP.DATA.audit().length === 0, KUP.DATA.audit().join('; '));
+check('数据域归属正确（FORMS→skin／WEAPONS→weapon／BOSSES→enemy／SUPPORTS→support）',
+  KUP.DATA.provider('FORMS').id === 'skin' && KUP.DATA.provider('WEAPONS').id === 'weapon' &&
+  KUP.DATA.provider('BOSSES').id === 'enemy' && KUP.DATA.provider('SUPPORTS').id === 'support');
+check('数据域文件路径均为 js/data/*.js', KUP.DATA_MODULES.every(m => /^js\/data\/[\w-]+\.js$/.test(m.file)));
+check('新增查询接口 KUP.WEAPON / KUP.ENEMY 可用（未知 id 回落 null）',
+  KUP.WEAPON('note') === KUP.WEAPONS.note && KUP.ENEMY('noise') === KUP.ENEMIES.noise &&
+  KUP.ENEMY('boss0') === KUP.BOSSES.boss0 && KUP.WEAPON('nope') === null && KUP.ENEMY('nope') === null);
+check('audit 可重复调用且无状态残留', KUP.DATA.audit().length === 0 && KUP.DATA.audit().length === 0);
 
 /* ========== 地基（v0.2.0-run 回归） ========== */
 // 1. 同 seed + 同区 → 布景完全一致
@@ -1016,7 +1033,7 @@ gU.ult.charge = 100;
 gU.castUltimate();
 check('浄化の歌清除敌方攻击（Danger）', gU.dangers.every(d => d.dead));
 
-// 25c. 同伴皮肤＝JK 制服：v0.13.7 起**注释保留**（同伴层暂不登场，内容在 data.js 里注释掉）
+// 25c. 同伴皮肤＝JK 制服：v0.13.7 起**注释保留**（同伴层暂不登场，内容在 js/data/skin.js 里注释掉）
 check('同伴皮肤：JK 制服已按人类要求注释保留（不在 FORMS 里；v0.18.2 起同伴层没有可选形态）',
   KUP.formsFor('companion').length === 0);
 check('魔女候补皮肤仍为黑／白', KUP.formsFor('recruit').map(f => f.id).join(',') === 'kuro,shiro');
@@ -2902,5 +2919,5 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   const c1 = runCrit(), c2 = runCrit();
   check('同 seed 同操作 → 会心次数可复现', c1 === c2 && c1 > 40, c1 + '/' + c2);
 }
-console.log(fail === 0 ? '\nALL PASS' : '\n' + fail + ' FAILED');
+console.log(fail === 0 ? '\nALL PASS (' + total + ' checks)' : '\n' + fail + ' FAILED / ' + total + ' checks');
 process.exit(fail === 0 ? 0 : 1);

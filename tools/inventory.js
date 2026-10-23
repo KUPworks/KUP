@@ -15,6 +15,15 @@ for (const f of ['js/utils.js', 'js/config.js', 'js/store.js', 'js/i18n.js', ...
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), ctx, { filename: f });
 }
 const KUP = ctx.KUP;
+/* 数据层（v0.19）：模块清单 + 跨域一致性校验（与浏览器启动时同一个 KUP.DATA.audit） */
+const dataProblems = KUP.DATA && KUP.DATA.audit ? KUP.DATA.audit() : ['KUP.DATA 缺失'];
+console.log('DATA       ' + (KUP.DATA ? KUP.DATA.modules.length : 0) + ' 模块 ' +
+  (KUP.DATA ? KUP.DATA.modules.map(m => m.id).join('/') : '-') +
+  (KUP.DATA && KUP.DATA.ready ? ' · ready' : ' · NOT READY'));
+console.log('DATA_AUDIT ' + (dataProblems.length
+  ? dataProblems.length + ' 问题:\n  - ' + dataProblems.join('\n  - ')
+  : 'OK'));
+if (dataProblems.length) process.exitCode = 1;
 console.log('AREAS      ' + KUP.AREAS.length);
 console.log('CHARS      ' + KUP.CHARS.length + '（招募 ' + KUP.CHARS.filter(c => c.recruit).length + '）');
 console.log('COMPANIONS ' + KUP.COMPANIONS.length + '（登场 ' + KUP.companionsActive().length + '）');

@@ -3,7 +3,7 @@ window.KUP = window.KUP || {};
 /* ================= I18N：中 / EN / 日 文本层 =================
  * - 静态文本：index.html 以 data-i18n / data-i18n-html / data-i18n-title 标注，I18N.apply() 填充
  * - 动态文本：I18N.t(key, vars) 取词，支持 {name} 插值
- * - 数据表：data.js 中 {zh,en,ja} 三语对象，I18N.tv(obj) 按语言取值
+ * - 数据表：js/data/ 各域中的 {zh,en,ja} 三语对象，I18N.tv(obj) 按语言取值
  * - 切换：语言按钮 / ?lang= 参数 / localStorage 持久化；缺词自动回退中文
  */
 KUP.I18N = {
