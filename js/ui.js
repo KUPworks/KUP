@@ -55,7 +55,7 @@ window.KUP = window.KUP || {};
         'companion-form-detail', 'form-strip', 'form-detail', 'form-title', 'form-chips', 'hud-companion', 'companion-form-title',
         'shop-list', 'shop-tickets', 'shop-cash', 'btn-exchange', 'fukkou-menu-tickets',
         'menu-slot-line', 'slot-list', 'slot-warn', 'slot-io-text', 'slot-io-msg',
-        'order-best-line', 'hud-wave', 'hud-space'];
+        'order-best-line', 'hud-wave', 'hud-space', 'space-rules'];
       for (const id of ids) this.els[id] = $(id);
       /* 形态/皮肤/同伴 + 上次出击配置：读回本槽存档（kup.save.<id>） */
       if (KUP.META) {
@@ -1296,6 +1296,21 @@ window.KUP = window.KUP || {};
             this.els['hud-space'].style.setProperty('--c', g.space.color || '#ffe89a');
           }
         }
+      }
+      /* v0.20.4 不可解空間：**规则原文**常驻顶部（人类：「进入不可解空间时把规则写在顶部」）。
+       * 空间名在 #hud-space 一行，这里只放规则正文；錯乱空間改写（g.space.id 变）会自动换文。 */
+      if (this.els['space-rules']) {
+        const on = !!(g.space && g.state === 'playing');
+        this.els['space-rules'].classList.toggle('hidden', !on);
+        if (on) {
+          const desc = KUP.I18N.tv(g.space.desc);
+          const sig = g.space.id + '|' + desc;
+          if (sig !== this._spaceRulesSig) {
+            this._spaceRulesSig = sig;
+            this.els['space-rules'].textContent = '▸ ' + desc;
+            this.els['space-rules'].style.setProperty('--c', g.space.color || '#ffe89a');
+          }
+        } else this._spaceRulesSig = null;
       }
       /* 静音空間：大招条置灰（封印不是"没充能"，要看得出来） */
       if (this.els['ult-wrap']) {

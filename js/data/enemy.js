@@ -78,7 +78,7 @@ KUP.ENEMY_SHAPES = [
   {
     id: 'bird',
     name: { zh: '鸟型', en: 'Avian', ja: '鳥型' },
-    note: '基本型变体：比基线略快、略脆、转向灵活；游走/绕行的手感（bird）。',
+    note: '基本型变体：比基线略快、略脆、转向灵活；游走/绕行的手感（bird 与〈爆塵〉）。',
   },
   {
     id: 'sphere',
@@ -157,8 +157,8 @@ KUP.ENEMIES = {
  *   ② **再调参**：hp/dmg/speed 一律**单独写**，不继承任何杂兵；只服从关卡顺序的强度曲线
  *      （hp 2000 → 3800 递增；dmg 24 → 33 递增；速度按体型给出、不强行递增）。
  *   ③ 因此"同体型的杂兵很弱、Boss 很强"是**设计如此**：体型只借手感，不借数值。
- *   七体 Boss 各占一形（球／人形／鱼／植物／虫／鸟／爬行）＝现有内容里八形都有成员；
- *   `humanoid_mob` 由杂兵 human_mob 担任。 */
+ *   七体番街 Boss 各占一形（球／人形／鱼／植物／虫／鸟／爬行），治安战的第 8 体〈弾片〉
+ *   取 `humanoid_mob`（人形·杂兵）⇒ **八形在 Boss 侧也各自有成员**。 */
 KUP.BOSSES = {
   boss0: {
     id: 'boss0', pattern: 'mute', shape: 'sphere',
@@ -200,6 +200,21 @@ KUP.BOSSES = {
     id: 'boss6', pattern: 'regen', shape: 'reptile',
     name: { zh: '大破维魔〈再生〉', en: 'Grand Tesseracter 〈Regenerate〉', ja: '大テセラクター〈再生〉' },
     hp: 3800, speed: 32, dmg: 33, xp: 0, r: 62, color: '#8fd0ff', sides: 12, boss: true, turn: 320,
+  },
+  /* ★ v0.20.4：**射弹型** Boss（治安战第 8 体，不进主线番街）。
+   * 人类 2026-10-24：「设计一个有射弹的 BOSS」。
+   * - 体型取 `humanoid_mob`（人形·杂兵）：它不是"更强的个体"，而是一团挤在一起的人形在往外吐碎片，
+   *   与它召唤 human_mob 的行为同一叙事；同时补上八形里唯一没有 Boss 的一形。
+   * - 攻击全部由 `Danger` 的 `shot` 种类承担（见 js/entities.js）：扇形齐射 + 单发重弹，
+   *   弹丸有飞行时间、会被楼体挡住 ⇒ **绕楼/侧移都能躲**，不是"贴脸必中"。
+   * - 出现方式：治安战的 Boss 轮换（`Object.keys(KUP.BOSSES)`）第 8 位；
+   *   调试可直接 `?boss=boss7` 在任意番街的 Boss 时刻看它。
+   * ⚠️ 名称与"弾片"称号均为**本作二创**（官方无此概念）。 */
+  boss7: {
+    /* 人形（杂兵）体型：不是更强的个体，而是"一群人形"挤成的炮台——靠射弹而不是身体素质施压 */
+    id: 'boss7', pattern: 'barrage', shape: 'humanoid_mob',
+    name: { zh: '大破维魔〈弾片〉', en: 'Grand Tesseracter 〈Shrapnel〉', ja: '大テセラクター〈弾片〉' },
+    hp: 3000, speed: 42, dmg: 24, xp: 0, r: 54, color: '#e0557a', sides: 7, boss: true, turn: 420,
   },
 };
 KUP.BOSS = id => KUP.BOSSES[id] || KUP.BOSSES.boss0;

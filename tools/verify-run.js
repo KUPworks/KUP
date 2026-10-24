@@ -452,14 +452,14 @@ check('破维魔八形齐全（顺序＝人类指定；三语＋设计注释齐�
   KUP.ENEMY_SHAPES.length === 8 && KUP.ENEMY_SHAPES.map(s => s.id).join(',') === SHAPE_IDS.join(',') &&
   KUP.ENEMY_SHAPES.every(s => ['zh', 'en', 'ja'].every(l => typeof s.name[l] === 'string' && s.name[l].length > 0) && !!s.note));
 const ALL_ENEMY_IDS = ['noise', 'bird', 'human_mob', 'glitch', 'tank', 'elite',
-  'boss0', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', 'boss6'];
-check('每个敌人（6 杂兵/精英 ＋ 7 体 Boss）都写了合法 shape',
+  'boss0', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', 'boss6', 'boss7'];
+check('每个敌人（6 杂兵/精英 ＋ 8 体 Boss）都写了合法 shape',
   ALL_ENEMY_IDS.every(id => KUP.ENEMIES[id] && SHAPE_IDS.indexOf(KUP.ENEMIES[id].shape) >= 0));
 check('八形各至少一个成员（分类不留空）',
   SHAPE_IDS.every(id => KUP.enemiesOfShape(id).length > 0),
   SHAPE_IDS.map(id => id + ':' + KUP.enemiesOfShape(id).length).join(' '));
-check('七体 Boss 各占一形（不重复，便于按体型记手感）',
-  new Set(Object.values(KUP.BOSSES).map(b => b.shape)).size === 7);
+check('八体 Boss 各占一形（不重复，便于按体型记手感）',
+  new Set(Object.values(KUP.BOSSES).map(b => b.shape)).size === 8);
 check('KUP.ENEMY_SHAPE 查询可用（未知 → null）',
   KUP.ENEMY_SHAPE('fish') === KUP.ENEMY_SHAPES[0] && KUP.ENEMY_SHAPE('nope') === null);
 /* 人类 2026-10-24 指定的两项：鱼形做高速型；鸟型／人形（杂兵）做"略有区别的基本型" */
@@ -500,6 +500,96 @@ check('鸟型/人形杂兵已接入波次（全局＋七个番街；权重按 70
 /* 人类要求「绘制方式等回退」：数据层不再提供剪影绘制钩子，剪影方案已整体撤回 */
 check('绘制已回退（数据层不再有 KUP.ENEMY_SILHOUETTES 剪影钩子）',
   typeof KUP.ENEMY_SILHOUETTES === 'undefined');
+
+/* ========== v0.20.4 射弹 Boss〈弾片〉＋ 统一警报 UI ＋ 不可解空間规则置顶 ========== */
+check('射弹 Boss〈弾片〉：第 8 体 Boss／barrage 模式／人形（杂兵）体型／三语名',
+  !!KUP.BOSSES.boss7 && KUP.BOSSES.boss7.pattern === 'barrage' &&
+  KUP.BOSSES.boss7.shape === 'humanoid_mob' && KUP.BOSSES.boss7.boss === true &&
+  /弾片/.test(KUP.BOSSES.boss7.name.zh) && /Shrapnel/.test(KUP.BOSSES.boss7.name.en) &&
+  /弾片/.test(KUP.BOSSES.boss7.name.ja));
+check('统一警报 UI：KUP.TELL 存在（红边 / 黄斜纹 / 近黑底）',
+  !!KUP.TELL && KUP.TELL.red === '#ff2b3d' && /255,225,74/.test(KUP.TELL.yellowRGBA));
+
+/* 记录式 ctx：抓 fillStyle/strokeStyle/shadowColor 赋值与「!」徽章，验证五种攻击同一套警报 */
+const recTellCtx = () => {
+  const calls = [];
+  const c = {
+    calls,
+    save() {}, restore() {}, translate() {}, rotate() {},
+    beginPath() {}, closePath() {}, moveTo() {}, lineTo() {}, rect() {}, clip() {},
+    arc() {}, fill() {}, stroke() {}, fillRect() {}, strokeRect() {}, setLineDash() {},
+    fillText(txt) { calls.push(['fillText', String(txt)]); },
+    createLinearGradient() { return { addColorStop() {} }; },
+  };
+  for (const prop of ['fillStyle', 'strokeStyle', 'shadowColor']) {
+    let v = '';
+    Object.defineProperty(c, prop, {
+      get() { return v; },
+      set(nv) { v = nv; calls.push([prop, String(nv)]); },
+    });
+  }
+  return c;
+};
+const tellProbe = (kind, extra) => {
+  const d = new KUP.Danger(0, 0, Object.assign({ kind, color: '#123456', arm: 0.5, r: 60, len: 300, w: 20, maxR: 200, dir: 0.3 }, extra || {}));
+  d.age = 0.2;
+  const c = recTellCtx();
+  d.draw(c, 1.23);
+  return c.calls;
+};
+const tellBad = [];
+for (const kind of ['beam', 'ring', 'field', 'bomb', 'shot']) {
+  const calls = tellProbe(kind);
+  if (!calls.some(c => c[0] === 'fillText' && c[1] === '!')) tellBad.push(kind + ':no!');
+  for (const c of calls) {
+    if ((c[0] === 'fillStyle' || c[0] === 'strokeStyle' || c[0] === 'shadowColor') && c[1] === '#123456') tellBad.push(kind + ':ownColor');
+  }
+}
+check('五种 Boss 攻击共用同一套警报 UI（「!」齐备，且不再使用各自的 color）',
+  tellBad.length === 0, tellBad.join(','));
+
+/* 射弹（shot）：预警不伤人 → 飞出命中结算 → 被楼体挡住 */
+const gSht = new KUP.Game(canvas);
+gSht.start({ char: 'kaf', area: 'area0', seed: 4242 });
+const pSht = gSht.player;
+pSht.invuln = 0;
+const hpSht0 = pSht.hp;
+const shotA = new KUP.Danger(pSht.x - 220, pSht.y, { kind: 'shot', dir: 0, speed: 260, r: 8, dmg: 12, arm: 0.4, shotLife: 3 });
+shotA.update(1 / 60, gSht); shotA.update(1 / 60, gSht);
+check('射弹预警期不造成伤害（可躲避窗口）', pSht.hp === hpSht0 && !shotA.dead);
+const sx0 = shotA.x;
+for (let i = 0; i < 160 && !shotA.dead; i++) shotA.update(1 / 60, gSht);
+check('射弹有飞行时间，飞出击中玩家后才结算（不是"落点即判定"）',
+  sx0 < pSht.x && pSht.hp < hpSht0 && shotA.dead, 'x ' + Math.round(sx0) + '→' + Math.round(shotA.x));
+const gBlk = new KUP.Game(canvas);
+gBlk.start({ char: 'kaf', area: 'area0', seed: 4243 });
+const hpBlk0 = gBlk.player.hp;
+const shotB = new KUP.Danger(gBlk.player.x - 200, gBlk.player.y, { kind: 'shot', dir: 0, speed: 300, r: 8, dmg: 12, arm: 0 });
+gBlk.collideCircle = () => true;                    // 模拟"前面有一栋楼"
+shotB.update(1 / 60, gBlk);
+check('射弹会被楼体挡下（绕楼是合法解法）', shotB.dead && gBlk.player.hp === hpBlk0);
+
+/* 〈弾片〉的 Boss 行为：barrage 真的发射 shot（扇形齐射 + 重弹） */
+const gB7 = new KUP.Game(canvas);
+gB7.start({ char: 'kaf', area: 'area0', seed: 777 });
+gB7.enemies.length = 0;
+gB7.player.invuln = 1e9;
+const b7 = gB7.spawnEnemy('boss7', gB7.player.x + 80, gB7.player.y);
+b7.bornAt = gB7.time;
+for (let i = 0; i < 300; i++) gB7.updateBossBehavior(1 / 60);
+const shots = gB7.dangers.filter(d => d.kind === 'shot');
+check('〈弾片〉行为会发射弹丸（扇形齐射 ≥5 发，且为可预警的 arm）',
+  shots.length >= 5 && shots.every(d => d.arm > 0 && d.dmg > 0), 'shots=' + shots.length);
+
+/* 不可解空間：规则原文常驻顶部（HTML/CSS/UI 三处接线 + 每条空间都有三语规则文） */
+const idxSrc = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const cssSrc = fs.readFileSync(path.join(__dirname, '..', 'css', 'style.css'), 'utf8');
+const uiSrc2 = fs.readFileSync(path.join(__dirname, '..', 'js', 'ui.js'), 'utf8');
+check('不可解空間规则置顶：HTML 有 #space-rules、CSS 有样式、UI 从 SPACES[*].desc 取文',
+  idxSrc.includes('id="space-rules"') && cssSrc.includes('#space-rules') &&
+  uiSrc2.includes("this.els['space-rules']") && uiSrc2.includes('g.space.desc') &&
+  KUP.SPACES.every(s => ['zh', 'en', 'ja'].every(l => typeof s.desc[l] === 'string' && s.desc[l].length > 0)));
+
 check('番街出处字段仍在数据层', KUP.AREAS.every(a => a.src === 'regenerate' || a.src === 'narrative' || a.src === 'original'));
 check('形態按角色类型匹配', KUP.formFits(KUP.FORM('ouranchou'), 'witch') && !KUP.formFits(KUP.FORM('ouranchou'), 'recruit') &&
   KUP.formFits(KUP.FORM('kuro'), 'recruit') && !KUP.formFits(KUP.FORM('kuro'), 'companion'));

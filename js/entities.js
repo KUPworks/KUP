@@ -1114,23 +1114,66 @@ window.KUP = window.KUP || {};
     }
   }
 
+  /* ---------- Boss 攻击的统一「警报」UI（v0.20.4） ----------
+   * 人类 2026-10-24：「给所有 BOSS 攻击区用同一种与玩家武器绝对不同的提示 UI」。
+   * 玩家武器＝青/金/粉的柔和霓虹（音符、音球、光束、圆形波），带 shadowBlur 光晕；
+   * 敌袭一律用本套样式：**近黑底 + 黄色 45° 斜纹 + 红色虚线硬边 + 白色「!」+ 收缩倒计时**，
+   * 颜色与笔触**不随 Boss 换**（`Danger.color` 仍接收，但不再参与绘制）。
+   * 于是「红色斜纹 + !」＝一定会伤到你的区域，看到就躲。
+   * 纯绘制：只读 t / age / arm，不消费 U.rng。 */
+  const TELL = {
+    red: '#ff2b3d',
+    redRGBA: 'rgba(255,43,61,',
+    yellowRGBA: 'rgba(255,225,74,',
+    ink: 'rgba(8,0,3,0.62)',
+    white: '#ffffff',
+  };
+  KUP.TELL = TELL;   // 供回归测试断言「所有 Boss 攻击共用同一套警报色」
+  /* 斜纹（在已 clip 的区域内画）：固定 45°，疏密随尺寸走 */
+  function tellHatch(ctx, halfW, halfH, step, alpha) {
+    ctx.strokeStyle = TELL.yellowRGBA + alpha + ')';
+    ctx.lineWidth = Math.max(3, step * 0.34);
+    const span = halfW + halfH;
+    for (let x = -span; x <= span; x += step) {
+      ctx.beginPath(); ctx.moveTo(x - halfH, -halfH); ctx.lineTo(x + halfH, halfH); ctx.stroke();
+    }
+  }
+  /* 「!」徽章：黑底 + 红环 + 白字——玩家侧没有任何文字标记，这是最强的阵营辨识 */
+  function tellBadge(ctx, x, y, rr) {
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = 'rgba(12,0,4,0.88)';
+    ctx.beginPath(); ctx.arc(x, y, rr, 0, U.TAU); ctx.fill();
+    ctx.strokeStyle = TELL.red; ctx.lineWidth = Math.max(2, rr * 0.22);
+    ctx.beginPath(); ctx.arc(x, y, rr, 0, U.TAU); ctx.stroke();
+    ctx.fillStyle = TELL.white;
+    ctx.font = 'bold ' + Math.round(rr * 1.5) + 'px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('!', x, y + rr * 0.06);
+    ctx.restore();
+  }
+
   /* ---------- 敌方攻击（Danger）：**与玩家武器完全分离** ----------
    * 为什么单独一类：Boss 若复用玩家武器（Ring/Beam/Zone），会 ①误伤破维魔 ②视觉与玩家武器混淆
    * ③难以统一做"可躲避"的预警。因此敌方攻击全部走本类，且：
    *   - **只伤害玩家**（命中判定自带，不依赖 Boss 逻辑，避免伤害写在别处）
    *   - 统一的**预警期**：arm>0 时先示警（斜纹 + 收缩倒计时环 + 「!」），到点才生效 → 可被躲开
-   *   - 统一的高对比外观：品红/橙 + 斜纹 + 虚线边缘（与玩家青/金的柔和光圈明显区分）
-   * kind: 'beam' 直线光束 | 'ring' 扩散音波环 | 'field' 持续伤害区 | 'bomb' 延迟爆炸 */
+   *   - v0.20.4：**所有 Boss 攻击共用一套「警报」样式**（`KUP.TELL`：近黑底 + 黄斜纹 +
+   *     红虚线硬边 + 白「!」+ 收缩倒计时），颜色不随 Boss 换；玩家武器是青/金/粉柔光，
+   *     两者不共享任何颜色与笔触（人类 2026-10-24：「同一种与玩家武器绝对不同的提示 UI」）。
+   * kind: 'beam' 直线光束 | 'ring' 扩散音波环 | 'field' 持续伤害区 | 'bomb' 延迟爆炸 |
+   *       'shot' 有飞行时间的敌方弹丸（v0.20.4，Boss〈弾片〉） */
   class Danger {
     constructor(x, y, opt) {
       opt = opt || {};
       this.x = x; this.y = y;
       this.kind = opt.kind || 'field';
       /* v0.14：kind 同时就是**伤害类型**（contact 由接触伤害另行传入），
-       * 玩家护盾按它查减伤表（C.SHIELD.REDUCE）：beam 50%／bomb 70%／field 75%／ring 85%。 */
+       * 玩家护盾按它查减伤表（C.SHIELD.REDUCE）：beam 50%／bomb 70%／field 75%／ring 85%。
+       * v0.20.4 的 shot 按 bomb 结算（弹丸=爆裂碎片），不新增护盾类型。 */
       this.r = opt.r || 60;
       this.dmg = opt.dmg || 10;
-      this.color = opt.color || '#ff4d8d';
+      this.color = opt.color || '#ff4d8d';   // 仅作数据保留：**绘制已统一用 KUP.TELL**
       this.age = 0;
       this.dead = false;
       this.hitPlayer = false;
@@ -1149,6 +1192,11 @@ window.KUP = window.KUP || {};
       this.maxR = opt.maxR || 220;
       this.speed = opt.speed || 300;
       this.cur = this.r0;
+      /* shot（v0.20.4）：预警期只亮弹道；到点沿 dir 以 speed 飞出，
+       * 命中玩家 / 撞楼 / 出界 / 超时消失（见 update）。 */
+      this.shotLife = opt.shotLife || 3.4;
+      this.vx = Math.cos(this.dir) * this.speed;
+      this.vy = Math.sin(this.dir) * this.speed;
       /* v0.14：**指向型光束的中段预瞄**（人类 2026-10-17：「激光角度不能太死」）。
        * follow>0 时，预警期内光路的前 len*aimF 段会持续转向玩家（角速度 turn rad/s），
        * 但**远端（len*aimF 之后）保持"发射瞬间"的方向**——即打提前量的位置。
@@ -1187,12 +1235,37 @@ window.KUP = window.KUP || {};
       game.shake(4);
       for (let i = 0; i < 14; i++) {
         const a = U.rng() * U.TAU;
-        game.parts.push(new KUP.Particle(this.x, this.y, Math.cos(a) * U.rand(60, 200), Math.sin(a) * U.rand(60, 200), 0.5, this.color, 2.6));
+        game.parts.push(new KUP.Particle(this.x, this.y, Math.cos(a) * U.rand(60, 200), Math.sin(a) * U.rand(60, 200), 0.5, TELL.red, 2.6));
       }
       KUP.Audio.sfx('boom');
     }
     update(dt, game) {
       this.age += dt;
+      /* shot（v0.20.4）：预警 → 飞出 → 命中/撞楼/出界/超时。弹丸是**有飞行时间**的，
+       * 所以"侧移、绕楼、冲刺"都能躲；这是与"区域型"攻击最大的手感差别。 */
+      if (this.kind === 'shot') {
+        if (!this.armed) {
+          if (this.age >= this.arm) {
+            this.armed = true; this.age = 0;
+            this.vx = Math.cos(this.dir) * this.speed;
+            this.vy = Math.sin(this.dir) * this.speed;
+          }
+          return;
+        }
+        this.x += this.vx * dt; this.y += this.vy * dt;
+        const p = game.player;
+        if (!this.hitPlayer && U.dist2(p.x, p.y, this.x, this.y) < Math.pow(this.r + p.r, 2)) {
+          this.hitPlayer = true;
+          game.hurtPlayer(this.dmg, 'bomb');
+          this.burst(game); this.dead = true; return;
+        }
+        if (game.collideCircle && game.collideCircle(this.x, this.y, this.r)) {
+          this.burst(game); this.dead = true; return;          // 楼体挡弹：绕楼是合法解法
+        }
+        if (this.age >= this.shotLife || this.x < -60 || this.y < -60 ||
+            this.x > C.ARENA + 60 || this.y > C.ARENA + 60) { this.dead = true; return; }
+        return;
+      }
       /* 预警阶段：只示警，不伤害（这就是"可躲避"的窗口） */
       if (!this.armed) {
         this.aimStep(dt, game);                 // v0.14：指向型光束的近段预瞄
@@ -1226,99 +1299,169 @@ window.KUP = window.KUP || {};
       if (this.life && this.age >= this.life) this.dead = true;
     }
     nearPlayer(p, pad) { return U.dist2(p.x, p.y, this.x, this.y) < Math.pow(this.r + (pad || 90), 2); }
+    /* 弹丸命中/撞楼的碎屑（纯表现；走模拟路径，可以用 U.rng） */
+    burst(game) {
+      for (let i = 0; i < 6; i++) {
+        const a = U.rng() * U.TAU;
+        game.parts.push(new KUP.Particle(this.x, this.y,
+          Math.cos(a) * U.rand(40, 130), Math.sin(a) * U.rand(40, 130), 0.35, TELL.red, 2));
+      }
+    }
+    /* 统一「警报」绘制（v0.20.4）：见 KUP.TELL 的说明。
+     * 预警阶段＝黑底 + 黄斜纹 + 红虚线 + 白「!」+ 收缩倒计时；
+     * 生效阶段＝同一套红/白配色（形状仍按 kind 区分）。
+     * ⚠️ 这里**不再读 this.color**：颜色必须所有 Boss 一致，否则又回到"每个 Boss 一套"，
+     * 玩家没法把"红色斜纹 + !"当成唯一的危险信号。 */
     draw(ctx, t) {
       ctx.save();
       ctx.translate(this.x, this.y);
-      if (!this.armed) {                       // 预警：斜纹 + 收缩倒计时
-        const k = Math.max(0, Math.min(1, this.age / this.arm));
+      if (!this.armed) {
+        const k = U.clamp(this.age / (this.arm || 1), 0, 1);
+        const pulse = 0.85 + 0.15 * Math.abs(Math.sin(t * 14));
         if (this.kind === 'beam') {
           ctx.save(); ctx.rotate(this.dir);
-          ctx.globalAlpha = 0.22 + 0.3 * Math.abs(Math.sin(t * 14));
-          ctx.fillStyle = this.color;
+          ctx.fillStyle = TELL.ink;
           ctx.fillRect(0, -this.w / 2, this.len, this.w);
+          ctx.save();
+          ctx.beginPath(); ctx.rect(0, -this.w / 2, this.len, this.w); ctx.clip();
+          ctx.globalAlpha = 0.55;
+          tellHatch(ctx, this.len / 2, this.w / 2, 18, 0.55);
+          ctx.restore();
           ctx.globalAlpha = 0.95;
-          ctx.strokeStyle = '#ffd25a'; ctx.lineWidth = 2;
+          ctx.strokeStyle = TELL.red; ctx.lineWidth = 3;
           ctx.setLineDash([14, 9]);
           ctx.strokeRect(0, -this.w / 2, this.len, this.w);
           ctx.setLineDash([]);
-          /* v0.14 预瞄显示：近段（会追人）用实心亮条，远端（提前量）用淡色 —— 玩家一眼
-           * 知道「贴着我的这一段在动，远处那段不动」，于是知道往哪边挪能走出光路。 */
+          /* 白中心线（方向）＋黄色进度条（倒计时：越长越危险） */
+          ctx.globalAlpha = 0.9;
+          ctx.fillStyle = TELL.white;
+          ctx.fillRect(0, -1.5, this.len * (0.25 + 0.75 * k), 3);
+          ctx.fillStyle = TELL.yellowRGBA + '0.95)';
+          ctx.fillRect(0, this.w / 2 - 5, this.len * k, 5);
+          /* v0.14 预瞄段：近段会追人（白亮），远端是提前量 —— 只影响读数，不改变"红色=危险" */
           if (this.aimAt) {
             const f = U.clamp(this.aimF, 0.2, 1) * this.len;
-            ctx.globalAlpha = 0.55;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, -this.w * 0.22, f, this.w * 0.44);
             ctx.globalAlpha = 0.5;
-            ctx.strokeStyle = '#ffd25a'; ctx.lineWidth = 1.5;
+            ctx.strokeStyle = TELL.white; ctx.lineWidth = 1.5;
             ctx.setLineDash([6, 6]);
             ctx.beginPath(); ctx.moveTo(f, -this.w / 2); ctx.lineTo(f, this.w / 2); ctx.stroke();
             ctx.setLineDash([]);
           }
           ctx.restore();
-        } else {
-          ctx.globalAlpha = 0.22 + 0.3 * Math.abs(Math.sin(t * 14));
-          ctx.fillStyle = this.color;
-          ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.fill();
-          ctx.save();
-          ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.clip();
-          ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 3;
-          for (let i = -this.r; i < this.r * 2; i += 16) { ctx.beginPath(); ctx.moveTo(i, -this.r); ctx.lineTo(i + this.r, this.r); ctx.stroke(); }
+          tellBadge(ctx, 26, 0, 13);
+        } else if (this.kind === 'shot') {
+          /* 弹道预警：虚线指向飞行方向（弹丸会沿它飞），炮口画警报圆 + 「!」 */
+          const lane = Math.min(520, this.speed * Math.max(0.35, this.arm) + 60);
+          ctx.save(); ctx.rotate(this.dir);
+          ctx.globalAlpha = 0.95;
+          ctx.strokeStyle = TELL.red; ctx.lineWidth = 3;
+          ctx.setLineDash([12, 8]);
+          ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(lane, 0); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.globalAlpha = 0.85;
+          ctx.strokeStyle = TELL.yellowRGBA + '0.9)'; ctx.lineWidth = 1.5;
+          for (let x = 30; x < lane * k; x += 46) {     // 黄点沿弹道推进＝倒计时
+            ctx.beginPath(); ctx.moveTo(x, -3); ctx.lineTo(x, 3); ctx.stroke();
+          }
+          ctx.restore();
+          const rr = Math.max(16, this.r * 2.2) * pulse;
+          ctx.fillStyle = TELL.ink;
+          ctx.beginPath(); ctx.arc(0, 0, rr, 0, U.TAU); ctx.fill();
+          ctx.save(); ctx.beginPath(); ctx.arc(0, 0, rr, 0, U.TAU); ctx.clip();
+          ctx.globalAlpha = 0.55; tellHatch(ctx, rr, rr, 14, 0.55);
           ctx.restore();
           ctx.globalAlpha = 0.95;
-          ctx.strokeStyle = '#ffd25a'; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.arc(0, 0, Math.max(6, this.r * k), 0, U.TAU); ctx.stroke();
-          ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.stroke();
+          ctx.strokeStyle = TELL.red; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(0, 0, rr, 0, U.TAU); ctx.stroke();
+          tellBadge(ctx, 0, 0, Math.max(8, Math.min(14, rr * 0.5)));
+        } else {
+          /* ring/field/bomb：圆形警报区（黑底 + 黄斜纹 + 红虚线 + 收缩内环） */
+          const rr = this.r;
+          ctx.fillStyle = TELL.ink;
+          ctx.beginPath(); ctx.arc(0, 0, rr, 0, U.TAU); ctx.fill();
+          ctx.save(); ctx.beginPath(); ctx.arc(0, 0, rr, 0, U.TAU); ctx.clip();
+          ctx.globalAlpha = 0.55; tellHatch(ctx, rr, rr, 16, 0.55);
+          ctx.restore();
           ctx.globalAlpha = 0.95;
-          ctx.fillStyle = '#ffd25a';
-          ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText('!', 0, 0);
+          ctx.strokeStyle = TELL.red; ctx.lineWidth = 3;
+          ctx.setLineDash([10, 8]);
+          ctx.beginPath(); ctx.arc(0, 0, rr, 0, U.TAU); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.strokeStyle = TELL.yellowRGBA + '0.95)'; ctx.lineWidth = 5;
+          ctx.beginPath(); ctx.arc(0, 0, Math.max(5, rr * k), 0, U.TAU); ctx.stroke();
+          /* 音波环还会一路扩到 maxR：用一圈很淡的红色虚线把"最终会到哪"标出来，
+           * 否则玩家只能看到一个炮口大小的圈，躲的时候没有尺度感。 */
+          if (this.kind === 'ring') {
+            ctx.globalAlpha = 0.32;
+            ctx.strokeStyle = TELL.red; ctx.lineWidth = 2;
+            ctx.setLineDash([6, 10]);
+            ctx.beginPath(); ctx.arc(0, 0, this.maxR, 0, U.TAU); ctx.stroke();
+            ctx.setLineDash([]);
+          }
+          tellBadge(ctx, 0, 0, Math.max(9, Math.min(16, rr * 0.32)));
         }
         ctx.restore();
         return;
       }
+      /* ---------- 生效阶段（真正的攻击） ---------- */
       if (this.kind === 'beam') {
         const a = Math.max(0, 1 - this.age / this.beamLife);
         ctx.rotate(this.dir);
-        ctx.globalAlpha = a * 0.92;
+        ctx.globalAlpha = a * 0.95;
         const g = ctx.createLinearGradient(0, 0, this.len, 0);
         g.addColorStop(0, '#ffffff');
-        g.addColorStop(0.3, this.color);
-        g.addColorStop(1, 'rgba(255,77,141,0)');
+        g.addColorStop(0.28, TELL.red);
+        g.addColorStop(1, 'rgba(255,43,61,0)');
         ctx.fillStyle = g;
-        ctx.shadowColor = this.color; ctx.shadowBlur = 18;
+        ctx.shadowColor = TELL.red; ctx.shadowBlur = 16;
         const h = this.w / 2;
         ctx.fillRect(0, -h, this.len, h * 2);
-        ctx.globalAlpha = a * 0.75;
+        ctx.globalAlpha = a * 0.8;
         ctx.fillStyle = '#fff';
-        ctx.fillRect(0, -h * 0.32, this.len, h * 0.64);
+        ctx.fillRect(0, -h * 0.3, this.len, h * 0.6);
         ctx.restore();
         return;
       }
       if (this.kind === 'ring') {
         const a = 1 - this.cur / this.maxR;
-        ctx.globalAlpha = 0.35 + a * 0.55;
-        ctx.strokeStyle = this.color;
-        ctx.lineWidth = 6 + a * 6;
+        ctx.globalAlpha = 0.45 + a * 0.5;
+        ctx.strokeStyle = TELL.red;
+        ctx.lineWidth = 7 + a * 6;
         ctx.setLineDash([18, 10]);
-        ctx.shadowColor = this.color; ctx.shadowBlur = 14;
+        ctx.shadowColor = TELL.red; ctx.shadowBlur = 14;
         ctx.beginPath(); ctx.arc(0, 0, this.cur, 0, U.TAU); ctx.stroke();
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, Math.max(1, this.cur - 7), 0, U.TAU); ctx.stroke();
         ctx.setLineDash([]);
         ctx.restore();
         return;
       }
-      /* bomb/field：敌方区域（斜纹 + 虚线边缘） */
+      if (this.kind === 'shot') {
+        ctx.rotate(Math.atan2(this.vy, this.vx));
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = TELL.redRGBA + '0.55)';
+        ctx.fillRect(-26, -this.r * 0.55, 26, this.r * 1.1);   // 尾迹
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = TELL.red;
+        ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(0, 0, Math.max(2, this.r * 0.42), 0, U.TAU); ctx.fill();
+        ctx.restore();
+        return;
+      }
+      /* bomb/field：生效中的敌方区域（同一套底纹，填色更实） */
       const left = this.life ? Math.max(0, 1 - this.age / this.life) : 1;
-      ctx.globalAlpha = this.kind === 'bomb' ? 0.7 : 0.18 + 0.24 * left;
-      ctx.fillStyle = this.color;
+      ctx.globalAlpha = this.kind === 'bomb' ? 0.9 : 0.4 + 0.35 * left;
+      ctx.fillStyle = TELL.redRGBA + '0.45)';
       ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.fill();
-      ctx.save();
-      ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.clip();
-      ctx.globalAlpha = 0.5;
-      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 3;
-      for (let i = -this.r; i < this.r * 2; i += 16) { ctx.beginPath(); ctx.moveTo(i, -this.r); ctx.lineTo(i + this.r, this.r); ctx.stroke(); }
+      ctx.save(); ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.clip();
+      ctx.globalAlpha = 0.55; tellHatch(ctx, this.r, this.r, 18, 0.6);
       ctx.restore();
       ctx.globalAlpha = 1;
-      ctx.strokeStyle = this.color; ctx.lineWidth = 3;
+      ctx.strokeStyle = TELL.red; ctx.lineWidth = 3;
       ctx.setLineDash([10, 8]);
       ctx.beginPath(); ctx.arc(0, 0, this.r, 0, U.TAU); ctx.stroke();
       ctx.setLineDash([]);

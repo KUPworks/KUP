@@ -176,6 +176,19 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 }
 #hud-space.hidden { display: none; }
 @keyframes space-glow { 0%,100% { opacity: 1; } 50% { opacity: .72; } }
+/* v0.20.4 不可解空間：规则原文常驻顶部（空间名仍在上一行；这一行只放规则，避免重复）。
+ * 宽度用 max-content + max-width 兜底：短规则不撑满、长规则会换行，不会把 HUD 顶出屏幕。 */
+#space-rules {
+  margin: 4px auto 0; width: max-content; max-width: min(680px, 76vw);
+  padding: 3px 10px; border-radius: 5px;
+  font-size: 11.5px; line-height: 1.55; letter-spacing: .04em; text-align: left;
+  color: var(--c, #ffe89a);
+  background: rgba(8,5,16,.62);
+  border: 1px solid color-mix(in srgb, var(--c, #ffe89a) 42%, transparent);
+  border-left: 3px solid var(--c, #ffe89a);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--c, #ffe89a) 45%, transparent);
+}
+#space-rules.hidden { display: none; }
 /* ---------- Boss 血条（v0.15.3：多体 Boss 依次纵排） ----------
  * 治安战里会出现多体 Boss 并存；旧版只有一条 #boss-bar，只显示 this.boss 那一体，
  * 击破其中一体还会把整块面板 showBoss(false) 掉 —— 其它 Boss 的血条跟着"被击退出场"。

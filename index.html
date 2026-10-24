@@ -39,6 +39,9 @@
       <div id="timer">00:00</div>
       <div id="hud-wave" class="hidden">WAVE 1</div>
       <div id="hud-space" class="hidden">◇ 不可解空間</div>
+      <!-- v0.20.4：不可解空間的**规则原文**常驻在顶部（人类：「进入不可解空间时把规则写在顶部」）。
+           内容由 UI.updateHUD 从 KUP.SPACES[*].desc 取三语文本，颜色随空间调色；錯乱空間改写时会自动换文。 -->
+      <div id="space-rules" class="hidden"></div>
       <div id="ult-wrap" title="浄化の歌">
         <div id="ult-label">♪ 浄化の歌</div>
         <div id="ult-bar-wrap"><div id="ult-fill"></div></div>
@@ -246,32 +249,32 @@
   </div>
 </div>
 
-<script src="js/config.js?v=0.20.4"></script>
-<script src="js/utils.js?v=0.20.4"></script>
+<script src="js/config.js?v=0.20.5"></script>
+<script src="js/utils.js?v=0.20.5"></script>
 <!-- 存档层：必须在 i18n/audio/meta 之前（它们都经由 KUP.STORE 读写持久化数据） -->
-<script src="js/store.js?v=0.20.4"></script>
-<script src="js/i18n.js?v=0.20.4"></script>
-<script src="js/audio.js?v=0.20.4"></script>
+<script src="js/store.js?v=0.20.5"></script>
+<script src="js/i18n.js?v=0.20.5"></script>
+<script src="js/audio.js?v=0.20.5"></script>
 <!-- 数据层（v0.19 拆分）：manifest＝加载顺序唯一真值；index 必须最后（注册＋校验）。
      增删数据域时，manifest.js、本段 <script>、tools 的加载清单三处保持一致；
      `node tools/check-html.js` 会核对这里与 manifest 是否同序、齐全。 -->
-<script src="js/data/manifest.js?v=0.20.4"></script>
-<script src="js/data/core.js?v=0.20.4"></script>
-<script src="js/data/char.js?v=0.20.4"></script>
-<script src="js/data/weapon.js?v=0.20.4"></script>
-<script src="js/data/passive.js?v=0.20.4"></script>
-<script src="js/data/item.js?v=0.20.4"></script>
-<script src="js/data/enemy.js?v=0.20.4"></script>
-<script src="js/data/skin.js?v=0.20.4"></script>
-<script src="js/data/support.js?v=0.20.4"></script>
-<script src="js/data/shop.js?v=0.20.4"></script>
-<script src="js/data/index.js?v=0.20.4"></script>
-<script src="js/meta.js?v=0.20.4"></script>
-<script src="js/entities.js?v=0.20.4"></script>
-<script src="js/game.js?v=0.20.4"></script>
-<script src="js/director.js?v=0.20.4"></script>
-<script src="js/render.js?v=0.20.4"></script>
-<script src="js/ui.js?v=0.20.4"></script>
-<script src="js/main.js?v=0.20.4"></script>
+<script src="js/data/manifest.js?v=0.20.5"></script>
+<script src="js/data/core.js?v=0.20.5"></script>
+<script src="js/data/char.js?v=0.20.5"></script>
+<script src="js/data/weapon.js?v=0.20.5"></script>
+<script src="js/data/passive.js?v=0.20.5"></script>
+<script src="js/data/item.js?v=0.20.5"></script>
+<script src="js/data/enemy.js?v=0.20.5"></script>
+<script src="js/data/skin.js?v=0.20.5"></script>
+<script src="js/data/support.js?v=0.20.5"></script>
+<script src="js/data/shop.js?v=0.20.5"></script>
+<script src="js/data/index.js?v=0.20.5"></script>
+<script src="js/meta.js?v=0.20.5"></script>
+<script src="js/entities.js?v=0.20.5"></script>
+<script src="js/game.js?v=0.20.5"></script>
+<script src="js/director.js?v=0.20.5"></script>
+<script src="js/render.js?v=0.20.5"></script>
+<script src="js/ui.js?v=0.20.5"></script>
+<script src="js/main.js?v=0.20.5"></script>
 </body>
 </html>

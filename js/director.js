@@ -46,7 +46,10 @@ window.KUP = window.KUP || {};
       const bossTime = area.bossTime || C.BOSS_TIME;
       if (!this.bossSpawned && t >= bossTime) {
         this.bossSpawned = true;
-        this.boss = this.spawnEnemy(area.boss || 'boss0');
+        /* v0.20.4：?boss=<id> 调试可强制本局 Boss（例如直接看射弹 Boss〈弹片〉）。
+         * 缺省仍用 area.boss —— 主线七区不受影响。 */
+        const bossId = (this.debug && this.debug.boss) || area.boss || 'boss0';
+        this.boss = this.spawnEnemy(bossId);
         KUP.UI.banner(KUP.I18N.t('banner.boss', { name: KUP.I18N.tv(this.boss.def.name) }), 2.6, 'warn');
         KUP.Audio.sfx('boss');
         /* v0.18：Boss 出现时按概率进入「不可解空間」（延迟 DELAY 秒展开，避免盖住 Boss 横幅） */
@@ -110,12 +113,15 @@ window.KUP = window.KUP || {};
         KUP.UI.banner(KUP.I18N.t('banner.elite'), 1.6, 'warn');
         KUP.Audio.sfx('warning');
       }
-      /* Boss（轮换 + 血量递增） */
+      /* Boss（轮换 + 血量递增）
+       * v0.20.4：轮换只看 KUP.BOSSES 的键序（现为 8 体 boss0–boss7），不再写死 %7——
+       * 以后加 Boss 只改数据表，轮换自动跟着走。 */
       this.orderBossT -= dt;
       if (this.orderBossT <= 0) {
         this.orderBossT = EN.BOSS_EVERY;
         this.orderBossIdx++;
-        const b = this.spawnEnemy('boss' + ((this.orderBossIdx - 1) % 7));
+        const order = Object.keys(KUP.BOSSES);
+        const b = this.spawnEnemy(order[(this.orderBossIdx - 1) % order.length]);
         if (b) {
           const k = 1 + (this.orderBossIdx - 1) * EN.HP_STEP;
           b.maxhp = Math.round(b.def.hp * KUP.HP_SCALE(this.time) * this.mods.enemyHp * k);
@@ -317,6 +323,47 @@ window.KUP = window.KUP || {};
           if (b.t3 <= 0) { b.t3 = 11; this.fogBoost = 0.3; this.fogBoostT = 3.5; }
           b.minionT -= dt;
           if (b.minionT <= 0) { b.minionT = 6; this.spawnEnemy('noise', b.x, b.y); this.spawnEnemy('noise', b.x, b.y); }
+          break;
+        }
+        /* 〈弹片〉治安战第 8 体（v0.20.4）：**射弹型** Boss —— 攻击不是"区域"，而是有飞行时间的弹丸。
+         * 设计要点（全部走 Danger 的统一警报 UI：斜纹 + 红虚线 + 「!」）：
+         *   ① **扇形齐射**：5 发（暴走 7 发）、扇角 ~40°、速度 330、伤害 10、预警 0.55s；
+         *      预警期先把每条弹道亮出来 ⇒ 玩家看到的是"几条会动的走廊"，从缝里穿过去。
+         *   ② **重弹**：1 发、速度 210、半径 14、伤害 18、预警 0.8s；慢、大、可以从侧面绕开。
+         *   ③ **弹丸会被楼体挡住**（Danger 的 shot 分支查 collideCircle）——绕楼是合法解法，
+         *      与"楼体是实体"的地图规则一致。
+         *   ④ 召唤人形杂兵（human_mob）保持"人形（杂兵）体型"的叙事：它不是更强的个体，
+         *      而是一团挤在一起的人形在往外吐碎片。 */
+        case 'barrage': {
+          b.t2 -= dt;
+          if (b.t2 <= 0) {
+            b.t2 = b.enraged ? 1.5 : 2.2;
+            const aim = Math.atan2(p.y - b.y, p.x - b.x);
+            const n = b.enraged ? 7 : 5;
+            const spread = 0.7;
+            for (let i = 0; i < n; i++) {
+              const off = n === 1 ? 0 : (i / (n - 1) - 0.5) * spread;
+              this.dangers.push(new KUP.Danger(b.x, b.y, {
+                kind: 'shot', dir: aim + off, speed: 330, r: 8, dmg: 10, arm: 0.55, shotLife: 3.4,
+              }));
+            }
+            KUP.Audio.sfx('warning');
+          }
+          b.t3 -= dt;
+          if (b.t3 <= 0) {
+            b.t3 = b.enraged ? 4.2 : 5.6;
+            const aim = Math.atan2(p.y - b.y, p.x - b.x);
+            this.dangers.push(new KUP.Danger(b.x, b.y, {
+              kind: 'shot', dir: aim, speed: 210, r: 14, dmg: 18, arm: 0.8, shotLife: 4.2,
+            }));
+            KUP.Audio.sfx('laser');
+          }
+          b.minionT -= dt;
+          if (b.minionT <= 0) {
+            b.minionT = 7;
+            this.spawnEnemy('human_mob', b.x, b.y);
+            this.spawnEnemy('human_mob', b.x, b.y);
+          }
           break;
         }
         /* 〈再生〉陸番街（终盘）：阶段1 音波环+高速群 → 阶段2 轰炸+精英召唤

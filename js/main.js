@@ -40,6 +40,9 @@ window.KUP = window.KUP || {};
     game.debug.egg = q.get('egg') === '1';            // v0.17 调试：下一次升级必出記憶の卵（現象卡）
     game.debug.revive = q.get('revive') === '1';      // v0.17 调试：开局带 1 次復活充能（验证復活手感）
     game.debug.space = q.get('space');                // v0.18 调试：?space=<id> 指定 / ?space=1 随机 / ?space=off 关闭
+    /* v0.20.4 调试：强制本局 Boss（如 ?boss=boss7 直接看射弹 Boss〈弹片〉）；
+     * 缺省不填＝按番街表走，主线七区不受影响。 */
+    game.debug.boss = q.get('boss');
     /* v0.14：?auto=first|last 自动采升级卡（验证被动/护盾 HUD 等需要频繁升级的效果） */
     const autoQ = q.get('auto');
     if (autoQ === 'first') game.debug.autoPick = 0;
