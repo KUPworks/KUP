@@ -590,6 +590,46 @@ check('不可解空間规则置顶：HTML 有 #space-rules、CSS 有样式、UI 
   uiSrc2.includes("this.els['space-rules']") && uiSrc2.includes('g.space.desc') &&
   KUP.SPACES.every(s => ['zh', 'en', 'ja'].every(l => typeof s.desc[l] === 'string' && s.desc[l].length > 0)));
 
+/* ========== v0.20.6 Boss 改名 ＋ 预警锚点跟随（被击退不再留线） ========== */
+check('第一体 Boss＝官方名「笛卡尔/Descartes/デカルト」（带 regenerate 出处记录）',
+  KUP.BOSSES.boss0.name.zh === '笛卡尔' && KUP.BOSSES.boss0.name.en === 'Descartes' &&
+  KUP.BOSSES.boss0.name.ja === 'デカルト' && KUP.BOSSES.boss0.src === 'regenerate' &&
+  KUP.ENEMIES.boss.name.zh === '笛卡尔');
+/* 「観測」在世界观里指観測者（玩家）、「消音」是旧自拟称号：都不能再出现在 Boss 名里 */
+check('Boss 名不再使用「消音」「観測」（观察＝観測者/玩家）',
+  Object.values(KUP.BOSSES).every(b => ['zh', 'en', 'ja'].every(l => !/消音|観測|Mute|Observation/.test(b.name[l]))) &&
+  KUP.BOSSES.boss4.name.zh === '大破维魔〈走査〉');
+/* 预警锚点跟随：Boss 被击退时，光束原点与预瞄点一起移动；地面轰炸不跟 */
+const anchorBoss = { x: 500, y: 500, dead: false };
+const beamF = new KUP.Danger(anchorBoss.x, anchorBoss.y, {
+  kind: 'beam', dir: 0, len: 400, w: 20, dmg: 1, arm: 0.6,
+  aimAt: { x: anchorBoss.x, y: anchorBoss.y }, aimF: 0.5, aimTurn: 0.35, follow: anchorBoss,
+});
+const anchorGame = { player: { x: 900, y: 500, r: 6 } };
+beamF.update(1 / 60, anchorGame);
+anchorBoss.x = 640; anchorBoss.y = 470;      // 模拟"被击退"
+beamF.update(1 / 60, anchorGame);
+check('Boss 预警锚点跟随：被击退后光束原点/预瞄点一起移动',
+  Math.abs(beamF.x - 640) < 1e-9 && Math.abs(beamF.y - 470) < 1e-9 &&
+  Math.abs(beamF.aimAt.x - 640) < 1e-9 && Math.abs(beamF.aimAt.y - 470) < 1e-9,
+  'origin ' + Math.round(beamF.x) + ',' + Math.round(beamF.y));
+const bombF = new KUP.Danger(300, 300, { kind: 'bomb', r: 80, dmg: 1, arm: 0.6, follow: anchorBoss });
+bombF.update(1 / 60, anchorGame);
+check('地面攻击（轰炸）不跟随 Boss：落点保持地面坐标',
+  Math.abs(bombF.x - 300) < 1e-9 && Math.abs(bombF.y - 300) < 1e-9);
+/* 行为层：〈走査〉的光束预警必须带 follow（否则击退仍留线） */
+const gScan2 = new KUP.Game(canvas);
+gScan2.start({ char: 'kaf', area: 'area4', seed: 31 });
+gScan2.enemies.length = 0;
+gScan2.player.invuln = 1e9;
+const bScan2 = gScan2.spawnEnemy('boss4', gScan2.player.x + 120, gScan2.player.y);
+bScan2.bornAt = gScan2.time;
+for (let i = 0; i < 260; i++) gScan2.updateBossBehavior(1 / 60);
+const scanBeams2 = gScan2.dangers.filter(d => d.kind === 'beam');
+check('〈走査〉光束预警带 follow 锚点（击退时会跟着走）',
+  scanBeams2.length > 0 && scanBeams2.every(d => d.follow === bScan2), 'beams=' + scanBeams2.length);
+
+
 check('番街出处字段仍在数据层', KUP.AREAS.every(a => a.src === 'regenerate' || a.src === 'narrative' || a.src === 'original'));
 check('形態按角色类型匹配', KUP.formFits(KUP.FORM('ouranchou'), 'witch') && !KUP.formFits(KUP.FORM('ouranchou'), 'recruit') &&
   KUP.formFits(KUP.FORM('kuro'), 'recruit') && !KUP.formFits(KUP.FORM('kuro'), 'companion'));
@@ -937,7 +977,7 @@ gB6.start({ char: 'kaf', area: 'area6', seed: 41 });
 gB6.time = KUP.CONFIG.BOSS_TIME;
 gB6.director(0.016);
 check('陸番街生成〈再生〉Boss', !!gB6.boss && gB6.boss.def.pattern === 'regen');
-/* 〈観測〉旋转光束：走 Danger，且**不会对破维魔造成伤害**（本次修正的核心 BUG） */
+/* 〈走査〉旋转光束：走 Danger，且**不会对破维魔造成伤害**（本次修正的核心 BUG） */
 const gB4 = new KUP.Game(canvas);
 gB4.start({ char: 'kaf', area: 'area4', seed: 51 });
 gB4.boss = gB4.spawnEnemy('boss4', gB4.player.x + 200, gB4.player.y);
@@ -945,8 +985,8 @@ const b4f = gB4.spawnEnemy('noise', gB4.player.x + 100, gB4.player.y);
 const b4fHp = b4f.hp;
 gB4.player.weapons = [];   // 隔离变量：只有 Boss 的 Danger 能打人，玩家武器不参与
 for (let i = 0; i < 220; i++) { gB4.updateBossBehavior(0.02); gB4.update(0.02); }
-check('〈観測〉光束走 Danger（不再推入玩家 beams）', gB4.dangers.some(d => d.kind === 'beam') && gB4.beams.length === 0);
-check('〈観測〉光束不伤破维魔（BUG 修正）', b4f.hp === b4fHp, 'hp ' + b4fHp + '→' + b4f.hp);
+check('〈走査〉光束走 Danger（不再推入玩家 beams）', gB4.dangers.some(d => d.kind === 'beam') && gB4.beams.length === 0);
+check('〈走査〉光束不伤破维魔（BUG 修正）', b4f.hp === b4fHp, 'hp ' + b4fHp + '→' + b4f.hp);
 /* 〈枯死〉毒区 / 〈爆塵〉空爆：均为 Danger，且轰炸远离玩家 */
 const gB3 = new KUP.Game(canvas);
 gB3.start({ char: 'kaf', area: 'area3', seed: 61 });
@@ -971,7 +1011,7 @@ check('〈爆塵〉预警时长足以跑出爆炸半径（arm > r / 玩家移速
   const walk = gB5.player.speed * d.arm;
   return walk > d.r;
 }), 'walk=' + Math.round(gB5.player.speed * 1.15) + 'px ≥ r=86px');
-/* 〈観測〉光束：v0.14 改**指向玩家**（预警期内近段预瞄），而不是固定角速度自转 */
+/* 〈走査〉光束：v0.14 改**指向玩家**（预警期内近段预瞄），而不是固定角速度自转 */
 const gScan = new KUP.Game(canvas);
 gScan.start({ char: 'kaf', area: 'area0', seed: 72 });
 gScan.player.weapons = [];
@@ -980,13 +1020,13 @@ gScan.time = 0;  // 不让 Boss 暴走干扰
 bScan.t2 = 0.02; // 立即触发第一发光束（避免只看计时器初值）
 for (let i = 0; i < 60; i++) gScan.updateBossBehavior(0.02);
 const beam0 = gScan.dangers.filter(d => d.kind === 'beam')[0];
-check('〈観測〉光束生成时朝玩家（误差 ≤ 单帧转向量 + 1°）', (() => {
+check('〈走査〉光束生成时朝玩家（误差 ≤ 单帧转向量 + 1°）', (() => {
   if (!beam0) return false;
   const want = Math.atan2(gScan.player.y - bScan.y, gScan.player.x - bScan.x);
   const tol = (beam0.aimTurn || 1.9) * 0.02 + 0.02;
   return Math.abs(KUP.U.angDiff(beam0.dir, want)) <= tol;
 })(), beam0 ? ((KUP.U.angDiff(beam0.dir, Math.atan2(gScan.player.y - bScan.y, gScan.player.x - bScan.x)) * 180 / Math.PI)).toFixed(2) + '°' : 'no beam');
-check('〈観測〉光束带近段预瞄（aimAt/aimF），可由横向移动躲开', !!beam0 && !!beam0.aimAt && beam0.aimF > 0 && beam0.aimF < 1);
+check('〈走査〉光束带近段预瞄（aimAt/aimF），可由横向移动躲开', !!beam0 && !!beam0.aimAt && beam0.aimF > 0 && beam0.aimF < 1);
 /* v0.18.6（人类 2026-10-22「激光仍然是大角速度追杀玩家，没有前后摇时间」）：
  * 前摇 0.6s、后摇 ≥1s、追踪角速度 ≤0.5 rad/s、光路更细、伤害下调。 */
 const beamFresh = () => {
@@ -995,11 +1035,11 @@ const beamFresh = () => {
   return gScan.dangers.filter(d => d.kind === 'beam' && !d.armed).pop();
 };
 const bm = beamFresh();
-check('〈観測〉光束前摇 ≥ 0.6s（看得见、躲得开）', !!bm && bm.arm >= 0.6, bm ? 'arm=' + bm.arm : 'no beam');
-check('〈観測〉两发之间有后摇（≥1.0s 才可能下一发）', bScan.t2 >= 1.0, 't2=' + bScan.t2.toFixed(2));
-check('〈観測〉追踪角速度 ≤ 0.5 rad/s（不再贴脸追杀）', !!bm && bm.aimTurn <= 0.5,
+check('〈走査〉光束前摇 ≥ 0.6s（看得见、躲得开）', !!bm && bm.arm >= 0.6, bm ? 'arm=' + bm.arm : 'no beam');
+check('〈走査〉两发之间有后摇（≥1.0s 才可能下一发）', bScan.t2 >= 1.0, 't2=' + bScan.t2.toFixed(2));
+check('〈走査〉追踪角速度 ≤ 0.5 rad/s（不再贴脸追杀）', !!bm && bm.aimTurn <= 0.5,
   bm ? 'aimTurn=' + bm.aimTurn : 'no beam');
-check('〈観測〉光路更细、伤害更低（w ≤ 18／dmg ≤ 12）', !!bm && bm.w <= 18 && bm.dmg <= 12,
+check('〈走査〉光路更细、伤害更低（w ≤ 18／dmg ≤ 12）', !!bm && bm.w <= 18 && bm.dmg <= 12,
   bm ? 'w=' + bm.w + ' dmg=' + bm.dmg : 'no beam');
 /* 追踪量：玩家瞬间换到 Boss 正上方（约 90°），0.5 秒内光束最多转 ~10° */
 if (bm) {
@@ -1007,7 +1047,7 @@ if (bm) {
   gScan.player.x = bScan.x; gScan.player.y = bScan.y - 300;
   for (let i = 0; i < 25; i++) bm.aimStep(0.02, gScan);
   const turned = Math.abs(KUP.U.angDiff(bm.dir, a0));
-  check('〈観測〉0.5 秒内最多转约 10°（大角度也甩得掉）', turned <= 0.35 * 0.5 + 0.02,
+  check('〈走査〉0.5 秒内最多转约 10°（大角度也甩得掉）', turned <= 0.35 * 0.5 + 0.02,
     (turned * 180 / Math.PI).toFixed(1) + '°');
 }
 /* 暴走：双光束夹角明显（中间留安全缝） */
@@ -1015,7 +1055,7 @@ const bScanEn = gScan.spawnEnemy('boss4', gScan.player.x - 300, gScan.player.y);
 bScanEn.enraged = true; bScanEn.t2 = 0.02;
 gScan.updateBossBehavior(0.02);
 const pair = gScan.dangers.filter(d => d.kind === 'beam' && !d.armed).slice(-2);
-check('〈観測〉暴走双光束夹角 ≥ 25°（中间有缝）',
+check('〈走査〉暴走双光束夹角 ≥ 25°（中间有缝）',
   pair.length === 2 && Math.abs(KUP.U.angDiff(pair[0].dir, pair[1].dir)) >= 25 * Math.PI / 180,
   pair.length === 2 ? (Math.abs(KUP.U.angDiff(pair[0].dir, pair[1].dir)) * 180 / Math.PI).toFixed(0) + '°' : 'no pair');
 
@@ -1782,7 +1822,7 @@ KUP.META.reset();
   const gB2 = new KUP.Game(canvas);
   gB2.start({ char: 'kaf', area: 'area0', seed: 165 });
   gB2.player.weapons = []; gB2.player.invuln = true;
-  gB2.boss = gB2.spawnEnemy('boss', 1500, 1500);      // 〈消音〉：ringT 驱动音波环
+  gB2.boss = gB2.spawnEnemy('boss', 1500, 1500);      // 〈笛卡尔〉：ringT 驱动音波环
   gB2.boss.ringT = 1;
   gB2.boss.stunT = 3;
   const dangers0 = gB2.dangers.length;
@@ -2322,7 +2362,7 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     def: { id: id, name: { zh: name, en: name, ja: name } }, hp: hp, maxhp: maxhp, enraged: enraged, dead: !!dead,
   });
   const live3 = [
-    mk('boss0', '消音', 2000, 2000),
+    mk('boss0', '笛卡尔', 2000, 2000),
     mk('boss1', '緘黙', 500, 1000, true),
     mk('boss2', '誘惑', 0, 800, false, true),      // 已击破
     mk('boss3', '枯死', 300, 1200),
@@ -2337,10 +2377,10 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     Math.abs(r3.rows[0].ratio - 1) < 1e-9 && Math.abs(r3.rows[1].ratio - 0.5) < 1e-9 &&
     r3.rows[1].enraged === true && r3.rows[0].enraged === false,
     r3.rows.map(r => r.ratio.toFixed(2)).join('/'));
-  check('Boss 血条：名字取三语表', r3.rows[0].name === '消音', r3.rows[0].name);
+  check('Boss 血条：名字取三语表', r3.rows[0].name === '笛卡尔', r3.rows[0].name);
   /* 击破一体只减一行（旧版 showBoss(false) 会把整块面板藏掉 = "被击退出场"） */
   const afterOneDead = live3.slice();
-  afterOneDead[0] = mk('boss0', '消音', 2000, 2000, false, true);
+  afterOneDead[0] = mk('boss0', '笛卡尔', 2000, 2000, false, true);
   const rAfter = KUP.bossHudRows(afterOneDead);
   check('击破一体后其它 Boss 的血条仍在（不再整块消失）',
     rAfter.rows.length === 2 && rAfter.rows[0].id === 'boss1' && rAfter.rows[1].id === 'boss3',

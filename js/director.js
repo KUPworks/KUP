@@ -187,7 +187,7 @@ window.KUP = window.KUP || {};
         KUP.Audio.sfx('boss');
       }
       switch (mode) {
-        /* 〈消音〉零番街：音波环 + 混合召唤（预警 0.5s，可走出来） */
+        /* 笛卡尔（零番街）：音波环 + 混合召唤（预警 0.5s，可走出来） */
         case 'mute': {
           b.ringT -= dt;
           if (b.ringT <= 0) {
@@ -258,7 +258,8 @@ window.KUP = window.KUP || {};
           if (b.minionT <= 0) { b.minionT = 5.5; this.spawnEnemy('tank', b.x, b.y); }
           break;
         }
-        /* 〈観測〉肆番街：**指向玩家**的光束（预警期内近段持续预瞄）＋分裂体
+        /* 〈走査〉肆番街（原〈観測〉，v0.20.6 改名：観測＝観測者/玩家，不能当敌人名）：
+         * **指向玩家**的光束（预警期内近段持续预瞄）＋分裂体
          * ⚠️ 只使用 Danger（敌方专属）：**不会对破维魔造成任何伤害**，也不再复用玩家 Beam。
          * v0.14（人类 2026-10-17「BOSS 的激光角度不能太死，要能打中 player」）：
          * 旧版是固定角速度的自转扫射（1.5s 才转一圈，玩家站着不动都可能擦不到），
@@ -284,6 +285,9 @@ window.KUP = window.KUP || {};
             const mk = off => this.dangers.push(new KUP.Danger(b.x, b.y, {
               kind: 'beam', dir: aim + off, len: 620, w: 16, dmg: 11, color: '#b58cff', arm: 0.6,
               aimAt: { x: b.x, y: b.y }, aimF: 0.55, aimTurn: 0.35,
+              /* v0.20.6：预警线锚在 Boss 身上。Boss 被击退/击飞时线跟着走，
+               * 不再出现「Boss 挪开了、红瞄准线还钉在旧位置」。 */
+              follow: b,
             }));
             mk(0);
             if (b.enraged) mk(0.5);                  // 第二道：偏移 ~29°，中间留缝
@@ -345,6 +349,7 @@ window.KUP = window.KUP || {};
               const off = n === 1 ? 0 : (i / (n - 1) - 0.5) * spread;
               this.dangers.push(new KUP.Danger(b.x, b.y, {
                 kind: 'shot', dir: aim + off, speed: 330, r: 8, dmg: 10, arm: 0.55, shotLife: 3.4,
+                follow: b,
               }));
             }
             KUP.Audio.sfx('warning');
@@ -355,6 +360,7 @@ window.KUP = window.KUP || {};
             const aim = Math.atan2(p.y - b.y, p.x - b.x);
             this.dangers.push(new KUP.Danger(b.x, b.y, {
               kind: 'shot', dir: aim, speed: 210, r: 14, dmg: 18, arm: 0.8, shotLife: 4.2,
+              follow: b,
             }));
             KUP.Audio.sfx('laser');
           }

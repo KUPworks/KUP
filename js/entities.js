@@ -1204,6 +1204,13 @@ window.KUP = window.KUP || {};
       this.aimAt = opt.aimAt || null;          // 预瞄起点（Boss 坐标）；缺省＝x,y
       this.aimF = opt.aimF !== undefined ? opt.aimF : 0.6;
       this.aimTurn = opt.aimTurn !== undefined ? opt.aimTurn : 1.5;   // rad/s
+      /* v0.20.6：**预警期锚点跟随**（`follow` 传 Boss 实例）。
+       * 人类 2026-10-24：「修正一下 BOSS 观测被击退时，瞄准线仍在原位的问题」——
+       * 旧版光束/射弹的预警把 Boss 坐标**快照**在生成瞬间，Boss 被击退后预警线留在原地，
+       * 玩家实机看到的是"Boss 已经挪开、红色瞄准线还钉在旧位置"。
+       * 现在预警期每帧把原点（以及 aimAt）同步到 follow 上；**只对以 Boss 为原点的攻击**生效
+       * （光束/射弹）——轰炸、毒区是地面坐标，不能跟着 Boss 跑。 */
+      this.follow = opt.follow || null;
       if (this.kind === 'beam' && this.armed) this.strikeBeam();
     }
     /* 预警期的预瞄（由 update 每帧调用）：只转**近段**，远端不动 =>
@@ -1239,8 +1246,18 @@ window.KUP = window.KUP || {};
       }
       KUP.Audio.sfx('boom');
     }
+    /* 预警期锚点跟随（v0.20.6）：Boss 被击退/击飞时，原点与 aimAt 一起跟着走。
+     * 已生效（armed）后不再跟随——飞出去的弹丸 / 已经打出去的光束当然不会回头。 */
+    syncAnchor() {
+      const f = this.follow;
+      if (!f || f.dead || this.armed) return;
+      if (this.kind !== 'beam' && this.kind !== 'shot') return;   // 地面攻击不跟随
+      this.x = f.x; this.y = f.y;
+      if (this.aimAt) { this.aimAt.x = f.x; this.aimAt.y = f.y; }
+    }
     update(dt, game) {
       this.age += dt;
+      this.syncAnchor();
       /* shot（v0.20.4）：预警 → 飞出 → 命中/撞楼/出界/超时。弹丸是**有飞行时间**的，
        * 所以"侧移、绕楼、冲刺"都能躲；这是与"区域型"攻击最大的手感差别。 */
       if (this.kind === 'shot') {
