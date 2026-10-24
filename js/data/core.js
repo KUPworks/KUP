@@ -205,6 +205,29 @@ window.KUP = window.KUP || {};
         need(usedMods[id], '武器模组 ' + id + ' 没有被任何武器使用（空模组）');
       });
 
+      /* ---------- 2b. 模组族（大模组）与命名空间 ----------
+       * 三层命名必须互不重名：武器 id 是「歌」，模组 id 是「行为」，族 id 是「大类」。
+       * 过去的 `note`/`bass`/`lance` 既是武器又是模组，读起来分不清；这里用 audit 钉住。 */
+      var fams = KUP.WEAPON_FAMILIES || {};
+      uniqueBy(Object.keys(fams).map(function (k) { return fams[k]; }),
+        'KUP.WEAPON_FAMILIES', function (f) { return f.id; });
+      Object.keys(fams).forEach(function (id) {
+        var f = fams[id];
+        need(f.id === id, 'KUP.WEAPON_FAMILIES["' + id + '"] 的 id 应为「' + id + '」');
+        needTri(f.name, '武器模组族 ' + id + ' 的 name');
+        needTri(f.desc, '武器模组族 ' + id + ' 的 desc');
+        need(Array.isArray(f.modules) && f.modules.length > 0, '武器模组族 ' + id + ' 缺少 modules 清单');
+        (f.modules || []).forEach(function (mid) {
+          need(mods[mid], '武器模组族 ' + id + ' 登记的模组「' + mid + '」不存在');
+          need(mods[mid] && mods[mid].family === id, '模组「' + mid + '」的 family 应为「' + id + '」');
+        });
+      });
+      Object.keys(mods).forEach(function (id) {
+        var m = mods[id];
+        need(KUP.FAMILY && KUP.FAMILY(m.family), '武器模组 ' + id + ' 的 family「' + m.family + '」不存在');
+        need(!weapons[id], '模组 id「' + id + '」与武器 id 重名：模组是行为、武器是数据，必须拆成两个命名空间');
+      });
+
       /* ---------- 3. 被动 / 局内道具 ---------- */
       var passives = KUP.PASSIVES || {};
       /* 被动以 id 为键、条目内不重复写 id：直接校验键唯一性。 */
@@ -316,7 +339,8 @@ window.KUP = window.KUP || {};
 
       /* ---------- 7. 查询接口齐全 ---------- */
       ['CHAR', 'charUnlockText', 'CRIT_OF', 'nameOf', 'shortOf', 'cvOf',
-        'MODULE', 'WEAPONS_OF', 'MODULE_OF', 'WEAPON', 'ULTIMATE',
+        'MODULE', 'WEAPONS_OF', 'MODULE_OF', 'WEAPON', 'FAMILY', 'MODULES_OF_FAMILY',
+        'FAMILY_OF_MODULE', 'FAMILY_OF', 'ULTIMATE',
         'ITEM', 'ENEMY', 'BOSS', 'COMPANION', 'companionsActive',
         'SUPPORT', 'FORM', 'defaultForm', 'formFits', 'formsFor',
         'formsOfChar', 'formGroups', 'charKind', 'SHOP_ITEM', 'shopCost'].forEach(needFn);

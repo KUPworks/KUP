@@ -402,7 +402,7 @@ const poolB = gA.rollChoices();
 check('觉醒后不再出现觉醒/升级项', !poolB.some(c => c.kind === 'awaken') && !poolB.some(c => c.kind === 'weapon-up' && c.id === 'note'));
 const statAfter = wNote.stat();
 check('觉醒后 stat 切换到进化形态', wNote.evolved && statAfter === wNote.def.evolved.stats && statAfter.dmg > wNote.def.levels[4].dmg);
-check('全部武器均配进化形态数据', Object.keys(KUP.WEAPONS).length === 11 &&
+check('全部武器均配进化形态数据', Object.keys(KUP.WEAPONS).length === 13 &&
   Object.values(KUP.WEAPONS).every(w => w.evolved && w.evolved.stats && w.evolved.name));
 
 // 11b. 主角＝魔女之子（角色 ≠ 声优）；招募角色与同伴
@@ -1457,8 +1457,8 @@ KUP.META.reset();
 // 25i. v0.12：新武器模组「斩音太刀」（近战挥刀：扇形角度 arc ＋ 刀长 len）
 {
   const SW = KUP.WEAPONS.slash;
-  check('新武器模组：斩音太刀（behavior=slash，通用组无 owner）',
-    SW && SW.behavior === 'slash' && !SW.owner && SW.maxLv === 5 && !!SW.evolved);
+  check('新武器模组：斩音太刀（behavior=cleave，通用组无 owner）',
+    SW && SW.behavior === 'cleave' && !SW.owner && SW.maxLv === 5 && !!SW.evolved);
   check('挥刀参数齐备：每级都有 arc（扇形角度·度）与 len（刀长·px）',
     SW.levels.every(l => typeof l.arc === 'number' && typeof l.len === 'number') &&
     typeof SW.evolved.stats.arc === 'number' && typeof SW.evolved.stats.len === 'number');
@@ -1466,8 +1466,8 @@ KUP.META.reset();
     SW.levels.every((l, i, a) => i === 0 || (l.arc > a[i - 1].arc && l.len > a[i - 1].len)) &&
     SW.evolved.stats.arc > SW.levels[4].arc && SW.evolved.stats.len > SW.levels[4].len,
     'arc=' + SW.levels.map(l => l.arc).join('/') + ' len=' + SW.levels.map(l => l.len).join('/'));
-  check('武器总数 11 · 行为 9 种', Object.keys(KUP.WEAPONS).length === 11 &&
-    new Set(Object.values(KUP.WEAPONS).map(w => w.behavior)).size === 9);
+  check('武器总数 13 · 行为 11 种', Object.keys(KUP.WEAPONS).length === 13 &&
+    new Set(Object.values(KUP.WEAPONS).map(w => w.behavior)).size === 11);
   /* 扇形判定：正前方中、正侧方不中（窄扇形）、刀长外不中 */
   const mkSlashGame = seed => {
     const g = new KUP.Game(canvas);
@@ -1510,7 +1510,7 @@ KUP.META.reset();
   gSld.slashes.push(new KUP.Slash(pSld.x, pSld.y, 0, { len: 120, arc: 120 * Math.PI / 180, dmg: 4, kb: 0, life: 0.2 }));
   for (let i = 0; i < 12; i++) gSld.update(0.02);
   check('每次挥砍每敌人只结算一次伤害', Math.abs(once.hp - (hpOnce - 4)) < 1e-6, 'hp=' + once.hp);
-  /* 武器分派：behavior 'slash' 生成挥砍实体；Lv4+ 附带扇形冲击波（Ring 带角度） */
+  /* 武器分派：behavior 'cleave' 生成挥砍实体；Lv4+ 附带扇形冲击波（Ring 带角度） */
   const gSle = new KUP.Game(canvas);
   gSle.start({ char: 'kaf', area: 'area0', seed: 155 });
   gSle.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.slash, 5)];
@@ -1538,7 +1538,7 @@ KUP.META.reset();
   check('圆形波角度参数：扇形外（正后方 180°）不受伤害', back2.hp === hpB2);
   /* bass 数据表 arc（度）→ Ring.arc（弧度）接线；既有 360° 武器不受影响 */
   KUP.WEAPONS._arcTest = {
-    id: '_arcTest', icon: '試', color: '#ffffff', behavior: 'bass', maxLv: 1,
+    id: '_arcTest', icon: '試', color: '#ffffff', behavior: 'shock', maxLv: 1,
     name: { zh: 't', en: 't', ja: 't' }, desc: { zh: '', en: '', ja: '' }, lvDesc: [],
     levels: [{ cd: 1, dmg: 5, r: 120, arc: 120 }],
     evolved: { name: { zh: 't', en: 't', ja: 't' }, desc: { zh: '', en: '', ja: '' }, stats: { cd: 1, dmg: 5, r: 120, arc: 120 } },
@@ -2249,8 +2249,8 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
 // 25o. 显示缩放：地雷只缩画面、不缩判定（v0.15.1：更小 + 触发/爆炸半径分离）；太刀不再画扇形范围框
 {
   check('地雷显示缩放更小（vis 0.5 → 0.32，面积 ≈ 1/10）', KUP.WEAPONS.mine.vis === 0.32, 'vis=' + KUP.WEAPONS.mine.vis);
-  check('地雷模组声明了触发半径系数（triggerMul）', KUP.MODULE('mine').base.triggerMul > 0 &&
-    KUP.MODULE('mine').params.indexOf('triggerMul') >= 0);
+  check('地雷模组声明了触发半径系数（triggerMul）', KUP.MODULE('minefield').base.triggerMul > 0 &&
+    KUP.MODULE('minefield').params.indexOf('triggerMul') >= 0);
   const gM = new KUP.Game(canvas);
   gM.debug.w = 'mine';                                  // ?w=mine：开局带 5 级音之地雷
   gM.start({ char: 'kaf', area: 'area0', seed: 601 });
@@ -2260,7 +2260,7 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   check('实战生成的地雷：判定半径不变（>60）且带显示缩放',
     !!zm && zm.vis === 0.32 && zm.r > 60, zm ? 'r=' + Math.round(zm.r) + ' vis=' + zm.vis : '未生成');
   check('地雷的触发半径 < 爆炸半径（"踩到"与"被炸到"分离）',
-    !!zm && zm.triggerR < zm.r && Math.abs(zm.triggerR - zm.r * KUP.MODULE('mine').base.triggerMul) < 1e-6,
+    !!zm && zm.triggerR < zm.r && Math.abs(zm.triggerR - zm.r * KUP.MODULE('minefield').base.triggerMul) < 1e-6,
     zm ? 'trigger=' + Math.round(zm.triggerR) + ' blast=' + Math.round(zm.r) : '未生成');
   /* 触发边界：站在 triggerR 外（但仍在 r 内）**不该**引爆；踏进 triggerR 才引爆 */
   {
@@ -2350,10 +2350,10 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   const orphan = Object.keys(KUP.WEAPONS).filter(id => !KUP.MODULE_OF(id));
   check('每把武器的 behavior 都能在注册表找到模组', orphan.length === 0, orphan.join(',') || '无孤儿');
   /* 反向查询：模组 → 具体武器（人类点名的例子：bass 共用テラ・ドロップ与救済の鐘） */
-  const bassW = KUP.WEAPONS_OF('bass').map(w => w.id).sort().join(',');
-  const lanceW = KUP.WEAPONS_OF('lance').map(w => w.id).sort().join(',');
-  check('bass 模组被两把武器共用（テラ・ドロップ ＋ 救済の鐘）', bassW === 'bass,prayer', bassW);
-  check('lance 模组被两把武器共用（追唱の矢 ＋ 追唱の矢〈亜留〉）', lanceW === 'follow,lance', lanceW);
+  const bassW = KUP.WEAPONS_OF('shock').map(w => w.id).sort().join(',');
+  const lanceW = KUP.WEAPONS_OF('sniper').map(w => w.id).sort().join(',');
+  check('shock 模组被两把武器共用（テラ・ドロップ ＋ 救済の鐘）', bassW === 'bass,prayer', bassW);
+  check('sniper 模组被两把武器共用（追唱の矢 ＋ the last bullet）', lanceW === 'follow,lance', lanceW);
   check('每个模组都至少有一把武器在用',
     modIds.every(id => KUP.WEAPONS_OF(id).length >= 1),
     modIds.map(id => id + ':' + KUP.WEAPONS_OF(id).length).join(' '));
@@ -2376,6 +2376,63 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     modIds.filter(id => !(MODS[id].area || []).length).join(',') || '全部已声明');
 }
 
+// 25p-3. v0.20：projectile 大模组（模组族 → 模组 → 武器 三层分离）＋ 连射/散弹
+{
+  const fam = KUP.FAMILY('projectile');
+  check('projectile 大模组存在，含 homing/sniper/machinegun/shotgun',
+    !!fam && ['homing', 'sniper', 'machinegun', 'shotgun'].every(id => fam.modules.indexOf(id) >= 0),
+    fam ? fam.modules.join(',') : 'missing');
+  check('每个弹道模组都回指 projectile 族',
+    !!fam && fam.modules.every(id => KUP.FAMILY_OF_MODULE(id) === fam));
+  check('模组 id 与武器 id 不重名（武器=歌／模组=行为）',
+    Object.keys(KUP.WEAPON_MODULES).every(id => !KUP.WEAPONS[id]),
+    Object.keys(KUP.WEAPON_MODULES).filter(id => KUP.WEAPONS[id]).join(',') || '无重名');
+  check('武器 → 模组 → 族 的查询接口可用',
+    KUP.FAMILY_OF('note') === fam && KUP.FAMILY_OF('lance') === fam && KUP.FAMILY_OF('orbit') !== fam);
+
+  /* machinegun：弹夹打空 → 进入换弹（停火）→ 换弹完成自动装满 */
+  const gMg = new KUP.Game(canvas);
+  gMg.start({ char: 'kaf', area: 'area0', seed: 901 });
+  gMg.director = () => {};
+  gMg.enemies.length = 0;
+  gMg.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.mg, 5)];
+  const wMg = gMg.player.weapons[0];
+  const mgStats = wMg.stat();
+  wMg.t = 0;
+  gMg.projs.length = 0;
+  for (let i = 0; i < mgStats.mag; i++) { wMg.t = 0; wMg.update(0.02, gMg); }
+  check('连射：打空弹夹后进入换弹且弹夹为 0',
+    wMg.mag === 0 && wMg.reloadT > 0 && gMg.projs.length === mgStats.mag,
+    'mag=' + wMg.mag + ' reloadT=' + (wMg.reloadT || 0).toFixed(2) + ' shots=' + gMg.projs.length);
+  gMg.projs.length = 0;
+  wMg.t = 0;
+  wMg.update(0.05, gMg);
+  check('连射：换弹期间停火（不产出弹体）', gMg.projs.length === 0 && wMg.mag === 0);
+  wMg.update(2.0, gMg);
+  check('连射：换弹完成后弹夹装满', wMg.mag === mgStats.mag && wMg.reloadT === 0, 'mag=' + wMg.mag);
+  check('连射：每发只消耗 1 发弹药（count 只增加同帧弹数）',
+    typeof mgStats.mag === 'number' && typeof mgStats.reload === 'number' && mgStats.reload > 0);
+
+  /* shotgun：一次多枚弹丸，总散布角 = spread（弧度），弹丸带较小击退倍率 */
+  const gSg = new KUP.Game(canvas);
+  gSg.start({ char: 'kaf', area: 'area0', seed: 902 });
+  gSg.director = () => {};
+  gSg.enemies.length = 0;
+  gSg.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.shot, 5)];
+  const wSg = gSg.player.weapons[0];
+  const sgStats = wSg.stat();
+  wSg.t = 0;
+  gSg.projs.length = 0;
+  wSg.update(0.016, gSg);
+  const sgAng = gSg.projs.map(pr => Math.atan2(pr.vy, pr.vx)).sort((a, b) => a - b);
+  const span = sgAng.length ? sgAng[sgAng.length - 1] - sgAng[0] : 0;
+  check('散弹：一次射出 count 枚弹丸、总散布角 = spread',
+    sgAng.length === sgStats.count && Math.abs(span - sgStats.spread) < 1e-6,
+    'n=' + sgAng.length + ' span=' + span.toFixed(3) + ' spread=' + sgStats.spread);
+  check('散弹：弹丸带击退倍率（kb<1，避免散弹把敌人推飞）',
+    gSg.projs.every(pr => pr.kb === KUP.MODULE('shotgun').base.kb || pr.kb === 0.6));
+}
+
 // 25p-2. 「范围」生效面：逐模组实测 areaMult 1 → 2 时几何量是否成比例放大
 {
   const probe = (wid, area) => {
@@ -2391,7 +2448,7 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     return { g, w };
   };
   const CASES = [
-    ['note', '追踪音符', r => r.g.projs[0] && r.g.projs[0].r],
+    ['note', '私論理（homing 命中半径）', r => r.g.projs[0] && r.g.projs[0].r],
     ['orbit', '环绕音球（球体体积）', r => r.w.orbR],
     ['orbit', '环绕音球（环绕半径）', r => r.w.orbitR],
     ['bass', 'テラ・ドロップ（冲击环半径）', r => r.g.rings[0] && r.g.rings[0].maxR],
@@ -2399,7 +2456,9 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     ['slash', '斩音太刀（刀长）', r => r.g.slashes[0] && r.g.slashes[0].len],
     ['laser', '贯穿光束（长度）', r => r.g.beams[0] && r.g.beams[0].len],
     ['lance', '追唱の矢（命中半径）', r => r.g.projs[0] && r.g.projs[0].r],
-    ['follow', '追唱の矢〈亜留〉（共用 lance 模组）', r => r.g.projs[0] && r.g.projs[0].r],
+    ['follow', '追唱の矢〈亜留〉（共用 sniper 模组）', r => r.g.projs[0] && r.g.projs[0].r],
+    ['mg', '连符机关（machinegun 命中半径）', r => r.g.projs[0] && r.g.projs[0].r],
+    ['shot', '散弹和音（shotgun 弹丸半径）', r => r.g.projs[0] && r.g.projs[0].r],
     ['toss', '残留音块（音场半径）', r => r.g.tosses[0] && r.g.tosses[0].zone.r],
     ['toss', '残留音块（投掷距离）', r => r.g.tosses[0] && Math.hypot(r.g.tosses[0].tx - r.g.player.x, r.g.tosses[0].ty - r.g.player.y)],
     ['bomb', '随机空爆（爆炸半径）', r => r.g.zones[0] && r.g.zones[0].r],
@@ -2682,8 +2741,8 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     Math.abs(Math.abs(KUP.U.angDiff(gL1.beams[1].dir, gL1.beams[0].dir)) - Math.PI) < 0.02);
 
   /* ③ 射弹（音枪/音枪系）：夹角变小；最近两敌各一发，多出来的补小角度 */
-  check('射弹模组的 spread 从 0.16 降到 ≤0.09（夹角变小）', KUP.MODULE('lance').base.spread <= 0.09,
-    'spread=' + KUP.MODULE('lance').base.spread);
+  check('射弹模组的 spread 从 0.16 降到 ≤0.09（夹角变小）', KUP.MODULE('sniper').base.spread <= 0.09,
+    'spread=' + KUP.MODULE('sniper').base.spread);
   const gPj = new KUP.Game(canvas);
   gPj.start({ char: 'asu', area: 'area0', seed: 204 });
   gPj.enemies.length = 0;

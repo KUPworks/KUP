@@ -776,7 +776,8 @@ window.KUP = window.KUP || {};
       this.homing = opt.homing || 0;
       this.target = opt.target || null;
       this.color = opt.color || '#fff';
-      this.kind = opt.kind || 'orb';   // note | lance | mini
+      this.kind = opt.kind || 'orb';   // homing | sniper | bullet | pellet | orb | mini
+      this.kb = opt.kb === undefined ? 1 : opt.kb;   // v0.20：击退倍率（基础击退＝速度×0.12）
       this.split = opt.split || 0;
       this.hits = new Set();
       this.dead = false;
@@ -803,13 +804,13 @@ window.KUP = window.KUP || {};
        * （实测 400 弹体时 render 单帧冲到 15ms+）。由渲染侧按密度决定是否开：
        * 弹体数 ≤ 阈值照旧发光，超了只画实心形状——正常密度下外观完全不变。 */
       if (glow !== false) { ctx.shadowColor = this.color; ctx.shadowBlur = 8; }
-      if (this.kind === 'note') {
+      if (this.kind === 'homing') {
         ctx.rotate(Math.atan2(this.vy, this.vx) + Math.PI / 2);
         ctx.fillStyle = this.color;
         ctx.font = 'bold 15px sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(this.split ? '♬' : '♪', 0, 0);
-      } else if (this.kind === 'lance') {
+      } else if (this.kind === 'sniper') {
         ctx.rotate(Math.atan2(this.vy, this.vx));
         ctx.fillStyle = this.color;
         ctx.beginPath();

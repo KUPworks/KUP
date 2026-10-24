@@ -60,7 +60,7 @@ window.KUP = window.KUP || {};
       const p = game.player, s = this.stat(), m = p.cdMult, col = this.def.color;
       const V = (k, d) => this.val(k, p, d);
       switch (this.def.behavior) {
-        case 'note': { // フラクタル・ノート：追踪音符
+        case 'homing': { // 追尾弾：追踪音符（v0.20：模组 id homing，武器 note＝私論理）
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
@@ -73,14 +73,14 @@ window.KUP = window.KUP || {};
               game.projs.push(new KUP.Projectile(p.x, p.y - 6, Math.cos(a) * sp, Math.sin(a) * sp, {
                 /* 命中半径 r 随「范围」放大（模组 area 声明）——体积/判定一起长 */
                 dmg: s.dmg * p.dmgMult, r: V('r', 7), life: V('life', 2.2), pierce: V('pierce', 0),
-                homing: V('homing', 5.2), target, color: col, kind: 'note', split: s.split ? 1 : 0,
+                homing: V('homing', 5.2), target, color: col, kind: 'homing', split: s.split ? 1 : 0,
               }));
             }
             KUP.Audio.sfx('shoot');
           }
           break;
         }
-        case 'orbit': { // レゾナンス・オーブ：环绕音球（**体积／转速／伤害可调**）
+        case 'orbital': { // レゾナンス・オーブ：环绕音球（**体积／转速／伤害可调**）
           /* v0.15（人类 2026-10-18）：**碰撞检测回到旋转物本身**——只看球心圆
            * （`U.dist2(e, orb) < (e.r + orbR)²`），不再判定「玩家→音球」的扫掠臂。
            * v0.15.1（同日第二次反馈）：**取消径向呼吸**，改为把球**拉得离玩家更近**
@@ -123,7 +123,7 @@ window.KUP = window.KUP || {};
           }
           break;
         }
-        case 'bass': { // テラ・ドロップ：低音冲击环（v0.12：可带**角度参数**做扇形冲击波）
+        case 'shock': { // テラ・ドロップ：低音冲击环（v0.12：可带**角度参数**做扇形冲击波）
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
@@ -154,7 +154,7 @@ window.KUP = window.KUP || {};
          * Lv4+ 的 wave 会额外放出**扇形冲击波**（复用 Ring 的角度参数）。
          * v0.13.1：太刀的刀光与冲击波都**不画范围框**（Slash 不填扇面、Ring 不补半径边）
          * ——判定照旧，只是不在屏幕上把范围摊开给玩家看（人类 2026-10-16 反馈）。 */
-        case 'slash': {
+        case 'cleave': {
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
@@ -176,7 +176,7 @@ window.KUP = window.KUP || {};
           }
           break;
         }
-        case 'laser': { // ヴァニッシュ・ビーム：贯穿光束
+        case 'beam': { // ヴァニッシュ・ビーム：贯穿光束
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
@@ -201,7 +201,7 @@ window.KUP = window.KUP || {};
           }
           break;
         }
-        case 'lance': { // アリア・ランス：穿透音枪（瞄准走 aimDir：自动/鼠标/移动）
+        case 'sniper': { // 穿透音枪（v0.20：模组 id sniper；瞄准走 aimDir：自动/鼠标/移动）
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
@@ -220,15 +220,68 @@ window.KUP = window.KUP || {};
               const sp = V('speed', 560);
               game.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
                 /* r 随「范围」放大（命中面积），飞行距离（speed×life）刻意不变 */
-                dmg: s.dmg * p.dmgMult, r: V('r', 8), life: V('life', 1.6), pierce: s.pierce, color: col, kind: 'lance',
+                dmg: s.dmg * p.dmgMult, r: V('r', 8), life: V('life', 1.6), pierce: s.pierce, color: col, kind: 'sniper',
               }));
             }
             KUP.Audio.sfx('shoot');
           }
           break;
         }
+        /* ===== v0.20：projectile 大模组——连射 / 散弹 =====
+         * machinegun：高射速 + **弹夹 mag / 换弹 reload**；打空后停火装填。
+         * shotgun   ：一次多枚弹丸，在 spread（总散布角·弧度）内均分成扇形。 */
+        case 'machinegun': {
+          const magSize = Math.max(1, V('mag', 16) | 0);
+          if (this.mag === undefined) this.mag = magSize;
+          if (this.reloadT > 0) {                       // 換彈中：停火
+            this.reloadT -= dt;
+            if (this.reloadT <= 0) { this.reloadT = 0; this.mag = magSize; }
+            break;
+          }
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const ad = game.aimDir(p);
+            const base = Math.atan2(ad.y, ad.x);
+            const n = Math.max(1, s.count | 0);
+            const spread = V('spread', 0.05);
+            const sp = V('speed', 780);
+            for (let i = 0; i < n; i++) {
+              const a = base + (i - (n - 1) / 2) * spread;
+              game.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
+                dmg: s.dmg * p.dmgMult, r: V('r', 4.5), life: V('life', 1.0), pierce: s.pierce | 0,
+                color: col, kind: 'bullet', kb: 0.35,
+              }));
+            }
+            this.mag--;
+            if (this.mag <= 0) this.reloadT = V('reload', 1.5) * Math.max(0.5, m);
+            KUP.Audio.sfx('shoot');
+          }
+          break;
+        }
+        case 'shotgun': {
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const ad = game.aimDir(p);
+            const base = Math.atan2(ad.y, ad.x);
+            const n = Math.max(1, s.count | 0);
+            const spread = V('spread', 0.55);
+            const sp = V('speed', 700);
+            for (let i = 0; i < n; i++) {
+              const a = base + (n === 1 ? 0 : -spread / 2 + (spread * i) / (n - 1));
+              game.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
+                dmg: s.dmg * p.dmgMult, r: V('r', 5), life: V('life', 0.4), pierce: s.pierce | 0,
+                color: col, kind: 'pellet', kb: 0.6,
+              }));
+            }
+            game.shake(1.2);
+            KUP.Audio.sfx('shoot');
+          }
+          break;
+        }
         /* ===== 新武器组：滞留・投掷系 ===== */
-        case 'toss': { // 残留音块：**分别投向最近 N 个不同的敌人**，落点留下滞留音场
+        case 'lob': { // 残留音块：**分别投向最近 N 个不同的敌人**，落点留下滞留音场
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
@@ -264,7 +317,7 @@ window.KUP = window.KUP || {};
           }
           break;
         }
-        case 'bomb': { // 随机空爆：周围随机落点，延迟引爆
+        case 'blast': { // 随机空爆：周围随机落点，延迟引爆
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
@@ -280,7 +333,7 @@ window.KUP = window.KUP || {};
           }
           break;
         }
-        case 'mine': { // 音之地雷：在身后放置滞留雷（有同时存在上限）
+        case 'minefield': { // 音之地雷：在身后放置滞留雷（有同时存在上限）
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
@@ -308,7 +361,7 @@ window.KUP = window.KUP || {};
     }
 
     drawOrbs(ctx, p) {
-      if (this.def.behavior !== 'orbit') return;
+      if (this.def.behavior !== 'orbital') return;
       const rr = this.orbR || 11;
       for (const orb of this.orbs) {
         ctx.save();
@@ -1099,7 +1152,7 @@ window.KUP = window.KUP || {};
               if (U.dist2(pr.x, pr.y, e.x, e.y) >= rr * rr) continue;
               /* 只有穿透弹需要去重（pierce=0 命中即结束，省掉 Set 的哈希开销） */
               if (pr.pierce > 0) { if (pr.hits.has(e)) continue; pr.hits.add(e); }
-              this.damageEnemy(e, pr.dmg, pr.vx * 0.12, pr.vy * 0.12);
+              this.damageEnemy(e, pr.dmg, pr.vx * 0.12 * pr.kb, pr.vy * 0.12 * pr.kb);
               if (pr.split) { this.spawnSplit(pr); pr.split = 0; }
               if (pr.pierce <= 0) { pr.dead = true; break; }
               pr.pierce--;
@@ -1113,7 +1166,7 @@ window.KUP = window.KUP || {};
       for (let i = 0; i < 2; i++) {
         const a = U.rng() * U.TAU;
         this.projs.push(new KUP.Projectile(pr.x, pr.y, Math.cos(a) * 320, Math.sin(a) * 320, {
-          dmg: pr.dmg * 0.5, r: 4, life: 0.7, pierce: 0, homing: 6.5, color: pr.color, kind: 'note',
+          dmg: pr.dmg * 0.5, r: 4, life: 0.7, pierce: 0, homing: 6.5, color: pr.color, kind: 'homing',
         }));
       }
     }
@@ -1417,7 +1470,7 @@ window.KUP = window.KUP || {};
           const a = (i / cnt) * U.TAU, sp = UD.shots.speed || 760;
           this.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
             dmg: UD.shots.dmgMul * p.dmgMult, r: 8, life: UD.shots.life || 1.3, pierce: UD.shots.pierce || 3,
-            color: UD.shots.color || '#7de0c8', kind: 'lance',
+            color: UD.shots.color || '#7de0c8', kind: 'sniper',
           }));
         }
       }
