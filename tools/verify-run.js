@@ -223,7 +223,7 @@ check('記憶の卵不再计入现金收入', KUP.META.cashIncome({ eggs: 9, kil
   gEgg.start({ char: 'kaf', area: 'area0', seed: 4242 });
   gEgg.debug.egg = true;                       // 调试钩子：下一次升级必出卵卡
   const pool = gEgg.rollChoices();
-  check('現象卡作为**额外第 4 张**出现（不占普通三选一）',
+  check('現象卡作为**第 4 张**出现（和普通卡一样占一格，总数仍 4）',
     pool.length === 4 && pool[3].kind === 'egg', JSON.stringify(pool.map(c => c.kind)));
   check('現象卡不可封禁（无 id ⇒ 不渲染 ✕）', pool[3].id === undefined);
   const again = gEgg.rollChoices();
@@ -232,7 +232,7 @@ check('記憶の卵不再计入现金收入', KUP.META.cashIncome({ eggs: 9, kil
   gEgg.state = 'levelup'; gEgg.pendingLevels = 1; gEgg.choices = pool;
   gEgg.choose(3);
   check('选中現象卡 → 獲得 1 次復活充能、回到 playing', gEgg.eggCharge === 1 && gEgg.state === 'playing');
-  check('选中后回到三选一（卵卡不占普通卡池）', gEgg.rollChoices().length === 3);
+  check('选中后回到四选一（卵卡不占普通卡池）', gEgg.rollChoices().length === 4);
   /* 致命伤 → 消耗卵復活（而不是 gameOver） */
   gEgg.player.invuln = false; gEgg.player.hitT = 0;
   gEgg.hurtPlayer(99999, 'contact');
@@ -1902,8 +1902,9 @@ KUP.META.reset();
 const gLu = new KUP.Game(canvas);
 gLu.start({ char: 'kaf', area: 'area0', seed: 111 });
 check('重掷次数默认 3 次/局', gLu.rerolls === 3 && !!gLu.banned && typeof gLu.banned.add === 'function');
-/* 分桶保底：三张卡尽量覆盖 武器 / 被动 / 道具 */
+/* 分桶保底：四张卡尽量覆盖 武器 / 被动 / 道具（卵卡不额外占位） */
 let covOk = 0, samples = 0;
+check('每次升级固定 4 张（无卵时）', gLu.rollChoices().length === 4);
 for (let i = 0; i < 400; i++) {
   const roll = gLu.rollChoices();
   samples++;
@@ -1912,7 +1913,7 @@ for (let i = 0; i < 400; i++) {
     : (c.kind.indexOf('passive') === 0 ? 'passive' : (c.kind === 'item' ? 'item' : 'heal')))));
   if (cats.has('weapon') && cats.has('passive') && cats.has('item')) covOk++;
 }
-check('分桶保底：三卡覆盖武器+被动+道具', covOk / samples > 0.95, covOk + '/' + samples);
+check('分桶保底：四卡覆盖武器+被动+道具', covOk / samples > 0.95, covOk + '/' + samples);
 /* 不重复：同一次抽取里不会出现两张相同卡 */
 let dupFound = false;
 for (let i = 0; i < 200; i++) {
@@ -1926,8 +1927,8 @@ const gRu = new KUP.Game(canvas);
 gRu.start({ char: 'kaf', area: 'area0', seed: 112 });
 gRu.state = 'levelup'; gRu.pendingLevels = 1; gRu.choices = gRu.rollChoices();
 const okRe = gRu.rerollChoices();
-check('重掷：消耗 1 次并重新抽取', okRe && gRu.rerolls === 2 && gRu.choices.length === 3);
-check('重掷后仍是合法三选一', gRu.choices.every(c => c && c.kind));
+check('重掷：消耗 1 次并重新抽取', okRe && gRu.rerolls === 2 && gRu.choices.length === 4);
+check('重掷后仍是合法四选一', gRu.choices.every(c => c && c.kind));
 gRu.rerolls = 0;
 check('重掷耗尽后失败', !gRu.rerollChoices());
 check('非升级状态不可重掷', (() => { const g = new KUP.Game(canvas); g.start({ char: 'kaf', area: 'area0', seed: 113 }); return !g.rerollChoices(); })());
@@ -1938,7 +1939,7 @@ gBn.state = 'levelup'; gBn.pendingLevels = 1; gBn.choices = gBn.rollChoices();
 const target = gBn.choices.find(c => c.id);
 const bannedId = target.id;
 const okBan = gBn.banChoice(gBn.choices.indexOf(target));
-check('封禁：加入名单并替换该格', okBan && gBn.banned.has(bannedId) && gBn.choices.length === 3);
+check('封禁：加入名单并替换该格', okBan && gBn.banned.has(bannedId) && gBn.choices.length === 4);
 check('封禁后该格不再是原卡', !gBn.choices.some(c => c.id === bannedId && c.kind === target.kind));
 let leak = false;
 for (let i = 0; i < 300; i++) if (gBn.rollChoices().some(c => c.id === bannedId)) leak = true;

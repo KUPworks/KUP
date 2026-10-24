@@ -43,7 +43,7 @@ window.KUP = window.KUP || {};
     /* v0.14：?auto=first|last 自动采升级卡（验证被动/护盾 HUD 等需要频繁升级的效果） */
     const autoQ = q.get('auto');
     if (autoQ === 'first') game.debug.autoPick = 0;
-    else if (autoQ === 'last') game.debug.autoPick = 2;
+    else if (autoQ === 'last') game.debug.autoPick = 3;
     game.debug.gem = q.get('gem');                    // 周期生成片段类型
     game.debug.ult = q.get('ult') === '1';            // 开局即充满浄化の歌（验证大招）
     game.debug.recruit = q.get('recruit') === '1';    // 调试：临时解锁全部招募（角色/同伴）
@@ -117,7 +117,7 @@ window.KUP = window.KUP || {};
     if (k === ' ') { game.castUltimate(); return; } // 浄化の歌（大招，不参与移动）
     if (k === 'shift') { if (!ev.repeat) game.tryDash(); return; } // 冲刺（主动回避，不参与移动）
     if (k === 'v') { if (!ev.repeat) game.cycleAim(); return; }    // 瞄准模式：自动/鼠标/移动
-    /* 升级屏（v0.10）：R 重掷 / B 切换封禁模式（之后按 1/2/3 封禁该卡） */
+    /* 升级屏（v0.10）：R 重掷 / B 切换封禁模式（之后按 1–4 封禁该卡） */
     if (game.state === 'levelup') {
       if (k === 'r') { if (!ev.repeat) game.rerollChoices(); return; }
       if (k === 'b') { if (!ev.repeat) KUP.UI.toggleBanMode(); return; }

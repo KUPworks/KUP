@@ -1809,7 +1809,7 @@ window.KUP = window.KUP || {};
       return { angles, targets };
     }
 
-    /* ---------- 升级三选一 ---------- */
+    /* ---------- 升级四选一 ---------- */
     openLevelUp() {
       this.state = 'levelup';
       this.choices = this.rollChoices();
@@ -1817,7 +1817,7 @@ window.KUP = window.KUP || {};
       KUP.Audio.sfx('levelup');
     }
 
-    /* ---------- 升级三选一（v0.10：分桶保底／重掷／封禁） ----------
+    /* ---------- 升级四选一（v0.10 分桶保底；v0.20.3 起四张） ----------
      * 抽取顺序：
      *   1. 覚醒卡优先（满级初期武装；与既有行为一致）
      *   2. **分桶保底**：武器／被动／道具 三桶各取一张（尽量凑齐「新武器·成长·应急」）
@@ -1871,21 +1871,24 @@ window.KUP = window.KUP || {};
       const quotas = { weapon: 1, passive: 1, item: hurt ? 2 : 1 };
       const order = hurt ? ['item', 'weapon', 'passive'] : ['weapon', 'passive', 'item'];
       for (const key of order) {
-        for (let n = 0; n < quotas[key] && out.length < 3; n++) {
+        for (let n = 0; n < quotas[key] && out.length < 4; n++) {
           for (const c of U.shuffle(buckets[key].slice())) { if (take(c)) break; }
         }
       }
-      if (out.length < 3) {                                            // 3. 补足
+      if (out.length < 4) {                                            // 3. 补足
         for (const c of U.shuffle([].concat(buckets.weapon, buckets.passive, buckets.item))) {
-          if (out.length >= 3) break;
+          if (out.length >= 4) break;
           take(c);
         }
       }
-      while (out.length < 3) out.push({ kind: 'heal' });               // 4. 兜底
+      while (out.length < 4) out.push({ kind: 'heal' });               // 4. 兜底
       U.shuffle(out);   // 位置随机：避免「闭眼点第一格」
-      /* v0.17 記憶の卵（現象卡）：低概率**额外**多出第 4 张（不进普通卡池、不可封禁、
-       * 不占分桶保底配额）。选中＝用这次升级换 1 次復活。 */
-      if (this.rollEggCard()) out.push({ kind: 'egg' });
+      /* v0.17 記憶の卵（現象卡）：低概率出现，**和普通卡一样占一格**——
+       * 四选一里固定作为**第 4 张**（总数仍是 4，不额外多给一张）。 */
+      if (this.rollEggCard()) {
+        if (out.length >= 4) out.length = 3;   // 让出第 4 格给卵卡
+        out.push({ kind: 'egg' });
+      }
       // 调试：?pick=heart,heal,ward 强制指定升级选项（确定性验证；支持被动/武器/道具 id）
       if (this.debug.pick) {
         const mk = s => s === 'heal' ? { kind: 'heal' }
@@ -1893,12 +1896,12 @@ window.KUP = window.KUP || {};
           : (KUP.PASSIVES[s] ? { kind: (s in p.passives) ? 'passive-up' : 'passive-new', id: s }
           : (KUP.WEAPONS[s] && ownedW.indexOf(s) < 0 ? { kind: 'weapon-new', id: s } : null)));
         const forced = this.debug.pick.split(',').map(mk).filter(Boolean);
-        for (let i = 0; i < forced.length && i < 3; i++) out[i] = forced[i];
+        for (let i = 0; i < forced.length && i < 4; i++) out[i] = forced[i];
       }
       return out;
     }
 
-    /* 重掷（v0.10）：重新抽取本次三选一，消耗 1 次（`R` 键 / HUD 按钮） */
+    /* 重掷（v0.10）：重新抽取本次四选一，消耗 1 次（`R` 键 / HUD 按钮） */
     rerollChoices() {
       if (this.state !== 'levelup') return false;
       if (!(this.rerolls > 0)) return false;
