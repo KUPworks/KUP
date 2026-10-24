@@ -55,7 +55,7 @@ KUP.WEAPON_FAMILIES = {
       en: 'The big projectile module: homing shots, piercing snipes, repeater fire and scatter pellets all share the same hit test.',
       ja: '歌を弾体に装填する大モジュール。追尾弾・貫通狙撃・連射・散弾が同じ命中判定を共有する。',
     },
-    modules: ['homing', 'sniper', 'machinegun', 'shotgun'],
+    modules: ['homing', 'sniper', 'machinegun', 'shotgun', 'typhoon'],
   },
   orbit: {
     id: 'orbit', entity: 'WeaponRuntime.orbs',
@@ -86,6 +86,18 @@ KUP.WEAPON_FAMILIES = {
     name: { zh: '区域系', en: 'Field', ja: '領域系' },
     desc: { zh: '投掷、空爆、地雷等「先在场上留下东西」的模组。', en: 'Thrown bricks, air raids and mines — anything that leaves something on the field.', ja: '投擲・空爆・地雷など「場に何かを残す」モジュール。' },
     modules: ['lob', 'blast', 'minefield'],
+  },
+  curse: {
+    id: 'curse', entity: 'Zone（devour）／Beam（chain）',
+    name: { zh: '咒缚系', en: 'Curse', ja: '呪縛系' },
+    desc: { zh: '吞噬与连锁——聚拢敌人再引爆，或沿最近的敌人一路传过去。', en: 'Devour and chain: gather foes and detonate, or leap from the nearest foe to the next.', ja: '捕食と連鎖——敵を集めて炸裂させ、或いは最寄りから次へ伝う。' },
+    modules: ['devour', 'chain'],
+  },
+  summon: {
+    id: 'summon', entity: 'Summon',
+    name: { zh: '召唤系', en: 'Summon', ja: '召喚系' },
+    desc: { zh: '在场上留下会自行攻击的幻影（新的 Summon 实体）。', en: 'Leaves a phantasm on the field that attacks on its own (the new Summon entity).', ja: '場に自律攻撃する幻影を残す（新しい Summon 実体）。' },
+    modules: ['summon'],
   },
 };
 KUP.FAMILY = id => KUP.WEAPON_FAMILIES[id] || null;
@@ -133,7 +145,7 @@ KUP.WEAPON_MODULES = {
     id: 'shock', family: 'wave', entity: 'Ring',
     name: { zh: '圆形波', en: 'Shock Ring', ja: '衝撃リング' },
     desc: { zh: '以玩家为中心扩散的冲击环（可定向成扇形）；扩散半径随「范围」放大。', en: 'A ring expanding from you (can be a sector); radius scales with Area.', ja: '自機中心に広がる衝撃環（扇形化も可）。半径は「範囲」で拡大。' },
-    params: ['cd', 'dmg', 'r', 'double', 'arc'],
+    params: ['cd', 'dmg', 'r', 'double', 'arc', 'kb'],
     base: { speed: 300, kb: 170, arc: 360, doubleSpeed: 220, doubleKb: 140, doubleDmgMul: 0.7 },
     area: ['r'],
   },
@@ -194,6 +206,58 @@ KUP.WEAPON_MODULES = {
     base: { speed: 700, r: 5, life: 0.4, spread: 0.55, pierce: 0 },
     area: ['r'],
   },
+  /* v0.20：**重弹**——体积大、飞得慢、击退强；用来表达「台风之子」这类巨物。 */
+  typhoon: {
+    id: 'typhoon', family: 'projectile', entity: 'Projectile',
+    name: { zh: '重弹', en: 'Heavy Shot', ja: '重弾' },
+    desc: {
+      zh: '又大又慢的弹体，**击退极强**、可贯穿多个敌人；命中半径随「范围」放大。',
+      en: 'A big, slow projectile with **heavy knockback** that pierces several foes; hit radius scales with Area.',
+      ja: '大きく遅い弾体。**ノックバックが極めて強く**、複数の敵を貫く。命中半径は「範囲」で拡大。',
+    },
+    params: ['cd', 'dmg', 'count', 'r', 'pierce', 'kb'],
+    base: { speed: 250, r: 26, life: 2.8, pierce: 3, homing: 0.7, kb: 3.0 },
+    area: ['r'],
+  },
+  /* v0.20：**吞噬**——先聚怪、再群伤（Zone kind='devour'）。 */
+  devour: {
+    id: 'devour', family: 'curse', entity: 'Zone（devour）',
+    name: { zh: '吞噬', en: 'Devour', ja: '捕食' },
+    desc: {
+      zh: '在最近敌人处张开吞噬领域：持续把范围内的敌人**拖向中心**，收束时一并炸开——先聚怪，再群伤。',
+      en: 'Opens a devouring field on the nearest foe: foes inside are **dragged toward the center**, then the field bursts — gather first, then AoE.',
+      ja: '最寄りの敵に捕食領域を開く。範囲内の敵を**中心へ引き寄せ**、収束時に炸裂——集めてから薙ぎ払う。',
+    },
+    params: ['cd', 'dmg', 'count', 'r', 'pull', 'life'],
+    base: { pull: 320, life: 0.7 },
+    area: ['r'],
+  },
+  /* v0.20：**连锁**——由最近怪搜索「下一个最近怪」，有跳跃距离与段数上限。 */
+  chain: {
+    id: 'chain', family: 'curse', entity: 'Beam（chain）',
+    name: { zh: '连锁', en: 'Chain', ja: '連鎖' },
+    desc: {
+      zh: '从最近的敌人起跳，每次只搜索**比当前更近的下一个**（跳跃距离上限 jump），最多跳 jumps 段；每段都造成伤害。',
+      en: 'Starts at the nearest foe and leaps to **the next nearest within jump range**, up to jumps links; every link deals damage.',
+      ja: '最寄りの敵から始まり、**jump 以内で次に近い敵**へ最大 jumps 段まで連鎖。各段がダメージを与える。',
+    },
+    params: ['cd', 'dmg', 'range', 'jump', 'jumps'],
+    base: { range: 560, jump: 240, jumps: 4 },
+    area: ['range', 'jump'],
+  },
+  /* v0.20：**召唤**——留下会自行攻击的幻影（新实体 KUP.Summon）。 */
+  summon: {
+    id: 'summon', family: 'summon', entity: 'Summon',
+    name: { zh: '召唤', en: 'Summon', ja: '召喚' },
+    desc: {
+      zh: '在身边留下**会自行索敌射击**的幻影，持续一段时间；幻影的弹体也吃角色的伤害加成。',
+      en: 'Leaves a phantasm beside you that **seeks and shoots on its own** for a while; its shots also scale with your damage.',
+      ja: '自機のそばに**自律して敵を狙う幻影**を残す。幻影の弾も自身のダメージ強化を受ける。',
+    },
+    params: ['cd', 'dmg', 'count', 'life', 'fireCd'],
+    base: { r: 13, speed: 420, life: 5, fireCd: 0.65, homing: 4.5 },
+    area: ['r'],
+  },
   lob: {
     id: 'lob', family: 'field', entity: 'Toss → Zone',
     name: { zh: '投掷・滞留音场', en: 'Thrown Field', ja: '投擲・残響音場' },
@@ -236,18 +300,18 @@ KUP.MODULE_OF = weaponId => { const w = KUP.WEAPONS[weaponId]; return w ? KUP.MO
 KUP.WEAPONS = {
   note: {
     id: 'note', icon: '♪', color: '#4ee6ff', behavior: 'homing', maxLv: 5, owner: 'kaf',
-    name: { zh: '分形音符', en: 'Fractal Note', ja: 'フラクタル・ノート' },
+    name: { zh: '私論理', en: 'Watashi Ronri', ja: '私論理' },
     desc: {
-      zh: '乐曲「わたしの声」化作追尾敌人的音符。森先化歩的初期武装。',
-      en: 'The song "Watashi no Koe" becomes notes that chase down enemies. MORISAKI KAFU\'s starting weapon.',
-      ja: '楽曲「わたしの声」が音符と化して敵を追尾する。森先化歩の初期武装。',
+      zh: '乐曲「私論理」化作追尾敌人的音符。森先化歩的初期武装。',
+      en: 'The song "Watashi Ronri" becomes notes that chase down enemies. MORISAKI KAFU\'s starting weapon.',
+      ja: '楽曲「私論理」が音符と化して敵を追尾する。森先化歩の初期武装。',
     },
     lvDesc: [
       { zh: '追尾音符 ×2，命中后消失。', en: '2 homing notes; they vanish on hit.', ja: '追尾音符 ×2。命中すると消える。' },
       { zh: '音符 ×3，射速提升。', en: '3 notes, faster fire.', ja: '音符 ×3、射速アップ。' },
       { zh: '命中时分裂出 2 枚小音符。', en: 'Splits into 2 mini notes on hit.', ja: '命中時に小音符 ×2 に分裂。' },
       { zh: '音符 ×4，追踪性能增强。', en: '4 notes, stronger homing.', ja: '音符 ×4、追尾性能強化。' },
-      { zh: '音符 ×6 —— 歌声响彻神椿市。', en: '6 notes — the song resounds through Kamitsubaki City.', ja: '音符 ×6 —— 歌声が神椿市に響き渡る。' },
+      { zh: '音符 ×6 —— 私論理响彻神椿市。', en: '6 notes — Watashi Ronri rings through Kamitsubaki City.', ja: '音符 ×6 —— 私論理が神椿市に響き渡る。' },
     ],
     levels: [
       { cd: 1.05, dmg: 10, count: 2, split: 0 },
@@ -258,13 +322,80 @@ KUP.WEAPONS = {
     ],
     /* 覚醒（進化形態）★ REGENERATE「魔女の娘へと覚醒する場面」：满级后觉醒，武器化为乐曲名的进化形态 */
     evolved: {
-      name: { zh: 'わたしの声 -unison-', en: 'Watashi no Koe -Unison-', ja: 'わたしの声 -unison-' },
+      name: { zh: '私論理 -theory-', en: 'Watashi Ronri -Theory-', ja: '私論理 -theory-' },
       desc: {
-        zh: '覚醒——「わたしの声」化为八枚合唱般的追尾音符。',
-        en: 'Awakened — "Watashi no Koe" becomes eight homing notes singing as one.',
-        ja: '覚醒——「わたしの声」が合唱のような八つの追尾音符と化す。',
+        zh: '覚醒——「私論理」化为八枚合唱般的追尾音符。',
+        en: 'Awakened — "Watashi Ronri" becomes eight homing notes singing as one.',
+        ja: '覚醒——「私論理」が合唱のような八つの追尾音符と化す。',
       },
       stats: { cd: 0.55, dmg: 24, count: 8, split: 1 },
+    },
+  },
+  /* ===== 花譜的第二、第三武装（v0.20）=====
+   * 初始仍是「私論理」（武器 note，模组 homing）；另两把分别对应
+   * 「過去を喰らう」（新模组 devour＝聚怪群伤）与「不可解」（新模组 chain＝最近怪连锁）。 */
+  kuu: {
+    id: 'kuu', icon: '喰', color: '#8b6cff', behavior: 'devour', maxLv: 5, owner: 'kaf',
+    name: { zh: '過去を喰らう', en: 'Devouring the Past', ja: '過去を喰らう' },
+    desc: {
+      zh: '乐曲「過去を喰らう」化作吞噬领域——先把范围内的破维魔**拖向中心**，收束时一并嚼碎。森先化歩的第二武装。',
+      en: 'The song "Kako wo Kurau" becomes a devouring field: foes inside are **dragged to the center**, then crushed at once. MORISAKI KAFU\'s second weapon.',
+      ja: '楽曲「過去を喰らう」が捕食領域となる。範囲内の敵を**中心へ引き寄せ**、収束時にまとめて噛み砕く。森先化歩の第二武装。',
+    },
+    lvDesc: [
+      { zh: '在最近敌人处张开吞噬领域，短暂拖拽后炸开。', en: 'Opens a devouring field on the nearest foe, dragging then bursting.', ja: '最寄りの敵に捕食領域を開き、引き寄せてから炸裂。' },
+      { zh: '领域扩大，拖拽力增强。', en: 'Wider field, stronger pull.', ja: '領域拡大、引き寄せ強化。' },
+      { zh: '伤害与收束时间提升。', en: 'More damage, longer gather.', ja: 'ダメージと収束時間アップ。' },
+      { zh: '同时张开 2 个领域。', en: '2 fields at once.', ja: '同時に領域 ×2。' },
+      { zh: '领域 ×2，拖拽力大幅提升 —— 过去被一口吞下。', en: '2 fields with a much stronger pull — the past is swallowed whole.', ja: '領域 ×2、引き寄せ大幅強化 —— 過去を一口で呑み込む。' },
+    ],
+    levels: [
+      { cd: 4.6, dmg: 18, count: 1, r: 110, pull: 240, life: 0.6 },
+      { cd: 4.2, dmg: 22, count: 1, r: 125, pull: 280, life: 0.65 },
+      { cd: 3.8, dmg: 26, count: 1, r: 140, pull: 320, life: 0.7 },
+      { cd: 3.4, dmg: 32, count: 2, r: 155, pull: 370, life: 0.8 },
+      { cd: 3.0, dmg: 38, count: 2, r: 170, pull: 420, life: 0.9 },
+    ],
+    evolved: {
+      name: { zh: '過去を喰らう -oblivion-', en: 'Devouring the Past -Oblivion-', ja: '過去を喰らう -oblivion-' },
+      desc: {
+        zh: '覚醒——吞噬领域撕开两处，过去与现在一同沉入 oblivion。',
+        en: 'Awakened — two devouring fields tear open; past and present sink into oblivion.',
+        ja: '覚醒——捕食領域が二つに裂け、過去も現在も oblivion へ沈む。',
+      },
+      stats: { cd: 2.2, dmg: 56, count: 2, r: 200, pull: 520, life: 1.0 },
+    },
+  },
+  fukakai: {
+    id: 'fukakai', icon: '鎖', color: '#ff4d6d', behavior: 'chain', maxLv: 5, owner: 'kaf',
+    name: { zh: '不可解', en: 'Fukakai', ja: '不可解' },
+    desc: {
+      zh: '乐曲「不可解」化作连锁：从最近的破维魔起跳，一路搜索**下一个更近的**（有跳跃距离上限）。森先化歩的第三武装。',
+      en: 'The song "Fukakai" becomes a chain: starting from the nearest foe, it leaps to **the next nearest** within range. MORISAKI KAFU\'s third weapon.',
+      ja: '楽曲「不可解」が連鎖となる。最寄りの敵から、**次に近い敵**へ範囲内で飛び移る。森先化歩の第三武装。',
+    },
+    lvDesc: [
+      { zh: '从最近敌人起跳，最多连锁 3 段。', en: 'Leaps from the nearest foe, up to 3 links.', ja: '最寄りの敵から最大 3 段連鎖。' },
+      { zh: '伤害提升，搜索距离扩大。', en: 'More damage, longer search.', ja: 'ダメージと探索距離アップ。' },
+      { zh: '连锁 4 段。', en: '4 links.', ja: '4 段連鎖。' },
+      { zh: '跳跃距离与伤害提升。', en: 'Longer jumps, more damage.', ja: '跳躍距離とダメージアップ。' },
+      { zh: '连锁 5 段 —— 不可解没有尽头。', en: '5 links — Fukakai has no end.', ja: '5 段連鎖 —— 不可解に終わりはない。' },
+    ],
+    levels: [
+      { cd: 3.4, dmg: 20, range: 520, jump: 220, jumps: 3 },
+      { cd: 3.1, dmg: 24, range: 540, jump: 240, jumps: 3 },
+      { cd: 2.8, dmg: 28, range: 560, jump: 260, jumps: 4 },
+      { cd: 2.5, dmg: 33, range: 600, jump: 280, jumps: 4 },
+      { cd: 2.2, dmg: 38, range: 640, jump: 300, jumps: 5 },
+    ],
+    evolved: {
+      name: { zh: '不可解 -infinite-', en: 'Fukakai -Infinite-', ja: '不可解 -infinite-' },
+      desc: {
+        zh: '覚醒——连锁六段，不可解沿着整条街传到尽头。',
+        en: 'Awakened — six links; Fukakai runs down the whole street.',
+        ja: '覚醒——六段の連鎖、不可解が街の果てまで伝う。',
+      },
+      stats: { cd: 1.5, dmg: 52, range: 700, jump: 340, jumps: 6 },
     },
   },
   orbit: {
@@ -303,6 +434,38 @@ KUP.WEAPONS = {
       stats: { dmg: 28, count: 8, r: 58, spin: 4.06, orbR: 24 },
     },
   },
+  horagai: {
+    id: 'horagai', icon: '螺', color: '#c9a24d', behavior: 'shock', maxLv: 5, owner: 'rim',
+    name: { zh: '法螺話', en: 'Horagai', ja: '法螺話' },
+    desc: {
+      zh: '乐曲「法螺話」化作一记**又窄又远**的法螺——伤害不高，但把正面一条扇形内的破维魔**狠狠推开**。谷置狸眼的第二武装。',
+      en: 'The song "Horagai" becomes a narrow, far-reaching horn blast: low damage, but it **shoves everything** in a thin fan away. TANIOKI RIME\'s second weapon.',
+      ja: '楽曲「法螺話」が**狭く遠い**法螺の一撃となる。ダメージは低いが、正面の扇形にいる敵を**強く押し返す**。谷置狸眼の第二武装。',
+    },
+    lvDesc: [
+      { zh: '正面 70° 扇形，击退 380、伤害很低。', en: 'A 70° fan; 380 knockback, very low damage.', ja: '正面 70° の扇形、ノックバック 380、ダメージは低い。' },
+      { zh: '扇形略宽，击退增强。', en: 'Slightly wider fan, stronger shove.', ja: '扇角が少し広がり、押し返し強化。' },
+      { zh: '范围扩大，伤害小幅提升。', en: 'Wider range, a little more damage.', ja: '範囲拡大、ダメージ小幅アップ。' },
+      { zh: '击退 440，冷却缩短。', en: '440 knockback, shorter cooldown.', ja: 'ノックバック 440、冷却短縮。' },
+      { zh: '正面 80° —— 一吹即散。', en: 'An 80° front — one blast clears it.', ja: '正面 80° —— 一吹きで散らす。' },
+    ],
+    levels: [
+      { cd: 2.8, dmg: 8, r: 170, arc: 70, kb: 380, double: false },
+      { cd: 2.6, dmg: 9, r: 185, arc: 72, kb: 400, double: false },
+      { cd: 2.4, dmg: 11, r: 200, arc: 74, kb: 420, double: false },
+      { cd: 2.2, dmg: 12, r: 220, arc: 76, kb: 440, double: false },
+      { cd: 2.0, dmg: 14, r: 240, arc: 80, kb: 460, double: false },
+    ],
+    evolved: {
+      name: { zh: '法螺話 -gale-', en: 'Horagai -Gale-', ja: '法螺話 -gale-' },
+      desc: {
+        zh: '覚醒——法螺声化为 90° 的狂风，正面被整片吹开。',
+        en: 'Awakened — the horn becomes a 90° gale that blows the whole front open.',
+        ja: '覚醒——法螺の音は 90° の疾風となり、正面を丸ごと吹き飛ばす。',
+      },
+      stats: { cd: 1.4, dmg: 20, r: 280, arc: 90, kb: 520, double: true },
+    },
+  },
   bass: {
     id: 'bass', icon: '低', color: '#ffb25a', behavior: 'shock', maxLv: 5, owner: 'harusaruhi',
     name: { zh: '泰拉坠击', en: 'Terra Drop', ja: 'テラ・ドロップ' },
@@ -333,6 +496,38 @@ KUP.WEAPONS = {
         ja: '覚醒——「テラ」が大地を崩落させる二重の低音衝撃。',
       },
       stats: { cd: 1.7, dmg: 46, r: 235, double: true },
+    },
+  },
+  taifuu: {
+    id: 'taifuu', icon: '颱', color: '#3fd0c9', behavior: 'typhoon', maxLv: 5, owner: 'harusaruhi',
+    name: { zh: '台風之子', en: 'Child of the Typhoon', ja: '台風の子' },
+    desc: {
+      zh: '乐曲「台風の子」化作**巨大的弹体**：飞得慢、体积大、击退极强，能把整排破维魔推着走。朝主派流的第二武装。',
+      en: 'The song "Taifuu no Ko" becomes a **huge projectile**: slow, big, with enormous knockback that pushes a whole line of foes. ASANUSHI HARU\'s second weapon.',
+      ja: '楽曲「台風の子」が**巨大な弾体**となる。遅く、大きく、ノックバックは極大——敵の列ごと押し流す。朝主派流の第二武装。',
+    },
+    lvDesc: [
+      { zh: '发射一枚巨大弹体，贯穿 3 体、强击退。', en: 'One huge shot; pierces 3 foes with heavy knockback.', ja: '巨大弾 ×1、3 体貫通、強ノックバック。' },
+      { zh: '伤害与击退提升。', en: 'More damage and knockback.', ja: 'ダメージとノックバックアップ。' },
+      { zh: '弹体更大，贯穿 4 体。', en: 'Bigger shot, pierces 4.', ja: '弾体拡大、4 体貫通。' },
+      { zh: '同时发射 2 枚。', en: '2 shots at once.', ja: '同時に ×2。' },
+      { zh: '弹体 ×2、击退 3.6 倍 —— 台风过境。', en: '2 shots with 3.6× knockback — the typhoon passes.', ja: '弾体 ×2、ノックバック 3.6 倍 —— 台風が過ぎる。' },
+    ],
+    levels: [
+      { cd: 2.8, dmg: 26, count: 1, r: 26, pierce: 3, kb: 2.8 },
+      { cd: 2.6, dmg: 30, count: 1, r: 28, pierce: 3, kb: 3.0 },
+      { cd: 2.4, dmg: 34, count: 1, r: 30, pierce: 4, kb: 3.2 },
+      { cd: 2.2, dmg: 38, count: 2, r: 32, pierce: 4, kb: 3.4 },
+      { cd: 2.0, dmg: 42, count: 2, r: 34, pierce: 5, kb: 3.6 },
+    ],
+    evolved: {
+      name: { zh: '台風の子 -eye-', en: 'Child of the Typhoon -Eye-', ja: '台風の子 -eye-' },
+      desc: {
+        zh: '覚醒——两枚巨弹卷成台风之眼，沿途的街区被连根拔起。',
+        en: 'Awakened — twin shots spin into the typhoon\'s eye, tearing the street up as they pass.',
+        ja: '覚醒——二つの巨弾が台風の眼をなし、通った街路を根こそぎさらう。',
+      },
+      stats: { cd: 1.5, dmg: 60, count: 2, r: 42, pierce: 6, kb: 4.2 },
     },
   },
   lance: {
@@ -367,13 +562,45 @@ KUP.WEAPONS = {
       stats: { cd: 0.85, dmg: 26, count: 6, pierce: 4 },
     },
   },
+  hakuchuumu: {
+    id: 'hakuchuumu', icon: '夢', color: '#ffffff', behavior: 'blast', maxLv: 5, owner: 'koko',
+    name: { zh: '白昼夢', en: 'Daydream', ja: '白昼夢' },
+    desc: {
+      zh: '乐曲「白昼夢」化作**白色的空爆**：在自身周围随机落下，短暂延迟后无声炸开。輪廻此処的第二武装。',
+      en: 'The song "Hakuchuumu" becomes **white air-bursts**: they fall at random around you and detonate after a short fuse. RINNE KOKO\'s second weapon.',
+      ja: '楽曲「白昼夢」が**白い空爆**となる。周囲のランダムな地点に落ち、短い信管の後に静かに炸ける。輪廻此処の第二武装。',
+    },
+    lvDesc: [
+      { zh: '每轮落下 1 枚白色空爆（信管 0.9 秒）。', en: '1 white blast per cycle (0.9s fuse).', ja: '白い空爆 ×1（信管 0.9 秒）。' },
+      { zh: '爆炸范围扩大。', en: 'Wider blast.', ja: '爆発範囲拡大。' },
+      { zh: '每轮 2 枚，范围再扩。', en: '2 blasts, wider still.', ja: '×2、さらに拡大。' },
+      { zh: '每轮 2 枚，信管缩短。', en: '2 blasts, shorter fuse.', ja: '×2、信管短縮。' },
+      { zh: '每轮 3 枚 —— 白昼的梦覆盖整条街。', en: '3 blasts — the daydream covers the street.', ja: '×3 —— 白昼の夢が街を覆う。' },
+    ],
+    levels: [
+      { cd: 3.2, dmg: 24, count: 1, r: 90, range: 220, fuse: 0.9 },
+      { cd: 3.0, dmg: 28, count: 1, r: 96, range: 240, fuse: 0.85 },
+      { cd: 2.8, dmg: 32, count: 2, r: 106, range: 260, fuse: 0.8 },
+      { cd: 2.6, dmg: 36, count: 2, r: 114, range: 280, fuse: 0.7 },
+      { cd: 2.4, dmg: 42, count: 3, r: 124, range: 300, fuse: 0.65 },
+    ],
+    evolved: {
+      name: { zh: '白昼夢 -daybreak-', en: 'Daydream -Daybreak-', ja: '白昼夢 -daybreak-' },
+      desc: {
+        zh: '覚醒——五枚白色空爆同时落下，白昼的梦在街区炸成一片。',
+        en: 'Awakened — five white bursts fall at once; the daydream blooms across the district.',
+        ja: '覚醒——五つの白い空爆が同時に落ち、白昼の夢が街に咲き乱れる。',
+      },
+      stats: { cd: 1.8, dmg: 56, count: 5, r: 140, range: 330, fuse: 0.55 },
+    },
+  },
   laser: {
     id: 'laser', icon: '光', color: '#7aa0ff', behavior: 'beam', maxLv: 5, owner: 'isekaijoucho',
-    name: { zh: '消失光束', en: 'Vanish Beam', ja: 'ヴァニッシュ・ビーム' },
+    name: { zh: 'シリウスの心臓', en: "Sirius's Heart", ja: 'シリウスの心臓' },
     desc: {
-      zh: '描摹乐曲「キミ消失セカイ」的贯穿光束。夜河世界的初期武装。',
-      en: 'A piercing beam tracing the song "Kimi Shometsu Sekai". YORUKAWA SEKAI\'s starting weapon.',
-      ja: '楽曲「キミ消失セカイ」をなぞる貫通光束。夜河世界の初期武装。',
+      zh: '乐曲「シリウスの心臓」化作贯穿光束。夜河世界的初期武装。',
+      en: 'The song "Sirius no Shinzou" becomes a piercing beam. YORUKAWA SEKAI\'s starting weapon.',
+      ja: '楽曲「シリウスの心臓」が貫通光束となる。夜河世界の初期武装。',
     },
     lvDesc: [
       { zh: '朝最近的破维魔发射贯穿光束。', en: 'Fires a piercing beam at the nearest Tesseracter.', ja: '最寄りのテセラクターへ貫通ビームを発射。' },
@@ -390,25 +617,57 @@ KUP.WEAPONS = {
       { cd: 2.3, dmg: 38, len: 760, w: 26, double: true },
     ],
     evolved: {
-      name: { zh: 'キミ消失セカイ -vanish-', en: 'Kimi Shometsu Sekai -Vanish-', ja: 'キミ消失セカイ -vanish-' },
+      name: { zh: 'シリウスの心臓 -pulse-', en: "Sirius's Heart -Pulse-", ja: 'シリウスの心臓 -pulse-' },
       desc: {
-        zh: '覚醒——「キミ消失セカイ」的双重光束，消失于世界的彼端。',
-        en: 'Awakened — twin beams tracing "Kimi Shometsu Sekai", vanishing beyond the world.',
-        ja: '覚醒——「キミ消失セカイ」の二連光束、世界の彼端へ消える。',
+        zh: '覚醒——「シリウスの心臓」的双重光束，如星核搏动。',
+        en: 'Awakened — twin beams of "Sirius no Shinzou", pulsing like a stellar core.',
+        ja: '覚醒——「シリウスの心臓」の二連光束、星核のように脈打つ。',
       },
       stats: { cd: 1.6, dmg: 44, len: 900, w: 30, double: true },
     },
   },
+  housekitan: {
+    id: 'housekitan', icon: '寶', color: '#7de0ff', behavior: 'lob', maxLv: 5, owner: 'isekaijoucho',
+    name: { zh: 'ヰ世界の宝石譚', en: 'Gem Tale of the Otherworld', ja: 'ヰ世界の宝石譚' },
+    desc: {
+      zh: '乐曲「ヰ世界の宝石譚」化作投掷的宝石：落点留下**滞留的宝光**，持续切割其中的破维魔。夜河世界的第二武装。',
+      en: 'The song "Isekai no Housekitan" becomes thrown gems: each impact leaves a **lingering gem-light** that keeps cutting foes inside. YORUKAWA SEKAI\'s second weapon.',
+      ja: '楽曲「ヰ世界の宝石譚」が投擲される宝石となる。着地点に**残る宝光**が範囲内の敵を切り続ける。夜河世界の第二武装。',
+    },
+    lvDesc: [
+      { zh: '向最近敌人投出 1 枚宝石，落点滞留 2.8 秒。', en: 'Throws 1 gem at the nearest foe; the light lingers 2.8s.', ja: '最寄りへ宝石 ×1、着地点に 2.8 秒の宝光。' },
+      { zh: '范围与伤害提升。', en: 'Wider field, more damage.', ja: '範囲とダメージアップ。' },
+      { zh: '投掷 2 枚。', en: '2 gems.', ja: '宝石 ×2。' },
+      { zh: '滞留时间延长，冷却缩短。', en: 'Longer lingering, shorter cooldown.', ja: '持続延長、冷却短縮。' },
+      { zh: '宝石 ×3 —— 整条街铺满宝光。', en: '3 gems — the street is paved with gem-light.', ja: '宝石 ×3 —— 街が宝光で埋まる。' },
+    ],
+    levels: [
+      { cd: 2.4, dmg: 10, count: 1, r: 58, range: 280, fly: 0.45, life: 2.8 },
+      { cd: 2.2, dmg: 12, count: 1, r: 64, range: 300, fly: 0.42, life: 3.0 },
+      { cd: 2.0, dmg: 14, count: 2, r: 70, range: 320, fly: 0.40, life: 3.4 },
+      { cd: 1.8, dmg: 16, count: 2, r: 76, range: 340, fly: 0.37, life: 3.8 },
+      { cd: 1.6, dmg: 18, count: 3, r: 84, range: 360, fly: 0.34, life: 4.2 },
+    ],
+    evolved: {
+      name: { zh: 'ヰ世界の宝石譚 -prism-', en: 'Gem Tale of the Otherworld -Prism-', ja: 'ヰ世界の宝石譚 -prism-' },
+      desc: {
+        zh: '覚醒——四枚宝石同时落下，折射出的宝光铺满街区。',
+        en: 'Awakened — four gems fall at once; their refracted light floods the district.',
+        ja: '覚醒——四つの宝石が同時に落ち、屈折した宝光が街を満たす。',
+      },
+      stats: { cd: 1.2, dmg: 26, count: 4, r: 96, range: 400, fly: 0.32, life: 5.0 },
+    },
+  },
   /* ===== 招募角色（魔女候補）的初期武装 =====
-   * ⚠ 这两把官方乐曲名（存流／明透的代表曲未在 lore 中列出）——
-   *   为本作同人命名，取自「ヰ世界救済教団」的祈祷意象（教団用语见 lore §4.7）。 */
+   * 曲名与年份取自 docs/lore/discography.md：あおいゆめ（2022）／オレンジ（2023）；
+   * 第二武装 さよなら（2021）／虚言（2022）见下方同组条目。 */
   prayer: {
     id: 'prayer', icon: '鐘', color: '#8fa8ff', behavior: 'shock', maxLv: 5, owner: 'aru',
-    name: { zh: '救済之钟', en: 'Bell of Salvation', ja: '救済の鐘' },
+    name: { zh: 'あおいゆめ', en: 'Aoi Yume', ja: 'あおいゆめ' },
     desc: {
-      zh: '教团的祈祷化作钟声冲击环。天祢亜留的初期武装。',
-      en: 'The order\'s prayer becomes a bell-like shockwave. AMANE ARU\'s starting weapon.',
-      ja: '教団の祈りが鐘の衝撃環となる。天祢亜留の初期武装。',
+      zh: '乐曲「あおいゆめ」化作钟声般的冲击环。天祢亜留的初期武装。',
+      en: 'The song "Aoi Yume" becomes a bell-like shockwave. AMANE ARU\'s starting weapon.',
+      ja: '楽曲「あおいゆめ」が鐘の衝撃環となる。天祢亜留の初期武装。',
     },
     lvDesc: [
       { zh: '以自身为中心敲响钟声冲击环。', en: 'Rings a shockwave around you.', ja: '自身を中心に鐘の衝撃環を鳴らす。' },
@@ -425,45 +684,109 @@ KUP.WEAPONS = {
       { cd: 2.4, dmg: 38, r: 195, double: true },
     ],
     evolved: {
-      name: { zh: '救済の鐘 -requiem-', en: 'Bell of Salvation -Requiem-', ja: '救済の鐘 -requiem-' },
+      name: { zh: 'あおいゆめ -requiem-', en: 'Aoi Yume -Requiem-', ja: 'あおいゆめ -requiem-' },
       desc: {
-        zh: '覚醒——钟声化为镇魂的双重冲击，为街区献上安魂。',
-        en: 'Awakened — the bell becomes a twin requiem quake.',
-        ja: '覚醒——鐘は鎮魂の二重衝撃となり、街に安魂を捧げる。',
+        zh: '覚醒——「あおいゆめ」的钟声化为镇魂的双重冲击，为街区献上安魂。',
+        en: 'Awakened — the bells of "Aoi Yume" become a twin requiem quake.',
+        ja: '覚醒——「あおいゆめ」の鐘は鎮魂の二重衝撃となり、街に安魂を捧げる。',
       },
       stats: { cd: 1.6, dmg: 44, r: 230, double: true },
     },
   },
-  follow: {
-    id: 'follow', icon: '矢', color: '#7de0c8', behavior: 'sniper', maxLv: 5, owner: 'asu',
-    name: { zh: '追唱之矢', en: 'Arrows of the Refrain', ja: '追唱の矢' },
+  sayonara: {
+    id: 'sayonara', icon: '別', color: '#b8b8ff', behavior: 'shotgun', maxLv: 5, owner: 'aru',
+    name: { zh: 'さよなら', en: 'Sayonara', ja: 'さよなら' },
     desc: {
-      zh: '追随的歌声化作贯穿之矢。地邑阿栖的初期武装。',
-      en: 'A following song becomes piercing arrows. CHIMURA ASU\'s starting weapon.',
-      ja: '追従の歌が貫通の矢となる。地邑阿栖の初期武装。',
+      zh: '乐曲「さよなら」化作一次**扇形散开的告别**：多枚弹丸同时离手，贴脸全中才痛。天祢亜留的第二武装。',
+      en: 'The song "Sayonara" becomes a **fan of farewells**: many pellets leave your hand at once; only point-blank hits hurt. AMANE ARU\'s second weapon.',
+      ja: '楽曲「さよなら」が**扇形に散る別れ**となる。多数の弾丸が同時に放たれ、至近距離で全弾当ててこそ痛い。天祢亜留の第二武装。',
     },
     lvDesc: [
-      { zh: '朝最近的破维魔射出 2 支贯穿之矢（夹角很小，主要打同一个）。', en: 'Fires 2 piercing arrows at the nearest foe (tight spread).', ja: '最寄りへ貫通の矢 ×2（狭い角度）。' },
-      { zh: '之矢 ×3。', en: '3 arrows.', ja: '矢 ×3。' },
-      { zh: '贯穿数 +1。', en: 'Pierce +1.', ja: '貫通数 +1。' },
-      { zh: '之矢 ×4（分射最近两个破维魔）。', en: '4 arrows (the two nearest foes get one each).', ja: '矢 ×4（最寄り 2 体へ）。' },
-      { zh: '之矢 ×5，贯穿数 +1 —— 合唱不止。', en: '5 arrows, pierce +1 — the chorus never ends.', ja: '矢 ×5、貫通数 +1 —— 合唱は止まない。' },
+      { zh: '弹丸 ×6，总散布角约 26°。', en: '6 pellets over a ~26° fan.', ja: '弾丸 ×6、扇角およそ 26°。' },
+      { zh: '弹丸 ×7，伤害提升。', en: '7 pellets, more damage.', ja: '弾丸 ×7、ダメージアップ。' },
+      { zh: '弹丸 ×8，散布更宽。', en: '8 pellets, wider spread.', ja: '弾丸 ×8、散布拡大。' },
+      { zh: '弹丸 ×9，冷却缩短。', en: '9 pellets, shorter cooldown.', ja: '弾丸 ×9、冷却短縮。' },
+      { zh: '弹丸 ×10 —— 一句再见，扫清正面。', en: '10 pellets — one goodbye clears the front.', ja: '弾丸 ×10 —— ひとつの別れが正面を薙ぐ。' },
     ],
     levels: [
-      { cd: 1.25, dmg: 13, count: 2, pierce: 1 },
-      { cd: 1.2, dmg: 14, count: 3, pierce: 1 },
-      { cd: 1.15, dmg: 16, count: 3, pierce: 2 },
-      { cd: 1.1, dmg: 18, count: 4, pierce: 2 },
-      { cd: 1.0, dmg: 21, count: 5, pierce: 3 },
+      { cd: 1.7, dmg: 8, count: 6, spread: 0.45, life: 0.36 },
+      { cd: 1.6, dmg: 9, count: 7, spread: 0.48, life: 0.38 },
+      { cd: 1.5, dmg: 10, count: 8, spread: 0.52, life: 0.40 },
+      { cd: 1.35, dmg: 12, count: 9, spread: 0.56, life: 0.42 },
+      { cd: 1.2, dmg: 14, count: 10, spread: 0.60, life: 0.44 },
     ],
     evolved: {
-      name: { zh: '追唱の矢 -chorus-', en: 'Arrows of the Refrain -Chorus-', ja: '追唱の矢 -chorus-' },
+      name: { zh: 'さよなら -adieu-', en: 'Sayonara -Adieu-', ja: 'さよなら -adieu-' },
       desc: {
-        zh: '覚醒——六连追唱，矢列如合唱般贯穿。',
-        en: 'Awakened — six arrows fly as one chorus.',
-        ja: '覚醒——六連の追唱、矢列は合唱のように貫く。',
+        zh: '覚醒——十二枚弹丸同时道别，正面再没有站着的破维魔。',
+        en: 'Awakened — twelve pellets say goodbye at once; nothing stays standing in front.',
+        ja: '覚醒——十二の弾丸が同時に別れを告げ、正面に立つ敵はない。',
       },
-      stats: { cd: 0.8, dmg: 25, count: 6, pierce: 4 },
+      stats: { cd: 0.9, dmg: 18, count: 12, spread: 0.68, life: 0.48 },
+    },
+  },
+  follow: {
+    id: 'follow', icon: '橙', color: '#ff9a3c', behavior: 'machinegun', maxLv: 5, owner: 'asu',
+    name: { zh: 'オレンジ', en: 'Orange', ja: 'オレンジ' },
+    desc: {
+      zh: '乐曲「オレンジ」化作**连珠般的橙色弹雨**：有弹夹，打空后换弹。地邑阿栖的初期武装。',
+      en: 'The song "Orange" becomes a **hail of orange bullets**: it has a magazine and reloads when empty. CHIMURA ASU\'s starting weapon.',
+      ja: '楽曲「オレンジ」が**橙色の弾雨**となる。弾倉を持ち、撃ち切ると装填する。地邑阿栖の初期武装。',
+    },
+    lvDesc: [
+      { zh: '橙色连射，弹夹 18 发，打空换弹。', en: 'Orange repeater; 18-round magazine, reloads when empty.', ja: '橙色の連射、弾倉 18 発、撃ち切ると装填。' },
+      { zh: '弹夹 22 发，伤害提升。', en: '22 rounds, more damage.', ja: '弾倉 22 発、ダメージアップ。' },
+      { zh: '弹夹 26 发，换弹加快。', en: '26 rounds, faster reload.', ja: '弾倉 26 発、装填短縮。' },
+      { zh: '弹夹 30 发，射速提升。', en: '30 rounds, faster fire.', ja: '弾倉 30 発、射速アップ。' },
+      { zh: '弹夹 34 发 —— 橙色弹雨不停。', en: '34 rounds — the orange rain never stops.', ja: '弾倉 34 発 —— 橙色の弾雨は止まらない。' },
+    ],
+    levels: [
+      { cd: 0.17, dmg: 6, count: 1, mag: 18, reload: 1.6, spread: 0.05 },
+      { cd: 0.16, dmg: 7, count: 1, mag: 22, reload: 1.5, spread: 0.05 },
+      { cd: 0.15, dmg: 8, count: 1, mag: 26, reload: 1.3, spread: 0.05 },
+      { cd: 0.13, dmg: 9, count: 1, mag: 30, reload: 1.1, spread: 0.055 },
+      { cd: 0.11, dmg: 10, count: 1, mag: 34, reload: 1.0, spread: 0.06 },
+    ],
+    evolved: {
+      name: { zh: 'オレンジ -sunset-', en: 'Orange -Sunset-', ja: 'オレンジ -sunset-' },
+      desc: {
+        zh: '覚醒——44 发弹鼓与近乎无缝的换弹，橙色黄昏覆盖整条街。',
+        en: 'Awakened — a 44-round drum and near-seamless reloads; an orange sunset covers the street.',
+        ja: '覚醒——44 発の弾倉とほぼ途切れない装填、橙色の夕暮れが街を覆う。',
+      },
+      stats: { cd: 0.09, dmg: 12, count: 1, mag: 44, reload: 0.85, spread: 0.065 },
+    },
+  },
+  kyogen: {
+    id: 'kyogen', icon: '嘘', color: '#d8a7ff', behavior: 'summon', maxLv: 5, owner: 'asu',
+    name: { zh: '虚言', en: 'Soragoto', ja: '虚言' },
+    desc: {
+      zh: '乐曲「虚言」化作**会自行索敌的幻影**：在身边留下虚像，替你说谎、替你开枪。地邑阿栖的第二武装。',
+      en: 'The song "Soragoto" becomes a **phantasm that seeks on its own**: a lie left beside you that shoots for you. CHIMURA ASU\'s second weapon.',
+      ja: '楽曲「虚言」が**自律索敵する幻影**となる。そばに虚像を残し、嘘をつき、弾を撃つ。地邑阿栖の第二武装。',
+    },
+    lvDesc: [
+      { zh: '留下 1 个幻影，持续 5 秒、自动射击。', en: '1 phantasm for 5s, firing on its own.', ja: '幻影 ×1、5 秒間、自動射撃。' },
+      { zh: '幻影伤害提升，射击更快。', en: 'Stronger, faster shots.', ja: '幻影のダメージと射速アップ。' },
+      { zh: '幻影持续 6 秒。', en: 'Phantasm lasts 6s.', ja: '幻影の持続 6 秒。' },
+      { zh: '同时留下 2 个幻影。', en: '2 phantasms at once.', ja: '同時に幻影 ×2。' },
+      { zh: '幻影 ×2、持续 7 秒 —— 谎言满街。', en: '2 phantasms for 7s — lies fill the street.', ja: '幻影 ×2、7 秒持続 —— 嘘が街に満ちる。' },
+    ],
+    levels: [
+      { cd: 7.0, dmg: 10, count: 1, life: 5, fireCd: 0.7 },
+      { cd: 6.4, dmg: 12, count: 1, life: 5.5, fireCd: 0.65 },
+      { cd: 5.8, dmg: 14, count: 1, life: 6, fireCd: 0.6 },
+      { cd: 5.2, dmg: 16, count: 2, life: 6.5, fireCd: 0.55 },
+      { cd: 4.6, dmg: 18, count: 2, life: 7, fireCd: 0.5 },
+    ],
+    evolved: {
+      name: { zh: '虚言 -mirage-', en: 'Soragoto -Mirage-', ja: '虚言 -mirage-' },
+      desc: {
+        zh: '覚醒——三个幻影同时开口，虚言成了街区的实景。',
+        en: 'Awakened — three phantasms speak at once; the lie becomes the district\'s reality.',
+        ja: '覚醒——三つの幻影が同時に口を開き、虚言が街の実景となる。',
+      },
+      stats: { cd: 3.6, dmg: 24, count: 3, life: 8, fireCd: 0.42 },
     },
   },
 

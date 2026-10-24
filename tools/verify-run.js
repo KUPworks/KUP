@@ -402,7 +402,7 @@ const poolB = gA.rollChoices();
 check('觉醒后不再出现觉醒/升级项', !poolB.some(c => c.kind === 'awaken') && !poolB.some(c => c.kind === 'weapon-up' && c.id === 'note'));
 const statAfter = wNote.stat();
 check('觉醒后 stat 切换到进化形态', wNote.evolved && statAfter === wNote.def.evolved.stats && statAfter.dmg > wNote.def.levels[4].dmg);
-check('全部武器均配进化形态数据', Object.keys(KUP.WEAPONS).length === 13 &&
+check('全部武器均配进化形态数据', Object.keys(KUP.WEAPONS).length === 21 &&
   Object.values(KUP.WEAPONS).every(w => w.evolved && w.evolved.stats && w.evolved.name));
 
 // 11b. 主角＝魔女之子（角色 ≠ 声优）；招募角色与同伴
@@ -1466,8 +1466,8 @@ KUP.META.reset();
     SW.levels.every((l, i, a) => i === 0 || (l.arc > a[i - 1].arc && l.len > a[i - 1].len)) &&
     SW.evolved.stats.arc > SW.levels[4].arc && SW.evolved.stats.len > SW.levels[4].len,
     'arc=' + SW.levels.map(l => l.arc).join('/') + ' len=' + SW.levels.map(l => l.len).join('/'));
-  check('武器总数 13 · 行为 11 种', Object.keys(KUP.WEAPONS).length === 13 &&
-    new Set(Object.values(KUP.WEAPONS).map(w => w.behavior)).size === 11);
+  check('武器总数 21 · 行为 15 种', Object.keys(KUP.WEAPONS).length === 21 &&
+    new Set(Object.values(KUP.WEAPONS).map(w => w.behavior)).size === 15);
   /* 扇形判定：正前方中、正侧方不中（窄扇形）、刀长外不中 */
   const mkSlashGame = seed => {
     const g = new KUP.Game(canvas);
@@ -2352,8 +2352,8 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   /* 反向查询：模组 → 具体武器（人类点名的例子：bass 共用テラ・ドロップ与救済の鐘） */
   const bassW = KUP.WEAPONS_OF('shock').map(w => w.id).sort().join(',');
   const lanceW = KUP.WEAPONS_OF('sniper').map(w => w.id).sort().join(',');
-  check('shock 模组被两把武器共用（テラ・ドロップ ＋ 救済の鐘）', bassW === 'bass,prayer', bassW);
-  check('sniper 模组被两把武器共用（追唱の矢 ＋ the last bullet）', lanceW === 'follow,lance', lanceW);
+  check('shock 模组被三把武器共用（テラ・ドロップ ＋ 法螺話 ＋ あおいゆめ）', bassW === 'bass,horagai,prayer', bassW);
+  check('sniper 模组只给 the last bullet（v0.20：オレンジ改走 machinegun）', lanceW === 'lance', lanceW);
   check('每个模组都至少有一把武器在用',
     modIds.every(id => KUP.WEAPONS_OF(id).length >= 1),
     modIds.map(id => id + ':' + KUP.WEAPONS_OF(id).length).join(' '));
@@ -2433,6 +2433,91 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     gSg.projs.every(pr => pr.kb === KUP.MODULE('shotgun').base.kb || pr.kb === 0.6));
 }
 
+// 25p-4. v0.20：角色双武装（花譜三把）与新模组 devour / chain / summon / typhoon
+{
+  check('花譜三把：私論理(homing)＋過去を喰らう(devour)＋不可解(chain)',
+    KUP.WEAPONS.note.behavior === 'homing' && KUP.WEAPONS.kuu.behavior === 'devour' &&
+    KUP.WEAPONS.fukakai.behavior === 'chain' &&
+    [KUP.WEAPONS.note, KUP.WEAPONS.kuu, KUP.WEAPONS.fukakai].every(w => w.owner === 'kaf'));
+  const pairs = {
+    rim: ['orbit', 'horagai'], harusaruhi: ['bass', 'taifuu'], isekaijoucho: ['laser', 'housekitan'],
+    koko: ['lance', 'hakuchuumu'], aru: ['prayer', 'sayonara'], asu: ['follow', 'kyogen'],
+  };
+  check('其余六人各两把，第二把 owner 正确', Object.keys(pairs).every(c =>
+    pairs[c].length === 2 && pairs[c].every(id => KUP.WEAPONS[id] && KUP.WEAPONS[id].owner === c)));
+  check('第二把模组：shock／typhoon／lob／blast／shotgun／summon',
+    KUP.WEAPONS.horagai.behavior === 'shock' && KUP.WEAPONS.taifuu.behavior === 'typhoon' &&
+    KUP.WEAPONS.housekitan.behavior === 'lob' && KUP.WEAPONS.hakuchuumu.behavior === 'blast' &&
+    KUP.WEAPONS.sayonara.behavior === 'shotgun' && KUP.WEAPONS.kyogen.behavior === 'summon');
+  check('白昼夢是「白色空爆」', KUP.WEAPONS.hakuchuumu.color === '#ffffff' &&
+    KUP.WEAPONS.hakuchuumu.behavior === 'blast');
+
+  /* devour：先把敌人拖向中心，收束时群伤 */
+  const gDv = new KUP.Game(canvas);
+  gDv.start({ char: 'kaf', area: 'area0', seed: 921 });
+  gDv.director = () => {};
+  gDv.player.weapons = [];
+  const dvE = gDv.spawnEnemy('noise', 1500, 1500);
+  dvE.x = gDv.player.x + 90; dvE.y = gDv.player.y;
+  const dvD0 = Math.hypot(dvE.x - gDv.player.x, dvE.y - gDv.player.y);
+  const hpDv = dvE.hp;
+  gDv.zones.push(new KUP.Zone(gDv.player.x, gDv.player.y, {
+    r: 140, dmg: 12, kind: 'devour', pull: 300, life: 0.4,
+  }));
+  gDv.update(0.2);
+  const dvD1 = Math.hypot(dvE.x - gDv.player.x, dvE.y - gDv.player.y);
+  check('吞噬：领域把敌人拖向中心', dvD1 < dvD0 - 5, dvD0.toFixed(1) + '→' + dvD1.toFixed(1));
+  gDv.update(0.3);
+  check('吞噬：收束时对范围内敌人造成伤害', dvE.dead || dvE.hp < hpDv, 'hp ' + hpDv + '→' + dvE.hp);
+
+  /* chain：最近怪 → 下一个最近怪，超出 range 的不进入首段 */
+  const gCh = new KUP.Game(canvas);
+  gCh.start({ char: 'kaf', area: 'area0', seed: 922 });
+  gCh.director = () => {};
+  gCh.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.fukakai, 5)];
+  gCh.player.weapons[0].t = 0;
+  const cE = [];
+  for (let i = 0; i < 3; i++) {
+    const e = gCh.spawnEnemy('noise', 1500, 1500);
+    e.x = gCh.player.x + 120 + i * 200; e.y = gCh.player.y;
+    e.maxhp = 9999; e.hp = 9999; e.speed = 0;
+    cE.push(e);
+  }
+  const cFar = gCh.spawnEnemy('noise', 1500, 1500);
+  cFar.x = gCh.player.x + 1600; cFar.y = gCh.player.y; cFar.maxhp = 9999; cFar.hp = 9999; cFar.speed = 0;
+  gCh.update(0.02);
+  check('连锁：沿最近的敌人逐段传导（3 段都掉血）',
+    cE.every(e => e.hp < 9999), cE.map(e => Math.round(9999 - e.hp)).join('/'));
+  check('连锁：超出 range 的敌人不被首段命中', cFar.hp === 9999);
+  check('连锁：每段画 1 条纯表现光束（不重复结算）', gCh.beams.length === 3, 'beams=' + gCh.beams.length);
+
+  /* summon：幻影自动索敌射击 */
+  const gSm = new KUP.Game(canvas);
+  gSm.start({ char: 'kaf', area: 'area0', seed: 923 });
+  gSm.director = () => {};
+  gSm.player.weapons = [];
+  const smE = gSm.spawnEnemy('noise', 1500, 1500);
+  smE.x = gSm.player.x + 300; smE.y = gSm.player.y; smE.maxhp = 9999; smE.hp = 9999; smE.speed = 0;
+  gSm.summons.push(new KUP.Summon(gSm.player.x, gSm.player.y, { life: 3, fireCd: 0.3, dmg: 5 }));
+  for (let i = 0; i < 12; i++) gSm.update(0.05);
+  check('召唤：幻影自动索敌并射出弹体', gSm.projs.length > 0 && gSm.summons.length === 1,
+    'projs=' + gSm.projs.length);
+
+  /* typhoon：巨大弹体、高击退 */
+  const gTy = new KUP.Game(canvas);
+  gTy.start({ char: 'kaf', area: 'area0', seed: 924 });
+  gTy.director = () => {};
+  gTy.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.taifuu, 5)];
+  const wTy = gTy.player.weapons[0];
+  wTy.t = 0;
+  gTy.projs.length = 0;
+  wTy.update(0.016, gTy);
+  check('台風の子：巨大弹体（r=34）＋高击退倍率（kb=3.6）',
+    gTy.projs.length === 2 && gTy.projs[0].r === 34 && gTy.projs[0].kb === 3.6 &&
+    gTy.projs[0].kind === 'typhoon',
+    'n=' + gTy.projs.length + ' r=' + (gTy.projs[0] && gTy.projs[0].r) + ' kb=' + (gTy.projs[0] && gTy.projs[0].kb));
+}
+
 // 25p-2. 「范围」生效面：逐模组实测 areaMult 1 → 2 时几何量是否成比例放大
 {
   const probe = (wid, area) => {
@@ -2455,8 +2540,8 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     ['prayer', '救済の鐘（共用 bass 模组）', r => r.g.rings[0] && r.g.rings[0].maxR],
     ['slash', '斩音太刀（刀长）', r => r.g.slashes[0] && r.g.slashes[0].len],
     ['laser', '贯穿光束（长度）', r => r.g.beams[0] && r.g.beams[0].len],
-    ['lance', '追唱の矢（命中半径）', r => r.g.projs[0] && r.g.projs[0].r],
-    ['follow', '追唱の矢〈亜留〉（共用 sniper 模组）', r => r.g.projs[0] && r.g.projs[0].r],
+    ['lance', 'the last bullet（sniper 命中半径）', r => r.g.projs[0] && r.g.projs[0].r],
+    ['follow', 'オレンジ（machinegun 命中半径）', r => r.g.projs[0] && r.g.projs[0].r],
     ['mg', '连符机关（machinegun 命中半径）', r => r.g.projs[0] && r.g.projs[0].r],
     ['shot', '散弹和音（shotgun 弹丸半径）', r => r.g.projs[0] && r.g.projs[0].r],
     ['toss', '残留音块（音场半径）', r => r.g.tosses[0] && r.g.tosses[0].zone.r],
@@ -2749,7 +2834,7 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   const q1 = gPj.spawnEnemy('noise', gPj.player.x + 300, gPj.player.y - 20);
   const q2 = gPj.spawnEnemy('noise', gPj.player.x - 260, gPj.player.y + 60);
   q1.speed = 0; q2.speed = 0;
-  gPj.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.follow, 5)];   // count 5
+  gPj.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.lance, 5)];   // count 5
   gPj.player.weapons[0].t = 0;
   gPj.player.weapons[0].update(0.016, gPj);
   const dirs = gPj.projs.map(pr => Math.atan2(pr.vy, pr.vx));

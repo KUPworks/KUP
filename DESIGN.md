@@ -18,6 +18,7 @@
 
 | 版本 | 主题 | 内容 |
 |---|---|---|
+| **v0.20.0** | **武器／模组／模组族三层拆分 ＋ 角色双武装（花譜三把）** | 人类 2026-10-24：「你真的区分好武器 id 和武器模组了吗？」并把「吞噬过去／不可解」分别改成新模组 `devour`／`chain`、把「白昼夢」做成白色 bomb、「虚言」做成新的 summon 类。**三层命名**：武器 id（歌／武装的数据身份）≠ 模组 id（行为实现）≠ 模组族（大模组）；模组全部改成行为名（`note→homing`、`lance→sniper`、`bass→shock` 等），audit 禁止模组 id 与武器 id 重名，并要求每个模组声明 `family`。**projectile 大模组**收拢 `homing`／`sniper`／`machinegun`（弹夹 mag＋换弹 reload）／`shotgun`（总散布角 spread）／`typhoon`（巨大重弹＋击退倍率）；另新增 `devour`（拖拽聚怪＋收束群伤）、`chain`（最近怪→下一个最近怪，range/jump/jumps）、`summon`（新实体 `KUP.Summon`）。**武器 11→21、行为 9→15**：花譜 3 把（私論理／過去を喰らう／不可解），其余 6 人各 2 把（法螺話／台風の子／ヰ世界の宝石譚／白昼夢／さよなら／虚言）；`Pilgrim` 与「百花缭乱」不做。回归 **583 → 606 项**，存档 122 项。 |
 | **v0.19.0** | **数据层拆分：`data.js` → `js/data/` 按域 ＋ manifest 单一真值 ＋ `KUP.DATA` 接口** | 人类 2026-10-23：「先将 data.js 拆分为 data/enemy.js、data/char.js、data/skin.js 等并安排好相关接口」。原 `js/data.js` 单文件 135KB／1849 行，是并行 Agent 最大的冲突面。现拆成 **8 个域文件**：`char`（CHARS／CRIT／显示名／ULTIMATES）· `weapon`（WEAPON_MODULES＋WEAPONS）· `passive` · `item` · `enemy`（ENEMIES＋BOSSES）· `skin`（FORM_SERIES＋FORMS＋查询）· `support`（COMPANIONS＋SUPPORTS）· `shop`；另有 `manifest.js`（**加载顺序唯一真值**：MODULES 的 id/file/provides/dependsOn，Node 工具直接 require 同一份清单）· `core.js`（`KUP.DATA`：register／module／provider／audit／finalize）· `index.js`（最后加载，注册全部域并跑 audit）。**接口**：新增 `KUP.WEAPON(id)`／`KUP.ENEMY(id)`；`KUP.DATA.audit()` 跨域校验角色↔武器（behavior／owner／params 白名单）↔形态（series／char／kinds）↔支援 owner↔Boss pattern↔商店，启动时一次查完，`verify-run` 断言 0 问题；`tools/check-html.js` 核对 index.html 的 `<script>` 与 manifest 同序齐全；`tools/inventory.js` 打印 `DATA`／`DATA_AUDIT`。行为零改动（数据逐行迁移）。回归 **575 → 583 项**（数据层 8 项），存档仍 **122 项**。 |
 | **v0.18.8** | **清理不用的关卡副标题** | 人类 2026-10-22：「清理一下不用的关卡副标题」，并选定两项都删：① 结算的「惨胜副标题」`end.win.sub.pyrrhic`（三语词条）——v0.15.2 起就固定用 `end.win.sub`，词条一直"保留未删"；② 番街选择卡上的章节行（`.area-chapter` 元素＋赋值＋CSS）——章节名只在开局「Q 発生」横幅显示一次即可；同时删掉治安战（endless）的 `chapter`，避免横幅出现「治安戦 · 治安戦 -Order War-」的重复。数据层 `AREAS[].chapter` 仍保留给七个番街（Q 横幅与章节演出使用）。回归 **573 → 575 项**（七个番街有章节名且治安战没有、pyrrhic 词条已从词典删除、`.area-chapter` 不再被渲染）。 |
 | **v0.18.7** | **修复皮肤「共用／全部」系列按钮点不动** | 人类 2026-10-22：「修正一下『共用』『全部』皮肤分类无法点击的问题」。根因：v0.18.2 加的「自动跳到选中形态所在系列」逻辑写在**每次渲染**里，于是点「共用」→ 渲染时发现选中的雏鸟不在共用组 → 立刻弹回「化歩」；点「全部」时 `__all` 又被当成"未知分组"清掉，同样回到「化歩」。现在把分组解析抽成纯函数 `KUP.resolveFormGroup(groups, list, currentKey, formId, keepGroup)`：`__all` 视为合法伪分组；只有**非手动切换**（换角色/首次渲染）才自动跳到选中形态所在组，点击系列按钮时传 `keepGroup=true` 保留玩家选择。回归 **568 → 573 项**（自动跳组、手动保留、__all 合法、未知分组回落、同组不跳）。 |
@@ -693,7 +694,7 @@ KUP.DERIVED = [
 
 ---
 
-### 6.15 角色双武器设计细则（v0.20 计划，**本轮只设计、不实现**）
+### 6.15 角色双武器设计细则（v0.20：6.15.1–6.15.9 为草案，**6.15.10 为实际落地**）
 
 > 人类 2026-10-24：为每位角色按**声优早期原创热门曲**设计两把武器——一把初始、一把带角色标签的「第二武器」，先写 DESIGN 细则，下一条对话开工。
 >
@@ -977,6 +978,71 @@ Lv5  cd1.2 dmg22 count3 pierce3 zigzag0.60 decoys3 decoyMul0.55
 3. **`Pilgrim` 曲目元数据**：`discography.md` 未收录，暂标 `source: pending`；开工前补官方出处或确认同名曲。
 4. **`さよなら`／`あおいゆめ` 的角色归属**：本稿按「现有初始保留」把 `prayer` 给 `あおいゆめ`、`sayonara` 作第二把；若人类想反过来（`sayonara` 初始），只需交换两把的 `role` 与等级表。
 5. **「角色相关标签」的形态**：本稿落为 `sig.tags`（字符串数组，可查询）；若人类想要 UI 徽章/卡面角标，另加表现层，不影响数据契约。
+
+#### 6.15.10 实施记录（v0.20.0，2026-10-24 已落地）
+
+> 人类在开工前改了口径，**本节为实际实现**；与 6.15.1–6.15.9 草案冲突处，以本节为准。
+
+**A. 三层命名（直接回应「你真的区分好武器 id 和武器模组了吗？」）**
+
+| 层 | 表 | 是什么 | 例 |
+|---|---|---|---|
+| 武器 id | `KUP.WEAPONS` | **数据**：一首歌／一位角色的武装；存档与 §6.9 派生曲只认它 | `note`＝私論理、`lance`＝the last bullet |
+| 模组 id | `KUP.WEAPON_MODULES` | **行为**：可复用的玩法实现；**不再与武器重名** | `homing`＝追踪弹、`sniper`＝贯通狙击 |
+| 模组族 | `KUP.WEAPON_FAMILIES` | **大模组**：把同族行为收在一起 | `projectile`＝homing/sniper/machinegun/shotgun/typhoon |
+
+- audit 新增两条硬规则：① 模组 id 不得等于任何武器 id；② 每个模组必须声明 `family`，且族 `modules` 清单与模组一一对应。
+- 查询：`KUP.MODULE_OF(武器)`／`KUP.WEAPONS_OF(模组)`／`KUP.FAMILY_OF(武器)`／`KUP.MODULES_OF_FAMILY(族)`。
+- 旧模组 id 全部改成行为名：`note→homing`、`lance→sniper`、`orbit→orbital`、`bass→shock`、`slash→cleave`、`laser→beam`、`toss→lob`、`bomb→blast`、`mine→minefield`。
+
+**B. 实际模组（15）**
+
+| 模组 | 族 | 产出实体 | 关键参数 |
+|---|---|---|---|
+| `homing` | projectile | Projectile | homing／count／split |
+| `sniper` | projectile | Projectile | pierce／targets／小夹角 spread |
+| `machinegun` | projectile | Projectile | **mag 弹夹／reload 换弹／cd 连射** |
+| `shotgun` | projectile | Projectile | **spread＝总散布角（弧度）／count 弹丸** |
+| `typhoon` | projectile | Projectile | 巨大 r／pierce／**kb 击退倍率** |
+| `orbital` | orbit | WeaponRuntime.orbs | spin／orbR／半圈律 |
+| `shock` | wave | Ring | arc（度，<360 为扇形）／kb |
+| `cleave` | melee | Slash | arc／len／wave |
+| `beam` | beam | Beam | len／w／double |
+| `lob` | field | Toss→Zone | range／r／life |
+| `blast` | field | Zone（bomb） | fuse／range／r |
+| `minefield` | field | Zone（mine） | triggerMul／max |
+| `devour` | curse | **Zone（devour）** | **pull 拖拽速度**／life／收束 dmg |
+| `chain` | curse | Beam（chain，纯表现） | **range 首段射程／jump 跳距／jumps 段数** |
+| `summon` | summon | **Summon（新实体）** | life／fireCd／count |
+
+**C. 实际武器（21）与角色归属**
+
+| 角色 | 初始（starter） | 第二／第三（signature） |
+|---|---|---|
+| 森先化歩（花譜） | `note` 私論理（homing） | `kuu` 過去を喰らう（devour）／`fukakai` 不可解（chain） |
+| 谷置狸眼（理芽） | `orbit` 食虫植物（orbital） | `horagai` 法螺話（shock：70–90° 窄扇形、低伤、kb 380–520） |
+| 朝主派流（春猿火） | `bass` テラ（shock） | `taifuu` 台風の子（typhoon：巨大弹体＋高击退） |
+| 夜河世界（ヰ世界情緒） | `laser` シリウスの心臓（beam） | `housekitan` ヰ世界の宝石譚（lob） |
+| 輪廻此処（幸祜） | `lance` the last bullet（sniper） | `hakuchuumu` 白昼夢（blast，白色空爆） |
+| 天祢亜留（存流） | `prayer` あおいゆめ（shock） | `sayonara` さよなら（shotgun） |
+| 地邑阿栖（明透） | `follow` オレンジ（machinegun） | `kyogen` 虚言（summon，新 Summon 实体） |
+
+> 通用组（无 owner）：`toss`／`bomb`／`mine`／`slash`／`mg`（machinegun）／`shot`（shotgun）。mg／shot 同时是 machinegun／shotgun 的首个使用者与回归样本。
+
+**D. 与草案的差异（人类本轮口径）**
+
+1. **模组改名**：`lance` 模组 → `sniper`、`note` 模组 → `homing`；武器 id 不动。
+2. **花譜改为 3 把**（草案 2 把）：私論理仍初始；過去を喰らう＝`devour`（聚怪群伤）；不可解＝`chain`（最近怪→下一个最近怪，有 range/jump 上限）。
+3. **Pilgrim 不做**：曲目保留，不生成武器；理芽第二把改「法螺話」（高击退低伤害窄扇形）。
+4. **百花缭乱不做**：春猿火第二把改「台風の子」（大体积高击退 projectile）。
+5. **白昼夢＝白色 bomb**；**虚言＝新的 summon 类**；**さよなら＝shotgun**；**ヰ世界の宝石譚＝lob**。
+6. 草案的 `sig` 元数据（songId/tags/role）**本轮未落数据**——先保证武器可玩；留给派生曲／使魔系统一并做，避免现在写一半标签。
+7. 通用武器 `mg`／`shot` 为验证两个新弹道模组而加入（否则 audit 会判「空模组」）。
+
+**E. 验证**
+
+- `verify-run` **606 checks** 全绿：新增 machinegun 弹夹/换弹/停火、shotgun 弹丸数与总散布角、devour 拖拽与收束伤害、chain 三段传导与超距不跳、summon 自动射击、typhoon 巨大弹体/击退、三层命名与族 audit。
+- `save.test` 122、`check-html`、`inventory`（21 武器 / 15 行为 / audit OK）。
 
 ---
 

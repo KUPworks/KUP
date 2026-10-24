@@ -280,6 +280,98 @@ window.KUP = window.KUP || {};
           }
           break;
         }
+        /* ===== v0.20：咒缚系 / 召唤系（花譜・明透的第二武装）===== */
+        case 'devour': { // 過去を喰らう：聚怪群伤（Zone kind='devour' 先拖拽、后引爆）
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const n = Math.max(1, s.count | 0);
+            const targets = game.nearestEnemies ? game.nearestEnemies(p.x, p.y, n) : [];
+            for (let i = 0; i < n; i++) {
+              const tgt = targets[i] || (i === 0 ? game.nearestEnemy(p.x, p.y) : null);
+              const cx = tgt ? tgt.x : p.x, cy = tgt ? tgt.y : p.y;
+              game.zones.push(new KUP.Zone(cx, cy, {
+                r: V('r', 110), dmg: s.dmg * p.dmgMult, kind: 'devour', color: col,
+                pull: V('pull', 320), life: V('life', 0.7),
+              }));
+            }
+            KUP.Audio.sfx('warning');
+          }
+          break;
+        }
+        case 'chain': { // 不可解：最近怪 → 下一个最近怪（跳跃距离上限 + 段数上限）
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const range = V('range', 560), jump = V('jump', 240);
+            const jumps = Math.max(1, s.jumps | 0);
+            let cur = null, bd = range * range;
+            for (const e of game.enemies) {
+              if (e.dead) continue;
+              const d = U.dist2(p.x, p.y, e.x, e.y);
+              if (d < bd) { bd = d; cur = e; }
+            }
+            if (cur) {
+              const hit = new Set();
+              let px = p.x, py = p.y;
+              for (let j = 0; j < jumps && cur; j++) {
+                hit.add(cur);
+                const dx = cur.x - px, dy = cur.y - py;
+                const len = Math.hypot(dx, dy) || 1;
+                /* 纯表现：dmg=0 + visualOnly，不重复结算（伤害由下一行手动给） */
+                game.beams.push(new KUP.Beam(px, py, Math.atan2(dy, dx), {
+                  len, w: 6, dmg: 0, color: col, game, visualOnly: true,
+                }));
+                game.damageEnemy(cur, s.dmg * p.dmgMult, (dx / len) * 60, (dy / len) * 60);
+                px = cur.x; py = cur.y;
+                let next = null, nd = jump * jump;
+                for (const e of game.enemies) {
+                  if (e.dead || hit.has(e)) continue;
+                  const d = U.dist2(px, py, e.x, e.y);
+                  if (d < nd) { nd = d; next = e; }
+                }
+                cur = next;
+              }
+              KUP.Audio.sfx('laser');
+            }
+          }
+          break;
+        }
+        case 'typhoon': { // 台風の子：巨大弹体、高击退
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const ad = game.aimDir(p);
+            const base = Math.atan2(ad.y, ad.x);
+            const n = Math.max(1, s.count | 0);
+            const sp = V('speed', 250);
+            for (let i = 0; i < n; i++) {
+              const a = base + (i - (n - 1) / 2) * 0.12;
+              game.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
+                dmg: s.dmg * p.dmgMult, r: V('r', 26), life: V('life', 2.8), pierce: s.pierce | 0,
+                homing: V('homing', 0.7), kb: V('kb', 3), color: col, kind: 'typhoon',
+              }));
+            }
+            game.shake(2);
+            KUP.Audio.sfx('boom');
+          }
+          break;
+        }
+        case 'summon': { // 虚言：留下会自行索敌射击的幻影
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const n = Math.max(1, s.count | 0);
+            for (let i = 0; i < n; i++) {
+              game.summons.push(new KUP.Summon(p.x, p.y, {
+                r: V('r', 13), life: V('life', 5), fireCd: V('fireCd', 0.65),
+                dmg: s.dmg * p.dmgMult, color: col, phase: (U.TAU * i) / n,
+              }));
+            }
+            KUP.Audio.sfx('select');
+          }
+          break;
+        }
         /* ===== 新武器组：滞留・投掷系 ===== */
         case 'lob': { // 残留音块：**分别投向最近 N 个不同的敌人**，落点留下滞留音场
           this.t -= dt;
@@ -423,6 +515,8 @@ window.KUP = window.KUP || {};
       this.parts = []; this.texts = [];
       /* 滞留区域 / 投掷物（新武器组与 Boss 共用） */
       this.zones = []; this.tosses = [];
+      /* v0.20：召唤物（虚言等） */
+      this.summons = [];
       /* 纯表现层（不参与任何判定）：地雷起爆的向外冲击波等，见 KUP.Shockwave */
       this.fx = [];
       /* 敌方攻击（Danger）：与玩家武器分离，统一预警与高对比外观 */
@@ -1044,6 +1138,7 @@ window.KUP = window.KUP || {};
       }
       for (const z of this.zones) z.update(dt, this);
       for (const ts of this.tosses) ts.update(dt, this);
+      for (const sm of this.summons) sm.update(dt, this);
       for (const f of this.fx) f.update(dt);
       for (const dg of this.dangers) dg.update(dt, this);
       for (const g of this.gems) { g.update(dt, this); if (!g.dead) this.collideCity(g); }
@@ -1059,6 +1154,7 @@ window.KUP = window.KUP || {};
       this.beams = this.beams.filter(b => !b.dead);
       this.zones = this.zones.filter(z => !z.dead);
       this.tosses = this.tosses.filter(t => !t.dead);
+      this.summons = this.summons.filter(s => !s.dead);
       this.fx = this.fx.filter(f => !f.dead);
       this.dangers = this.dangers.filter(d => !d.dead);
       /* 敌袭预警 HUD：有未生效的 Danger 贴近玩家时提示 */

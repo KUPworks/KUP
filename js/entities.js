@@ -826,6 +826,62 @@ window.KUP = window.KUP || {};
     }
   }
 
+  /* ---------- 召唤物（v0.20「虚言」）----------
+   * 跟随玩家、自动索敌射击的幻影；不参与碰撞，只产弹。
+   * 与 Projectile 一样属于**玩家武器侧**，不会误伤玩家。 */
+  class Summon {
+    constructor(x, y, opt) {
+      opt = opt || {};
+      this.x = x; this.y = y;
+      this.r = opt.r || 13;
+      this.life = opt.life || 5; this.age = 0;
+      this.fireCd = opt.fireCd || 0.65; this.t = 0.35;
+      this.dmg = opt.dmg || 8;
+      this.color = opt.color || '#d8a7ff';
+      this.phase = opt.phase || 0;
+      this.dead = false;
+    }
+    update(dt, game) {
+      this.age += dt;
+      if (this.age >= this.life) { this.dead = true; return; }
+      const p = game.player;
+      if (!p) { this.dead = true; return; }
+      const a = this.age * 1.4 + this.phase;
+      const tx = p.x + Math.cos(a) * 52, ty = p.y + Math.sin(a) * 52;
+      const k = Math.min(1, dt * 5);
+      this.x += (tx - this.x) * k; this.y += (ty - this.y) * k;
+      this.t -= dt;
+      if (this.t <= 0) {
+        this.t = this.fireCd;
+        const e = game.nearestEnemy(this.x, this.y);
+        if (e) {
+          const ang = Math.atan2(e.y - this.y, e.x - this.x);
+          game.projs.push(new KUP.Projectile(this.x, this.y, Math.cos(ang) * 460, Math.sin(ang) * 460, {
+            dmg: this.dmg, r: 5, life: 1.1, pierce: 0, homing: 5.5, color: this.color, kind: 'homing',
+          }));
+          KUP.Audio.sfx('shoot');
+        }
+      }
+    }
+    draw(ctx, t) {
+      const left = Math.max(0, 1 - this.age / this.life);
+      const pulse = 0.65 + 0.35 * Math.sin(t * 6 + this.phase);
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.globalAlpha = (0.32 + 0.42 * left) * pulse;
+      ctx.fillStyle = this.color;
+      ctx.shadowColor = this.color; ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.moveTo(0, -this.r); ctx.lineTo(this.r * 0.72, 0);
+      ctx.lineTo(0, this.r); ctx.lineTo(-this.r * 0.72, 0);
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = Math.min(1, left + 0.25);
+      ctx.fillStyle = 'rgba(255,255,255,.85)';
+      ctx.beginPath(); ctx.arc(0, 0, Math.max(2, this.r * 0.22), 0, U.TAU); ctx.fill();
+      ctx.restore();
+    }
+  }
+
   /* ---------- 片段（フラグメント ★：经验 / 回复 / 記憶の卵） ---------- */
   class Gem {
     constructor(x, y, xp, type) {
@@ -1041,14 +1097,16 @@ window.KUP = window.KUP || {};
       this.life = opt.life || 0.16; this.age = 0;
       this.color = opt.color || '#aef0ff';
       this.dead = false;
-      // 立即结算（只对破维魔）
+      // 立即结算（只对破维魔）；visualOnly 仅借光束画一条线（连锁等由分派自己结算）
       const cs = Math.cos(dir), sn = Math.sin(dir);
       const game = opt.game;
-      for (const e of game.enemies) {
-        if (e.dead) continue;
-        const tt = U.clamp((e.x - x) * cs + (e.y - y) * sn, 0, this.len);
-        const px = x + cs * tt, py = y + sn * tt;
-        if (U.dist2(e.x, e.y, px, py) < Math.pow(this.w / 2 + e.r, 2)) game.damageEnemy(e, this.dmg);
+      if (!opt.visualOnly) {
+        for (const e of game.enemies) {
+          if (e.dead) continue;
+          const tt = U.clamp((e.x - x) * cs + (e.y - y) * sn, 0, this.len);
+          const px = x + cs * tt, py = y + sn * tt;
+          if (U.dist2(e.x, e.y, px, py) < Math.pow(this.w / 2 + e.r, 2)) game.damageEnemy(e, this.dmg);
+        }
       }
     }
     update(dt) { this.age += dt; if (this.age >= this.life) this.dead = true; }
@@ -1340,11 +1398,12 @@ window.KUP = window.KUP || {};
       this.triggerR = opt.triggerR || this.r;
       this.dmg = opt.dmg || 0;
       this.color = opt.color || '#8fd0ff';
-      this.kind = opt.kind || 'field';       // field 滞留音场 | bomb 空爆 | mine 地雷
+      this.kind = opt.kind || 'field';       // field 滞留音场 | bomb 空爆 | mine 地雷 | devour 吞噬
       this.life = opt.life || 0;             // 0＝无时限（由 arm/引爆决定）
       this.age = 0;
       this.arm = opt.arm || 0;               // 引爆延迟（空爆的起爆前摇）
       this.armed = this.arm <= 0;
+      this.pull = opt.pull || 0;             // devour：每秒把敌人拖向中心的距离
       this.tickRate = opt.tickRate || 0.45;
       this.tick = 0;
       this.slow = !!opt.slow;                // 是否给敌人减速（滞留效果）
@@ -1381,6 +1440,23 @@ window.KUP = window.KUP || {};
     }
     update(dt, game) {
       this.age += dt;
+      /* v0.20 吞噬（devour）：先把范围内的敌人拖向中心，收束时引爆；
+       * 拖拽走 collideCity，避免被推进楼体。Boss 不吃拖拽（只吃最后的伤害）。 */
+      if (this.kind === 'devour') {
+        for (const e of game.enemies) {
+          if (e.dead || e.boss) continue;
+          const dx = this.x - e.x, dy = this.y - e.y;
+          const d2 = dx * dx + dy * dy;
+          const rr = this.r + e.r;
+          if (d2 > rr * rr || d2 < 1) continue;
+          const d = Math.sqrt(d2);
+          const step = Math.min(d, this.pull * dt);
+          e.x += (dx / d) * step; e.y += (dy / d) * step;
+          if (game.collideCity) game.collideCity(e);
+        }
+        if (this.age >= this.life) { this.detonate(game); this.dead = true; }
+        return;
+      }
       /* 地雷：待机 → 敌人踏进**触发半径**即引爆（伤害按**爆炸半径**结算）→ 消失 */
       if (this.kind === 'mine') {
         for (const e of game.enemies) {
@@ -1567,6 +1643,7 @@ window.KUP = window.KUP || {};
   KUP.Zone = Zone;
   KUP.Shockwave = Shockwave;
   KUP.Toss = Toss;
+  KUP.Summon = Summon;
   KUP.Particle = Particle;
   KUP.FloatText = FloatText;
 })();
