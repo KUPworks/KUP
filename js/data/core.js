@@ -273,6 +273,32 @@ window.KUP = window.KUP || {};
       need(bosses.boss0, 'KUP.BOSSES 缺少 boss0 兜底');
       need(enemies.boss === bosses.boss0, 'KUP.ENEMIES.boss 应指向 KUP.BOSSES.boss0');
 
+      /* ---------- 4b. 八形分类（v0.20.1） ----------
+       * shape 决定剪影（js/entities.js 的 KUP.ENEMY_SILHOUETTES 用同一套 id）。
+       * 三条规则：① 八形齐全且 id 唯一；② 每个敌人都写了 shape 且命中；
+       *          ③ 每个形至少有一个敌人（不允许"分类留空"）。 */
+      var shapes = KUP.ENEMY_SHAPES || [];
+      var shapeSet = uniqueBy(shapes, 'KUP.ENEMY_SHAPES', function (s) { return s.id; });
+      need(shapes.length === 8, 'KUP.ENEMY_SHAPES 应为八形（当前 ' + shapes.length + '）');
+      shapes.forEach(function (s) {
+        needTri(s.name, '破维魔形态 ' + s.id + ' 的 name');
+        needStr(s.note, '破维魔形态 ' + s.id + ' 的 note');
+      });
+      Object.keys(enemies).forEach(function (key) {
+        var e = enemies[key];
+        if (!isObj(e)) { return; }
+        need(isStr(e.shape), '敌人 ' + key + ' 缺少 shape（须为八形之一）');
+        if (isStr(e.shape)) {
+          need(shapeSet[e.shape], '敌人 ' + key + ' 的 shape「' + e.shape + '」不在 KUP.ENEMY_SHAPES');
+        }
+      });
+      if (typeof KUP.enemiesOfShape === 'function') {
+        shapes.forEach(function (s) {
+          need(KUP.enemiesOfShape(s.id).length > 0,
+            '破维魔形态「' + s.id + '」还没有任何敌人（分类不应留空）');
+        });
+      }
+
       /* ---------- 5. 皮肤（形态） ---------- */
       var series = KUP.FORM_SERIES || [];
       var serSet = uniqueBy(series, 'KUP.FORM_SERIES', function (s) { return s.id; });
@@ -341,7 +367,7 @@ window.KUP = window.KUP || {};
       ['CHAR', 'charUnlockText', 'CRIT_OF', 'nameOf', 'shortOf', 'cvOf',
         'MODULE', 'WEAPONS_OF', 'MODULE_OF', 'WEAPON', 'FAMILY', 'MODULES_OF_FAMILY',
         'FAMILY_OF_MODULE', 'FAMILY_OF', 'ULTIMATE',
-        'ITEM', 'ENEMY', 'BOSS', 'COMPANION', 'companionsActive',
+        'ITEM', 'ENEMY', 'BOSS', 'ENEMY_SHAPE', 'enemiesOfShape', 'COMPANION', 'companionsActive',
         'SUPPORT', 'FORM', 'defaultForm', 'formFits', 'formsFor',
         'formsOfChar', 'formGroups', 'charKind', 'SHOP_ITEM', 'shopCost'].forEach(needFn);
 

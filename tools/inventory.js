@@ -35,6 +35,9 @@ console.log('SHOP       ' + KUP.SHOP.length);
 console.log('FORMS      ' + KUP.FORMS.length + '（' + KUP.FORMS.map(f => f.id).join(',') + '）');
 console.log('ENEMIES    ' + Object.keys(KUP.ENEMIES).filter(k => !k.startsWith('boss')).join(','));
 console.log('BOSSES     ' + Object.keys(KUP.BOSSES).length + ' 模式: ' + [...new Set(Object.values(KUP.BOSSES).map(b => b.pattern))].join('/'));
+/* v0.20.1 八形：形 → 成员（同一体只算一次；boss0 与 boss 是同一对象） */
+console.log('SHAPES     ' + KUP.ENEMY_SHAPES.length + '（' +
+  KUP.ENEMY_SHAPES.map(s => s.id + ':' + KUP.enemiesOfShape(s.id).map(e => e.id).join('+')).join(' / ') + '）');
 console.log('MODIFIERS  ' + Object.keys(KUP.MODIFIERS).length + '（' + Object.keys(KUP.MODIFIERS).join(',') + '）');
 console.log('MODS_KEYS  ' + KUP.MODS_KEYS.length);
 console.log('bossTime 默认 ' + KUP.CONFIG.BOSS_TIME + 's / 暴走 ' + KUP.CONFIG.ENRAGE_TIME + 's；XP_NEXT(1..5)=' + [1,2,3,4,5].map(l => KUP.XP_NEXT(l)).join(','));
