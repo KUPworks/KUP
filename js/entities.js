@@ -11,18 +11,17 @@ window.KUP = window.KUP || {};
    *   强度系数 k   ＝ 保护效率 / 满值（v0.18.4：效率与耐久分开；效率 88/100）
    *   查表基础值 b ＝ C.SHIELD.REDUCE[类型]
    *   减伤        ＝ base × (SCALE_OFF + SCALE_MUL × k)     （满值 k=1 时精确等于 b；HARD_CAP 封顶）
-   *   贴靠特例：被光束/轰炸打穿（taint）或**持续贴靠已失效**（touchT≤0 且 touchUsed）⇒ 0%。
-   *   ★ v0.18.5（人类 2026-10-22「应是不为0就有减伤效果」）：**删掉**旧门槛
-   *     「总耐久 < 满值 × TOUCH_UNIT 就完全不挡」——耐久只剩 1 也照样有减伤，
-   *     只有**耐久真正归零**时才没有减伤。
+   *   ★ v0.18.5：删掉「总耐久 < 满值 × TOUCH_UNIT 就不挡」的旧门槛；
+   *   ★ v0.20.3（人类 2026-10-24「怎么又是没满就不减伤了…比如 19/40」）：
+   *     再删掉**贴靠失效（touchUsed）**与**打穿失灵（taint）**两道门槛——
+   *     它们会让"刚被接触挡过一次/刚被光束打过"的 0.45s～3s 内完全没有减伤，
+   *     表现为"耐久明明还有 19/40 却不减伤"。
+   *     **现在的唯一规则：耐久 > 0 就按保护效率减伤，归零才没有。**
    * p 可为玩家实例；缺 shieldTotal 时返回 0。 */
   KUP.shieldReducePct = (p, kind) => {
     const S = C.SHIELD, RU = S.REDUCE || {};
     const total = p && p.shieldTotal ? p.shieldTotal() : 0;
     if (total <= 0) return 0;                       // 只有打空才是"没有减伤"
-    if (kind === 'contact') {
-      if (p.shieldTaintT > 0 || p.shieldTouchUsed) return 0;
-    }
     const base = RU[kind] !== undefined ? RU[kind] : RU.contact;
     /* v0.18.4：减伤只看**保护效率**（玩家实例有 shieldEfficiency 时），
      * 旧探针对象没有该函数 ⇒ 退回"总强度/100"的旧口径（测试仍可复用）。 */
@@ -68,7 +67,7 @@ window.KUP = window.KUP || {};
       this.shieldEff = 0;    // v0.18.4：保护效率（0～100，与耐久分开；决定减伤比例）
       this.shieldTmpT = 0;   // 膜层剩余秒数（到期归零 → 护盾回到被动给的那一层）
       this.shieldCharge = 0; this.shieldHitFx = 0;
-      this.shieldTouchT = 0; this.shieldTaintT = 0; this.shieldTouchUsed = false;
+      /* v0.20.3：贴靠/打穿失灵已删除——不再有 touchT/taintT/touchUsed 状态 */
       /* v0.18.3：护盾会被打薄 → 记录「距上次受伤」的时间，用于脱战恢复 */
       this.shieldRegenT = 0;
       /* v0.18.3 暴击「会心」：会心率/倍率/专属特效由角色的 KUP.CRIT 决定 */
@@ -163,18 +162,13 @@ window.KUP = window.KUP || {};
      * 返回实际扣到生命的伤害；**护盾耐久按挡下的伤害被扣减**（先扣临时膜层，再扣本体），
      * 减伤比例只看"保护效率"，**耐久 > 0 就一直有效**；只有耐久归零才没有减伤，
      * 脱战后自动回满（见 update 的 shieldRegenT）。
-     * 贴靠膜：挡下第一击后 TOUCH_ARM 秒内失效（要持续贴靠才算"挡开"），
-     * 被光束/轰炸打穿后 TAINT_T 秒内也失效 —— 被围住时不是无敌，而是争取脱身时间。 */
+     * v0.20.3：删除贴靠/打穿的额外失灵判定——不再有"耐久还有却突然不减伤"的窗口。 */
     applyShield(dmg, kind) {
       const S = C.SHIELD;
       const total = this.shieldTotal();
       if (total <= 0 || dmg <= 0) return dmg;
-      if (kind === 'contact' && (this.shieldTaintT > 0 || this.shieldTouchUsed)) return dmg;
       const pct = KUP.shieldReducePct(this, kind) / 100;
       const blocked = dmg * pct;
-      if (kind === 'contact') { this.shieldTouchT = S.TOUCH_ARM; this.shieldTouchUsed = true; }
-      /* 光束/轰炸**打穿**膜层：贴靠膜失灵 TAINT_T 秒（其它类型的减伤照旧） */
-      if (kind === 'beam' || kind === 'bomb') this.shieldTaintT = S.TAINT_T;
       /* v0.18.3：挡下多少就消耗多少强度（先临时膜层、再护盾本体；
        * 单次伤害超过剩余强度时最多扣到 0，不会变成负数） */
       let use = blocked * (S.CONSUME || 1);
@@ -190,8 +184,8 @@ window.KUP = window.KUP || {};
     }
     /* 护盾对某类伤害的减伤百分比（0～95）——HUD 与测试共用 KUP.shieldReducePct 的同一算法 */
     reducePct(kind) { return KUP.shieldReducePct(this, kind); }
-    /* 被光束/轰炸**打穿**：贴靠膜失灵 TAINT_T 秒（护盾仍有其它类型的减伤） */
-    shieldTaint() { this.shieldTaintT = C.SHIELD.TAINT_T; }
+    /* v0.20.3：taint 方法保留为空壳（旧调用点/存档字段兼容），不再制造失灵窗口 */
+    shieldTaint() { /* no-op：打穿不再让护盾失灵 */ }
     addBuff(kind, seconds, amount) {
       const b = this.buffs;
       if (kind === 'miss') { b.miss = Math.max(b.miss, 0) + seconds; b.missAmt = Math.max(b.missAmt, amount); }
@@ -271,14 +265,9 @@ window.KUP = window.KUP || {};
       /* 残影寿命 */
       for (const gh of this.ghosts) gh.age += dt;
       this.ghosts = this.ghosts.filter(gh => gh.age < 0.3).slice(-10);
-      /* 护盾（v0.18.3）：贴靠膜的持续判定、被打穿的失灵时间、显示用能量衰减，
-       * 以及**脱战自动回满**——受伤后 REGEN_DELAY 秒内不恢复，之后 REGEN_TIME 秒回满。 */
+      /* 护盾（v0.20.3）：只有膜层计时、显示用能量衰减与**脱战自动回满**——
+       * 不再有贴靠/打穿的失灵计时（耐久 > 0 就始终减伤）。 */
       this.noHitT += dt;
-      if (this.shieldTouchT > 0) {
-        this.shieldTouchT -= dt;
-        if (this.shieldTouchT <= 0) { this.shieldTouchT = 0; this.shieldTouchUsed = false; }  // 脱离接触 → 贴靠膜重新可用
-      }
-      if (this.shieldTaintT > 0) this.shieldTaintT -= dt;
       if (this.shieldTmpT > 0) { this.shieldTmpT -= dt; if (this.shieldTmpT <= 0) { this.shieldTmpT = 0; this.shieldTmp = 0; } }
       /* v0.18.3：护盾恢复（只恢复本体，不恢复「防音の符」的临时膜层） */
       if (this.shieldMax > 0 && this.shield < this.shieldMax) {
@@ -508,23 +497,21 @@ window.KUP = window.KUP || {};
       if (this.hitT > 0) {
         ctx.globalAlpha = 0.45 + 0.35 * Math.abs(Math.sin(t * 30));
       }
-      /* 护盾（v0.14 减伤膜）：**厚度＝总强度**（护盾＋膜层），不是"血量比例"。
+      /* 护盾（v0.14 减伤膜）：**厚度＝总耐久**（护盾＋膜层），不是"血量比例"。
        *   颜色＝淡蓝（只有护盾）／青绿（含膜层）；被挡下的瞬间闪亮；
-       *   被光束/轰炸打穿后 3 秒呈破碎虚线（贴靠膜失灵）；
+       *   v0.20.3 起不再画"打穿失灵"的破碎虚线（失灵机制已删除）；
        *   膜层即将过期（<1.5s）时收缩闪烁 —— 一眼能看出"还剩多少保护"。 */
       const shTotal = this.shieldTotal();
       if (shTotal > 0) {
         const k = U.clamp(shTotal / C.SHIELD.AURA_MAX, 0.15, 1.4);
         const hasTmp = (this.shieldTmp || 0) > 0;
         const shColor = hasTmp ? '#7dffe0' : '#8fd0ff';
-        const tainted = this.shieldTaintT > 0;
         const pulse = this.shieldHitFx > 0 ? 0.35 + this.shieldHitFx : 0;
         ctx.save();
         ctx.globalAlpha = 0.30 + 0.35 * Math.min(1, k) + pulse;
-        ctx.strokeStyle = tainted ? '#ff8a5a' : shColor;
+        ctx.strokeStyle = shColor;
         ctx.lineWidth = 1.5 + 2.6 * Math.min(1, k);
-        ctx.shadowColor = tainted ? '#ff8a5a' : shColor; ctx.shadowBlur = 12 + 10 * Math.min(1, k) + pulse * 20;
-        if (tainted) ctx.setLineDash([5, 5]);
+        ctx.shadowColor = shColor; ctx.shadowBlur = 12 + 10 * Math.min(1, k) + pulse * 20;
         ctx.beginPath(); ctx.arc(0, bob, 13 + 5 * Math.min(1, k), 0, U.TAU); ctx.stroke();
         ctx.setLineDash([]);
         ctx.globalAlpha = 0.07 + 0.10 * Math.min(1, k) + pulse * 0.5;
@@ -1189,15 +1176,12 @@ window.KUP = window.KUP || {};
       const tt = U.clamp((p.x - this.x) * cs + (p.y - this.y) * sn, 0, this.len);
       const px = this.x + cs * tt, py = this.y + sn * tt;
       if (U.dist2(p.x, p.y, px, py) < Math.pow(this.w / 2 + p.r, 2)) {
-        g.hurtPlayer(this.dmg, 'beam');
-        /* 光束打穿：贴靠膜失灵（其它类型的减伤照旧） */
-        if (p.shieldTaint) p.shieldTaint();
+        g.hurtPlayer(this.dmg, 'beam');   // v0.20.3：不再附加"打穿失灵"
       }
     }
     detonate(game) {
       if (!this.hitPlayer && U.dist2(game.player.x, game.player.y, this.x, this.y) < Math.pow(this.r + game.player.r, 2)) {
         game.hurtPlayer(this.dmg, this.kind === 'bomb' ? 'bomb' : 'field');
-        if (this.kind === 'bomb' && game.player.shieldTaint) game.player.shieldTaint();
       }
       this.hitPlayer = true;
       game.shake(4);

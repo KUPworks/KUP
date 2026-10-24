@@ -964,7 +964,9 @@ check('效率 100 → 贴靠 95%／光束 50%／轰炸 70%／毒区 75%／音波
   gS.player.reducePct('contact') === 95 && gS.player.reducePct('beam') === 50 &&
   gS.player.reducePct('bomb') === 70 && gS.player.reducePct('field') === 75 &&
   gS.player.reducePct('ring') === 85);
-/* 耐久消耗与贴靠纪律 */
+/* v0.20.3（人类 2026-10-24「怎么又是没满就不减伤了…比如 19/40」）：
+ * 删除「贴靠挡一次后 0.45s 失效」与「被光束/轰炸打穿后 3s 失效」两道门槛后，
+ * **只要耐久 > 0，任何伤害类型都按效率减伤**，不存在"还有耐久却不减伤"的窗口。 */
 gS.state = 'playing';
 gS.player.hp = gS.player.maxhp;
 gS.player.hitT = 0;
@@ -975,38 +977,45 @@ check('满耐久贴靠：20 点只掉 1、耐久 100 → 81',
   'loss=' + (hpT - gS.player.hp).toFixed(2) + ' sh=' + gS.player.shield.toFixed(1));
 gS.player.hitT = 0;
 gS.hurtPlayer(20, 'contact');
-check('贴靠膜只挡一次：连续第二击照常扣血', Math.abs(Math.round(hpT - gS.player.hp) - 20) <= 1,
-  'loss=' + (hpT - gS.player.hp).toFixed(1));
-gS.player.shield = gS.player.shieldMax; gS.player.shieldTaintT = 0;
-gS.player.update(KUP.CONFIG.SHIELD.TOUCH_ARM + 0.05, gS);
-check('脱离接触后贴靠膜恢复', gS.player.reducePct('contact') === 95, 'touchUsed=' + gS.player.shieldTouchUsed);
-gS.player.hitT = 0;
-gS.hurtPlayer(10, 'beam');
-check('光束打穿后贴靠膜失灵（taint）', gS.player.shieldTaintT > 0 && gS.player.reducePct('contact') === 0,
-  'taint=' + gS.player.shieldTaintT.toFixed(2));
-gS.player.shieldTaintT = 0;
+check('连续接触的第二击照样减伤（不再有"挡一次就失效"）',
+  Math.abs((hpT - gS.player.hp) - 2) < 0.02 && Math.abs(gS.player.shield - 62) < 0.05,
+  'loss=' + (hpT - gS.player.hp).toFixed(2) + ' sh=' + gS.player.shield.toFixed(1));
+/* 用户报的场景：2 级护盾 40 耐久，被打到 19，再吃一发光束——接触必须仍有 89% 减伤 */
+const gS2 = new KUP.Game(canvas);
+gS2.start({ char: 'kaf', area: 'area0', seed: 94 });
+gS2.player.addPassive('shield'); gS2.player.addPassive('shield');
+check('2 级护盾：耐久 40、效率 88', gS2.player.shieldMax === 40 && gS2.player.shieldEff === 88);
+gS2.player.shield = 19;
+gS2.player.hitT = 0;
+gS2.hurtPlayer(10, 'beam');                    // 光束 47% 减伤，耐久扣到 ~14
+check('19/40 被光束打过之后，接触仍有 89% 减伤（旧版这里会归零）',
+  gS2.player.reducePct('contact') === 89, 'pct=' + gS2.player.reducePct('contact'));
+gS2.player.hitT = 0;
+const hpX = gS2.player.hp;
+gS2.hurtPlayer(20, 'contact');
+check('19/40 的接触受击照常减伤（20 点只掉 ~2.2）',
+  Math.abs((hpX - gS2.player.hp) - 2.24) < 0.05,
+  'loss=' + (hpX - gS2.player.hp).toFixed(2) + ' sh=' + gS2.player.shield.toFixed(1));
 /* 打空与恢复 */
-gS.player.shield = 12; gS.player.shieldTmp = 0; gS.player.shieldTouchUsed = false; gS.player.hitT = 0;
+gS.player.shield = 12; gS.player.shieldTmp = 0; gS.player.hitT = 0;
 gS.hurtPlayer(400, 'beam');
 check('耐久打空后归零（不会负值）且此后不再减伤',
   gS.player.shield === 0 && gS.player.reducePct('beam') === 0, 'sh=' + gS.player.shield);
-gS.player.shield = 10; gS.player.shieldRegenT = 0; gS.player.shieldTaintT = 0;
+gS.player.shield = 10; gS.player.shieldRegenT = 0;
 for (let i = 0; i < 40; i++) gS.player.update(0.05, gS);        // 2.0s
 check('脱战 3 秒内不回盾', Math.abs(gS.player.shield - 10) < 1e-6, 'sh=' + gS.player.shield.toFixed(1));
 for (let i = 0; i < 60; i++) gS.player.update(0.05, gS);        // 再 3.0s
 check('脱战 3 秒后 1.5 秒内回满', gS.player.shield === 100, 'sh=' + gS.player.shield.toFixed(1));
 gS.player.shield = 20; gS.player.shieldRegenT = 0;
 for (let i = 0; i < 50; i++) gS.player.update(0.05, gS);
-gS.player.hitT = 0; gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false;
+gS.player.hitT = 0;
 const shMid = gS.player.shield;
 gS.hurtPlayer(2, 'ring');
 check('受伤会打断恢复计时', gS.player.shieldRegenT === 0, 't=' + gS.player.shieldRegenT.toFixed(2));
 for (let i = 0; i < 20; i++) gS.player.update(0.05, gS);
 check('打断后的 3 秒内仍不回复', gS.player.shield < shMid + 8, 'sh=' + gS.player.shield.toFixed(1));
-/* v0.18.5（人类 2026-10-22「应是不为0就有减伤效果」）：
- * 耐久只剩一点点也照样减伤，只有归零才失去（旧版有"耐久 <20 就不挡"的门槛）。 */
+/* v0.18.5：耐久只剩一点点也照样减伤，只有归零才失去 */
 gS.player.shield = 5; gS.player.shieldTmp = 0;
-gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false;
 check('耐久剩 5（>0）仍保留 95% 贴靠减伤', gS.player.reducePct('contact') === 95,
   'pct=' + gS.player.reducePct('contact'));
 gS.player.hitT = 0; gS.player.invuln = false;
@@ -1016,7 +1025,7 @@ gS.hurtPlayer(20, 'contact');
 check('耐久很低时依然挡下伤害（20 点只掉 1）',
   Math.abs((hpLow - gS.player.hp) - 1) < 0.01 && gS.player.shield === 0,
   'loss=' + (hpLow - gS.player.hp).toFixed(2) + ' sh=' + gS.player.shield);
-gS.player.shield = 0.5; gS.player.shieldTaintT = 0; gS.player.shieldTouchUsed = false;
+gS.player.shield = 0.5;
 check('耐久 0.5 也有减伤（归零前一直有效）', gS.player.reducePct('contact') === 95);
 gS.player.shield = 0;
 check('耐久归零后才是没有减伤', gS.player.reducePct('contact') === 0);
@@ -1031,12 +1040,12 @@ gSW.player.addShield(60);
 check('防音の符：+60 耐久、效率 +12 → 100（贴靠 95%）',
   gSW.player.shieldTotal() === 80 && gSW.player.shieldEfficiency() === 100 && gSW.player.reducePct('contact') === 95,
   'total=' + gSW.player.shieldTotal() + ' eff=' + gSW.player.shieldEfficiency());
-gSW.player.hitT = 0; gSW.player.shieldTouchUsed = false;
+gSW.player.hitT = 0;
 gSW.hurtPlayer(10, 'ring');
 check('临时的膜层先被消耗（本体耐久不动）', gSW.player.shieldTmp < 60 && gSW.player.shield === 20,
   'tmp=' + gSW.player.shieldTmp.toFixed(1) + ' sh=' + gSW.player.shield);
 check('强度探针仍兼容旧口径（88→89%、100→95%）', (() => {
-  const probe = t => ({ shieldTotal: () => t, shieldTaintT: 0, shieldTouchUsed: false });
+  const probe = t => ({ shieldTotal: () => t });
   return KUP.shieldReducePct(probe(88), 'contact') === 89 && KUP.shieldReducePct(probe(100), 'contact') === 95;
 })());
 /* 回避：概率回避（把概率设为 1 验证通路） */
@@ -1140,7 +1149,7 @@ check('防音の符：无护盾时直接 +60 膜层（可见来源）', shBefore
 check('防音の符：膜层有存活时间（30s）', Math.abs(gI.player.shieldTmpT - KUP.CONFIG.SHIELD.TEMP_SECONDS) < 1e-9);
 check('防音の符：膜层计入护盾总强度（HUD 显示 60）', gI.player.shieldTotal() === 60, 'total=' + gI.player.shieldTotal());
 const hpWard = gI.player.hp;
-gI.player.hitT = 0; gI.player.shieldTouchUsed = false; gI.player.shieldTaintT = 0;
+gI.player.hitT = 0;
 /* v0.18.4：没有被动护盾时，「防音の符」只提供 +12 效率（k=0.12）→ 贴靠 52% */
 const pctWard = gI.player.reducePct('contact');
 gI.hurtPlayer(100, 'contact');

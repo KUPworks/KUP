@@ -1205,7 +1205,7 @@ window.KUP = window.KUP || {};
         const row = this.els['shield-row'];
         row.classList.toggle('hidden', total <= 0);
         const sig = Math.round(total) + '/' + Math.round(p.shieldMax || 0) + '/' +
-          Math.round(p.shieldTmpT || 0) + '/' + (p.shieldTaintT > 0 ? 1 : 0);
+          Math.round(p.shieldTmpT || 0);
         if (sig !== this.lastShieldSig) {
           this.lastShieldSig = sig;
           const cf = KUP.shieldReducePct(p, 'contact');
@@ -1221,10 +1221,8 @@ window.KUP = window.KUP || {};
               : pct;
           }
         }
-        row.classList.toggle('tainted', p.shieldTaintT > 0);
         /* 残盾/回盾中：给一个「弱化」标记，避免和满盾看起来一样 */
         row.classList.toggle('dimmed', p.shieldMax > 0 && p.shield < p.shieldMax * 0.999);
-        if (this.els['shield-orb']) this.els['shield-orb'].style.opacity = p.shieldTaintT > 0 ? 0.45 : 1;
       }
       if (this.els['dash-pips']) {
         const dsig = p.dashCharge + '/' + p.dashMax;
