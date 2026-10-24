@@ -2,7 +2,7 @@ window.KUP = window.KUP || {};
 
 /* ================= 全局配置 ================= */
 KUP.CONFIG = {
-  VERSION: '0.20.1',
+  VERSION: '0.20.2',
   ARENA: 3000,            // 正方形竞技场边长
   PLAYER_R: 13,
   PLAYER_HIT_CD: 0.55,    // 玩家受击无敌帧
@@ -192,12 +192,12 @@ KUP.DMG_SCALE = t => 1 + (t / 600) * 0.5;
 
 /* 全局波次表（零番街基线；按时间取最后一条满足的行） */
 KUP.WAVES = [
-  { t: 0,   rate: 1.0, types: { noise: 1 } },
-  { t: 45,  rate: 1.5, types: { noise: 4, glitch: 1 } },
-  { t: 105, rate: 2.0, types: { noise: 3, glitch: 1.4, tank: 0.18 } },
-  { t: 165, rate: 2.4, types: { noise: 2.6, glitch: 1.6, tank: 0.4 } },
-  { t: 225, rate: 2.8, types: { noise: 2.2, glitch: 1.8, tank: 0.55 } },
-  { t: 285, rate: 3.1, types: { noise: 2, glitch: 2, tank: 0.7 } },
+  { t: 0,   rate: 1.0, types: { noise: 0.7, bird: 0.15, human_mob: 0.15 } },
+  { t: 45,  rate: 1.5, types: { noise: 2.8, bird: 0.6, human_mob: 0.6, glitch: 1 } },
+  { t: 105, rate: 2.0, types: { noise: 2.1, bird: 0.45, human_mob: 0.45, glitch: 1.4, tank: 0.18 } },
+  { t: 165, rate: 2.4, types: { noise: 1.82, bird: 0.39, human_mob: 0.39, glitch: 1.6, tank: 0.4 } },
+  { t: 225, rate: 2.8, types: { noise: 1.54, bird: 0.33, human_mob: 0.33, glitch: 1.8, tank: 0.55 } },
+  { t: 285, rate: 3.1, types: { noise: 1.4, bird: 0.3, human_mob: 0.3, glitch: 2, tank: 0.7 } },
 ];
 
 /* ================= 一局（run / session）的配置 =================
@@ -256,12 +256,12 @@ KUP.AREAS = [
     hue: [185, 235], blocks: 150, win: 0.75, tone: 'rgba(10,20,42,0.92)', fog: 0.06,
     accent: '#4ec8ff',
     waves: [
-      { t: 0,   rate: 1.1, types: { noise: 1 } },
-      { t: 40,  rate: 1.8, types: { noise: 3.2, glitch: 1.5 } },
-      { t: 100, rate: 2.3, types: { noise: 2.6, glitch: 1.9, tank: 0.22 } },
-      { t: 160, rate: 2.7, types: { noise: 2.2, glitch: 2.1, tank: 0.45 } },
-      { t: 225, rate: 3.0, types: { noise: 2, glitch: 2.2, tank: 0.6 } },
-      { t: 285, rate: 3.3, types: { noise: 1.8, glitch: 2.4, tank: 0.75 } },
+      { t: 0,   rate: 1.1, types: { noise: 0.7, bird: 0.15, human_mob: 0.15 } },
+      { t: 40,  rate: 1.8, types: { noise: 2.24, bird: 0.48, human_mob: 0.48, glitch: 1.5 } },
+      { t: 100, rate: 2.3, types: { noise: 1.82, bird: 0.39, human_mob: 0.39, glitch: 1.9, tank: 0.22 } },
+      { t: 160, rate: 2.7, types: { noise: 1.54, bird: 0.33, human_mob: 0.33, glitch: 2.1, tank: 0.45 } },
+      { t: 225, rate: 3.0, types: { noise: 1.4, bird: 0.3, human_mob: 0.3, glitch: 2.2, tank: 0.6 } },
+      { t: 285, rate: 3.3, types: { noise: 1.26, bird: 0.27, human_mob: 0.27, glitch: 2.4, tank: 0.75 } },
     ],
     events: [
       { t: 120, name: { zh: '恶意累积 —— 恶意化为破维魔的潮水', en: 'Malice builds — the tide swells', ja: '悪意の蓄積——悪意がテセラクターの潮となる' }, surge: 14 },
@@ -279,12 +279,12 @@ KUP.AREAS = [
     hue: [295, 400], blocks: 145, win: 0.5, tone: 'rgba(26,10,30,0.92)', fog: 0.05,
     accent: '#ff7ad9',
     waves: [
-      { t: 0,   rate: 1.2, types: { noise: 1.4 } },
-      { t: 45,  rate: 2.0, types: { noise: 5, glitch: 0.8 } },
-      { t: 105, rate: 2.5, types: { noise: 4, glitch: 1.2, tank: 0.15 } },
-      { t: 165, rate: 2.9, types: { noise: 3.4, glitch: 1.4, tank: 0.35 } },
-      { t: 225, rate: 3.3, types: { noise: 3, glitch: 1.6, tank: 0.5 } },
-      { t: 285, rate: 3.6, types: { noise: 2.6, glitch: 1.8, tank: 0.65 } },
+      { t: 0,   rate: 1.2, types: { noise: 0.98, bird: 0.21, human_mob: 0.21 } },
+      { t: 45,  rate: 2.0, types: { noise: 3.5, bird: 0.75, human_mob: 0.75, glitch: 0.8 } },
+      { t: 105, rate: 2.5, types: { noise: 2.8, bird: 0.6, human_mob: 0.6, glitch: 1.2, tank: 0.15 } },
+      { t: 165, rate: 2.9, types: { noise: 2.38, bird: 0.51, human_mob: 0.51, glitch: 1.4, tank: 0.35 } },
+      { t: 225, rate: 3.3, types: { noise: 2.1, bird: 0.45, human_mob: 0.45, glitch: 1.6, tank: 0.5 } },
+      { t: 285, rate: 3.6, types: { noise: 1.82, bird: 0.39, human_mob: 0.39, glitch: 1.8, tank: 0.65 } },
     ],
     events: [
       { t: 110, name: { zh: '欲望增殖 —— 破维魔贪食着街区', en: 'Desire proliferates — Tesseracters feast', ja: '欲望の増殖——テセラクターが街を貪る' }, surge: 18 },
@@ -304,12 +304,12 @@ KUP.AREAS = [
     hue: [80, 150], blocks: 58, win: 0.25, tone: 'rgba(10,28,22,0.92)', fog: 0.18,
     accent: '#7dff9a', theme: 'farm', // 温室／田垄
     waves: [
-      { t: 0,   rate: 0.9, types: { noise: 1 } },
-      { t: 45,  rate: 1.4, types: { noise: 3, glitch: 0.8 } },
-      { t: 100, rate: 1.8, types: { noise: 2.4, glitch: 1, tank: 0.5 } },
-      { t: 160, rate: 2.2, types: { noise: 2, glitch: 1.2, tank: 0.9 } },
-      { t: 225, rate: 2.6, types: { noise: 1.8, glitch: 1.4, tank: 1.1 } },
-      { t: 285, rate: 2.9, types: { noise: 1.6, glitch: 1.5, tank: 1.3 } },
+      { t: 0,   rate: 0.9, types: { noise: 0.7, bird: 0.15, human_mob: 0.15 } },
+      { t: 45,  rate: 1.4, types: { noise: 2.1, bird: 0.45, human_mob: 0.45, glitch: 0.8 } },
+      { t: 100, rate: 1.8, types: { noise: 1.68, bird: 0.36, human_mob: 0.36, glitch: 1, tank: 0.5 } },
+      { t: 160, rate: 2.2, types: { noise: 1.4, bird: 0.3, human_mob: 0.3, glitch: 1.2, tank: 0.9 } },
+      { t: 225, rate: 2.6, types: { noise: 1.26, bird: 0.27, human_mob: 0.27, glitch: 1.4, tank: 1.1 } },
+      { t: 285, rate: 2.9, types: { noise: 1.12, bird: 0.24, human_mob: 0.24, glitch: 1.5, tank: 1.3 } },
     ],
     events: [
       /* ★ 章节名沿用动画第5話官方副标题「ファミリア」，但**不能把眷魔写成敌人**——
@@ -329,12 +329,12 @@ KUP.AREAS = [
     hue: [195, 335], blocks: 152, win: 0.35, tone: 'rgba(14,12,30,0.94)', fog: 0.1,
     accent: '#b58cff', theme: 'ruins', // 锈迹骨架
     waves: [
-      { t: 0,   rate: 1.1, types: { noise: 1 } },
-      { t: 40,  rate: 1.9, types: { noise: 2.6, glitch: 1.8 } },
-      { t: 100, rate: 2.4, types: { noise: 2, glitch: 2.4, tank: 0.2 } },
-      { t: 160, rate: 2.8, types: { noise: 1.8, glitch: 2.6, tank: 0.4 } },
-      { t: 225, rate: 3.1, types: { noise: 1.6, glitch: 2.8, tank: 0.55 } },
-      { t: 285, rate: 3.4, types: { noise: 1.4, glitch: 3, tank: 0.7 } },
+      { t: 0,   rate: 1.1, types: { noise: 0.7, bird: 0.15, human_mob: 0.15 } },
+      { t: 40,  rate: 1.9, types: { noise: 1.82, bird: 0.39, human_mob: 0.39, glitch: 1.8 } },
+      { t: 100, rate: 2.4, types: { noise: 1.4, bird: 0.3, human_mob: 0.3, glitch: 2.4, tank: 0.2 } },
+      { t: 160, rate: 2.8, types: { noise: 1.26, bird: 0.27, human_mob: 0.27, glitch: 2.6, tank: 0.4 } },
+      { t: 225, rate: 3.1, types: { noise: 1.12, bird: 0.24, human_mob: 0.24, glitch: 2.8, tank: 0.55 } },
+      { t: 285, rate: 3.4, types: { noise: 0.98, bird: 0.21, human_mob: 0.21, glitch: 3, tank: 0.7 } },
     ],
     events: [
       { t: 110, name: { zh: '現象 —— 高速群发生', en: 'Phenomenon — a swarm manifests', ja: '現象——高速群が発生する' }, surge: 20 },
@@ -356,12 +356,12 @@ KUP.AREAS = [
     hue: [15, 60], blocks: 120, win: 0.5, tone: 'rgba(28,18,10,0.92)', fog: 0.22,
     accent: '#ffb25a', theme: 'industry', // 烟囱
     waves: [
-      { t: 0,   rate: 0.9, types: { noise: 1 } },
-      { t: 45,  rate: 1.4, types: { noise: 2.6, glitch: 1 } },
-      { t: 105, rate: 1.8, types: { noise: 2, glitch: 1.2, tank: 0.55 } },
-      { t: 165, rate: 2.2, types: { noise: 1.8, glitch: 1.4, tank: 0.85 } },
-      { t: 225, rate: 2.5, types: { noise: 1.6, glitch: 1.6, tank: 1.1 } },
-      { t: 285, rate: 2.8, types: { noise: 1.4, glitch: 1.8, tank: 1.3 } },
+      { t: 0,   rate: 0.9, types: { noise: 0.7, bird: 0.15, human_mob: 0.15 } },
+      { t: 45,  rate: 1.4, types: { noise: 1.82, bird: 0.39, human_mob: 0.39, glitch: 1 } },
+      { t: 105, rate: 1.8, types: { noise: 1.4, bird: 0.3, human_mob: 0.3, glitch: 1.2, tank: 0.55 } },
+      { t: 165, rate: 2.2, types: { noise: 1.26, bird: 0.27, human_mob: 0.27, glitch: 1.4, tank: 0.85 } },
+      { t: 225, rate: 2.5, types: { noise: 1.12, bird: 0.24, human_mob: 0.24, glitch: 1.6, tank: 1.1 } },
+      { t: 285, rate: 2.8, types: { noise: 0.98, bird: 0.21, human_mob: 0.21, glitch: 1.8, tank: 1.3 } },
     ],
     events: [
       { t: 90, name: { zh: 'ブラックアウト —— 视野被夺走', en: 'Blackout — sight is stolen', ja: 'ブラックアウト——視界が奪われる' }, surge: 10, fog: 0.34, fogT: 7 },
@@ -382,12 +382,12 @@ KUP.AREAS = [
     accent: '#8f86c9', theme: 'restricted', // 雾＋残骸
     eliteTimes: [75, 135, 195], bossTime: 210, // 最后一关：精英与 Boss 提前
     waves: [
-      { t: 0,   rate: 1.2, types: { noise: 1.2, glitch: 0.6 } },
-      { t: 35,  rate: 2.0, types: { noise: 3, glitch: 1.8 } },
-      { t: 90,  rate: 2.5, types: { noise: 2.4, glitch: 2.2, tank: 0.4 } },
-      { t: 140, rate: 2.9, types: { noise: 2, glitch: 2.5, tank: 0.7 } },
-      { t: 195, rate: 3.3, types: { noise: 1.8, glitch: 2.7, tank: 0.9 } },
-      { t: 255, rate: 3.6, types: { noise: 1.6, glitch: 3, tank: 1.1 } },
+      { t: 0,   rate: 1.2, types: { noise: 0.84, bird: 0.18, human_mob: 0.18, glitch: 0.6 } },
+      { t: 35,  rate: 2.0, types: { noise: 2.1, bird: 0.45, human_mob: 0.45, glitch: 1.8 } },
+      { t: 90,  rate: 2.5, types: { noise: 1.68, bird: 0.36, human_mob: 0.36, glitch: 2.2, tank: 0.4 } },
+      { t: 140, rate: 2.9, types: { noise: 1.4, bird: 0.3, human_mob: 0.3, glitch: 2.5, tank: 0.7 } },
+      { t: 195, rate: 3.3, types: { noise: 1.26, bird: 0.27, human_mob: 0.27, glitch: 2.7, tank: 0.9 } },
+      { t: 255, rate: 3.6, types: { noise: 1.12, bird: 0.24, human_mob: 0.24, glitch: 3, tank: 1.1 } },
     ],
     events: [
       { t: 100, name: { zh: '再生 -Regenerate- 前夜 —— 夺回一切', en: 'Eve of Regenerate — take it all back', ja: '再生の前夜——すべてを取り戻せ' }, surge: 24 },

@@ -273,8 +273,9 @@ window.KUP = window.KUP || {};
       need(bosses.boss0, 'KUP.BOSSES 缺少 boss0 兜底');
       need(enemies.boss === bosses.boss0, 'KUP.ENEMIES.boss 应指向 KUP.BOSSES.boss0');
 
-      /* ---------- 4b. 八形分类（v0.20.1） ----------
-       * shape 决定剪影（js/entities.js 的 KUP.ENEMY_SILHOUETTES 用同一套 id）。
+      /* ---------- 4b. 八形＝体型/参数原型（v0.20.2） ----------
+       * shape 是**数据标签**（决定参数原型与图鉴分组），不承载绘制：
+       * 所有破维魔共用 js/entities.js 的多边形故障体，只由 sides/color/r 等参数给出差异。
        * 三条规则：① 八形齐全且 id 唯一；② 每个敌人都写了 shape 且命中；
        *          ③ 每个形至少有一个敌人（不允许"分类留空"）。 */
       var shapes = KUP.ENEMY_SHAPES || [];

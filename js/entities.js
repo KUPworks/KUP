@@ -578,203 +578,6 @@ window.KUP = window.KUP || {};
     }
   }
 
-  /* ---------- 破维魔形态剪影（v0.20.1 · 八形；与 js/data/enemy.js 的 KUP.ENEMY_SHAPES 同 id） ----------
-   * 纯绘制：只读 t（视觉时钟）／r／phase／dirA，**绝不消费 U.rng**（AGENTS §3 可复现性铁律）。
-   * 每个函数只往**当前路径**追加子路径，由调用方统一 fill ⇒ 故障色散（品红/青错位）、
-   * 受击白闪、冷冻覆冰都自动复用同一剪影，不必为每种状态各写一套形状。
-   * 局部坐标：+X＝朝向（Enemy._shape 已按 dirA 旋转）；尺度以碰撞半径 r 归一化。
-   * 观感允许略超出 r（鳍／翅／触角／尾），**剪影不是判定**——判定仍只用 r。 */
-  const _silLimb = (ctx, x0, y0, x1, y1, w0, w1) => {
-    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1;
-    const nx = -dy / L, ny = dx / L;
-    ctx.moveTo(x0 + nx * w0, y0 + ny * w0);
-    ctx.lineTo(x1 + nx * w1, y1 + ny * w1);
-    ctx.lineTo(x1 - nx * w1, y1 - ny * w1);
-    ctx.lineTo(x0 - nx * w0, y0 - ny * w0);
-    ctx.closePath();
-  };
-  const _silTri = (ctx, x1, y1, x2, y2, x3, y3) => {
-    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.lineTo(x3, y3); ctx.closePath();
-  };
-  const _silCircle = (ctx, cx, cy, rr) => {
-    ctx.moveTo(cx + rr, cy); ctx.arc(cx, cy, rr, 0, U.TAU); ctx.closePath();
-  };
-
-  /* 球型：多面体核心＋三枚绕核碎片——「不像生物」就是它的辨识度 */
-  const _silSphere = (ctx, e, t) => {
-    const R = e.r, ph = e.phase;
-    const br = 1 + 0.045 * Math.sin(t * 3 + ph);            // 呼吸
-    const n = e.boss ? 10 : 9;
-    ctx.moveTo(R * br, 0);
-    for (let i = 1; i <= n; i++) {
-      const a = (i / n) * U.TAU;
-      const rr = R * br * (0.94 + 0.06 * Math.cos(a * 3 + t * 1.5 + ph));
-      ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
-    }
-    ctx.closePath();
-    if (R < 9) return;                                      // 太小就别撒碎片了（糊成一坨）
-    for (let i = 0; i < 3; i++) {
-      const a = t * 0.9 + ph + (i * U.TAU) / 3;
-      const cx = Math.cos(a) * R * 1.15, cy = Math.sin(a) * R * 1.15, s = R * 0.13;
-      _silTri(ctx, cx + s, cy, cx - s * 0.5, cy - s * 0.8, cx - s * 0.5, cy + s * 0.8);
-    }
-  };
-
-  /* 鱼形：纺锤躯干＋分叉尾鳍＋背鳍／胸鳍——摆尾是唯一动画，读起来像"游过来" */
-  const _silFish = (ctx, e, t) => {
-    const R = e.r, ph = e.phase;
-    const sw = Math.sin(t * 5 + ph);
-    ctx.moveTo(R * 1.2, 0);
-    ctx.bezierCurveTo(R * 0.85, R * 0.7, R * 0.1, R * 0.72, -R * 0.62, R * 0.18 + R * 0.08 * sw);
-    ctx.lineTo(-R * 0.72, R * 0.06 * sw);
-    ctx.lineTo(-R * 0.72, -R * 0.06 * sw);
-    ctx.lineTo(-R * 0.62, -R * 0.18 + R * 0.08 * sw);
-    ctx.bezierCurveTo(R * 0.1, -R * 0.72, R * 0.85, -R * 0.7, R * 1.2, 0);
-    ctx.closePath();
-    /* 分叉尾鳍 */
-    _silTri(ctx, -R * 0.7, R * 0.05 * sw, -R * 1.5, R * 0.6 + R * 0.25 * sw, -R * 1.12, 0);
-    _silTri(ctx, -R * 0.7, -R * 0.05 * sw, -R * 1.5, -R * 0.6 + R * 0.25 * sw, -R * 1.12, 0);
-    /* 背鳍（-y 侧）＋两片胸鳍（随摆尾轻扇） */
-    _silTri(ctx, R * 0.48, -R * 0.16, R * 0.1, -R * 0.86, -R * 0.3, -R * 0.14);
-    _silTri(ctx, R * 0.34, R * 0.3, R * 0.02, R * 0.82 + R * 0.1 * sw, -R * 0.06, R * 0.28);
-    _silTri(ctx, R * 0.34, -R * 0.3, R * 0.02, -R * 0.82 + R * 0.1 * sw, -R * 0.06, -R * 0.28);
-  };
-
-  /* 爬行类：低伏宽躯干＋摆动长尾＋四条短肢——剪影直接解释「慢、笨、撞得疼」 */
-  const _silReptile = (ctx, e, t) => {
-    const R = e.r, ph = e.phase;
-    const gait = Math.sin(t * 6 + ph);
-    ctx.moveTo(R * 0.95, 0);
-    ctx.bezierCurveTo(R * 0.55, R * 0.55, -R * 0.35, R * 0.6, -R * 0.85, R * 0.18);
-    ctx.lineTo(-R * 0.85, -R * 0.18);
-    ctx.bezierCurveTo(-R * 0.35, -R * 0.6, R * 0.55, -R * 0.55, R * 0.95, 0);
-    ctx.closePath();
-    _silTri(ctx, -R * 0.8, R * 0.16, -R * 1.65, R * 0.5 + R * 0.35 * gait, -R * 0.8, -R * 0.16);
-    _silCircle(ctx, R * 1.02, 0, R * 0.34);                         // 头
-    _silLimb(ctx, R * 0.5, R * 0.42, R * 0.8, R * 0.9 + R * 0.12 * gait, R * 0.12, R * 0.07);
-    _silLimb(ctx, R * 0.5, -R * 0.42, R * 0.8, -R * 0.9 - R * 0.12 * gait, R * 0.12, R * 0.07);
-    _silLimb(ctx, -R * 0.35, R * 0.45, -R * 0.6, R * 0.92 - R * 0.12 * gait, R * 0.12, R * 0.07);
-    _silLimb(ctx, -R * 0.35, -R * 0.45, -R * 0.6, -R * 0.92 + R * 0.12 * gait, R * 0.12, R * 0.07);
-  };
-
-  /* 虫型：长腹节＋三对高频足＋触角——密集时"糊成一片"，是数量压力的视觉来源 */
-  const _silInsect = (ctx, e, t) => {
-    const R = e.r, ph = e.phase;
-    const g = Math.sin(t * 11 + ph);
-    ctx.moveTo(R * 0.55, 0);
-    ctx.bezierCurveTo(R * 0.5, R * 0.42, -R * 0.2, R * 0.5, -R * 0.75, R * 0.22);
-    ctx.quadraticCurveTo(-R * 1.05, 0, -R * 0.75, -R * 0.22);
-    ctx.bezierCurveTo(-R * 0.2, -R * 0.5, R * 0.5, -R * 0.42, R * 0.55, 0);
-    ctx.closePath();
-    _silCircle(ctx, R * 0.78, 0, R * 0.27);                         // 头
-    for (let i = 0; i < 3; i++) {
-      const bx = R * (0.4 - i * 0.3), by = R * 0.3;
-      const sg = i % 2 ? -1 : 1;
-      _silLimb(ctx, bx, by, bx + R * 0.12 + R * 0.18 * g * sg, by + R * 0.62, R * 0.085, R * 0.04);
-      _silLimb(ctx, bx, -by, bx + R * 0.12 - R * 0.18 * g * sg, -by - R * 0.62, R * 0.085, R * 0.04);
-    }
-    _silLimb(ctx, R * 0.95, R * 0.12, R * 1.45, R * 0.42 + R * 0.12 * g, R * 0.05, R * 0.02);
-    _silLimb(ctx, R * 0.95, -R * 0.12, R * 1.45, -R * 0.42 - R * 0.12 * g, R * 0.05, R * 0.02);
-  };
-
-  /* 植物形：中心球茎＋五片缓慢张合的叶瓣＋后拖根须——不靠移动，靠"扎根/散播"占场 */
-  const _silPlant = (ctx, e, t) => {
-    const R = e.r, ph = e.phase;
-    for (let i = 0; i < 5; i++) {
-      const a = ph + (i * U.TAU) / 5 + Math.sin(t * 1.2 + ph) * 0.12;
-      const len = R * (1.15 + 0.16 * Math.sin(t * 2 + i));        // 张合
-      const sp = 0.34;
-      ctx.moveTo(0, 0);
-      ctx.quadraticCurveTo(Math.cos(a - sp) * len * 0.7, Math.sin(a - sp) * len * 0.7,
-        Math.cos(a) * len, Math.sin(a) * len);
-      ctx.quadraticCurveTo(Math.cos(a + sp) * len * 0.7, Math.sin(a + sp) * len * 0.7, 0, 0);
-      ctx.closePath();
-    }
-    _silCircle(ctx, 0, 0, R * 0.52);                              // 球茎
-    const sway = Math.sin(t * 2 + ph) * 0.1;
-    _silLimb(ctx, -R * 0.35, R * 0.18, -R * 1.15, R * 0.55 + R * sway, R * 0.1, R * 0.03);
-    _silLimb(ctx, -R * 0.35, -R * 0.18, -R * 1.05, -R * 0.6 - R * sway, R * 0.1, R * 0.03);
-  };
-
-  /* 鸟型：双翼拍动＋扇形尾羽＋喙——俯冲/投掷类行为的剪影担当 */
-  const _silBird = (ctx, e, t) => {
-    const R = e.r, ph = e.phase;
-    const flap = Math.sin(t * 9 + ph);
-    ctx.moveTo(R * 0.95, 0);
-    ctx.bezierCurveTo(R * 0.5, R * 0.42, -R * 0.45, R * 0.4, -R * 0.8, R * 0.1);
-    ctx.lineTo(-R * 0.8, -R * 0.1);
-    ctx.bezierCurveTo(-R * 0.45, -R * 0.4, R * 0.5, -R * 0.42, R * 0.95, 0);
-    ctx.closePath();
-    _silCircle(ctx, R * 1.0, 0, R * 0.26);                        // 头
-    _silTri(ctx, R * 1.18, R * 0.1, R * 1.75, 0, R * 1.18, -R * 0.1);  // 喙
-    const wy = R * (0.95 + 0.35 * flap);
-    _silTri(ctx, R * 0.35, R * 0.18, R * 0.05, wy, -R * 0.35, R * 0.2);
-    _silTri(ctx, R * 0.35, -R * 0.18, R * 0.05, -wy, -R * 0.35, -R * 0.2);
-    for (let i = -1; i <= 1; i++) {                               // 三根尾羽
-      const a = Math.PI + i * 0.3 + Math.sin(t * 4 + ph) * 0.04;
-      _silLimb(ctx, -R * 0.68, 0, Math.cos(a) * R * 1.55, Math.sin(a) * R * 1.1, R * 0.09, R * 0.02);
-    }
-  };
-
-  /* 人形（杂兵）：前倾、细长、双臂前伸——数量型；"像人但不对"制造不安 */
-  const _silHumanoidMob = (ctx, e, t) => {
-    const R = e.r, ph = e.phase;
-    const gait = Math.sin(t * 7 + ph);
-    ctx.moveTo(R * 0.35, 0);
-    ctx.bezierCurveTo(R * 0.42, R * 0.34, -R * 0.1, R * 0.4, -R * 0.42, R * 0.22);
-    ctx.lineTo(-R * 0.55, 0);
-    ctx.lineTo(-R * 0.42, -R * 0.22);
-    ctx.bezierCurveTo(-R * 0.1, -R * 0.4, R * 0.42, -R * 0.34, R * 0.35, 0);
-    ctx.closePath();
-    _silCircle(ctx, R * 0.62, 0, R * 0.3);                        // 头（偏大、无五官）
-    _silLimb(ctx, R * 0.18, R * 0.3, R * 0.55 + R * 0.12 * gait, R * 0.72, R * 0.11, R * 0.06);
-    _silLimb(ctx, R * 0.18, -R * 0.3, R * 0.55 - R * 0.12 * gait, -R * 0.72, R * 0.11, R * 0.06);
-    _silLimb(ctx, -R * 0.3, R * 0.16, -R * 0.75 - R * 0.2 * gait, R * 0.34, R * 0.1, R * 0.05);
-    _silLimb(ctx, -R * 0.3, -R * 0.16, -R * 0.75 + R * 0.2 * gait, -R * 0.34, R * 0.1, R * 0.05);
-  };
-
-  /* 人形（个体）：宽肩、长臂、沉重步伐——与杂兵同一条"人形线"，但一眼更大更稳 */
-  const _silHumanoid = (ctx, e, t) => {
-    const R = e.r, ph = e.phase;
-    const gait = Math.sin(t * 3.4 + ph);
-    ctx.moveTo(R * 0.3, R * 0.08);
-    ctx.lineTo(R * 0.12, R * 0.72);
-    ctx.lineTo(-R * 0.45, R * 0.62);
-    ctx.lineTo(-R * 0.55, 0);
-    ctx.lineTo(-R * 0.45, -R * 0.62);
-    ctx.lineTo(R * 0.12, -R * 0.72);
-    ctx.lineTo(R * 0.3, -R * 0.08);
-    ctx.closePath();
-    _silCircle(ctx, R * 0.5, 0, R * 0.26);                        // 头
-    _silLimb(ctx, R * 0.05, R * 0.55, R * 0.35, R * 0.95 + R * 0.05 * gait, R * 0.14, R * 0.08);
-    _silLimb(ctx, R * 0.05, -R * 0.55, R * 0.35, -R * 0.95 - R * 0.05 * gait, R * 0.14, R * 0.08);
-    _silLimb(ctx, -R * 0.3, R * 0.2, -R * 0.6 - R * 0.12 * gait, R * 0.42, R * 0.12, R * 0.07);
-    _silLimb(ctx, -R * 0.3, -R * 0.2, -R * 0.6 + R * 0.12 * gait, -R * 0.42, R * 0.12, R * 0.07);
-  };
-
-  const ENEMY_SILHOUETTES = {
-    fish: _silFish,
-    humanoid_mob: _silHumanoidMob,
-    humanoid: _silHumanoid,
-    reptile: _silReptile,
-    insect: _silInsect,
-    plant: _silPlant,
-    bird: _silBird,
-    sphere: _silSphere,
-  };
-  /* 未登记的 shape 兜底＝旧版多边形：数据写错也只会"回到老样子"，不会空白 */
-  function _silFallback(ctx, e, t) {
-    const def = e.def, n = def.sides || 7;
-    for (let i = 0; i <= n; i++) {
-      const a = (i / n) * U.TAU + t * (def.sides === 3 ? 3 : 0.6);
-      const rr = e.r * (0.82 + 0.18 * Math.sin(a * 3 + t * 5 + e.phase));
-      const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-  }
-  KUP.ENEMY_SILHOUETTES = ENEMY_SILHOUETTES;
-
   /* ---------- 敌人（ノイズ） ---------- */
   class Enemy {
     constructor(def, x, y, hpScale, dmgScale) {
@@ -880,19 +683,23 @@ window.KUP = window.KUP || {};
       this.stunMax = Math.max(this.stunMax, this.stunT);
       return true;
     }
-    /* 剪影（v0.20.1）：按 def.shape 选八形之一，**并旋转到当前朝向**。
-     * 旋转写在路径构建阶段（save → translate/rotate → beginPath → 构建 → restore → fill）：
-     * 画布的路径在构建时就换算到设备坐标，所以 restore 之后 fill 仍是这个朝向，
-     * 而 ox/oy（故障色散的屏幕错位）不受旋转影响——色散永远水平错位，不会跟着转身转。 */
     _shape(ctx, t, ox, oy) {
-      const fn = KUP.ENEMY_SILHOUETTES[this.def.shape] || _silFallback;
-      ctx.save();
-      ctx.translate(ox, oy);
-      ctx.rotate(this.dirA || 0);
+      const def = this.def, ph = this.phase;
+      const n = def.sides || 7;
       ctx.beginPath();
-      fn(ctx, this, t);
-      ctx.restore();
-      ctx.fill();
+      for (let i = 0; i <= n; i++) {
+        const a = (i / n) * U.TAU + t * (def.sides === 3 ? 3 : 0.6);
+        const rr = this.r * (0.82 + 0.18 * Math.sin(a * 3 + t * 5 + ph));
+        const x = Math.cos(a) * rr + ox, y = Math.sin(a) * rr + oy;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath(); ctx.fill();
+      if (this.boss) { // 核心「眼」
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(ox, oy, this.r * 0.3, 0, U.TAU); ctx.fill();
+        ctx.fillStyle = '#1a0f2e';
+        ctx.beginPath(); ctx.arc(ox + Math.cos(t * 2) * this.r * 0.12, oy, this.r * 0.15, 0, U.TAU); ctx.fill();
+      }
     }
     draw(ctx, t) {
       const c = this.def.color;
@@ -919,15 +726,6 @@ window.KUP = window.KUP || {};
       ctx.fillStyle = '#2be0ff'; this._shape(ctx, vt, G.SPLIT + ds + jx, jy);
       ctx.globalAlpha = 1;
       ctx.fillStyle = c; this._shape(ctx, vt, jx, jy);
-      /* 大破维魔的「眼」：只给 Boss 画。旧版写在 _shape 里，八形化之后移到外层，
-       * 于是每种剪影都不必各自处理"眼睛"（也让色散层只有身体、不至于三只眼）。 */
-      if (this.boss) {
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(0, 0, this.r * 0.3, 0, U.TAU); ctx.fill();
-        ctx.fillStyle = '#1a0f2e';
-        ctx.beginPath();
-        ctx.arc(Math.cos(t * 2) * this.r * 0.12, 0, this.r * 0.15, 0, U.TAU); ctx.fill();
-      }
       if (this.flash > 0) {
         ctx.globalAlpha = Math.min(1, this.flash * 10);
         ctx.fillStyle = '#fff'; this._shape(ctx, vt, 0, 0);

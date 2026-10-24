@@ -1,8 +1,7 @@
 /* ================= 敌人数据域（js/data/enemy.js） =================
  * 模块 id：enemy
- * 内容：KUP.ENEMY_SHAPES（八形分类）→ KUP.ENEMIES（杂兵／精英）→ KUP.BOSSES（七体番街 Boss，含 pattern）→ 并入敌人表。
- * 依赖：无。Boss 的 pattern 由 js/director.js 的 updateBossBehavior 分派；
- *       shape 由 js/entities.js 的 KUP.ENEMY_SILHOUETTES 绘制（同 id 一一对应）。
+ * 内容：KUP.ENEMY_SHAPES（八形＝体型/参数原型）→ KUP.ENEMIES（杂兵／精英）→ KUP.BOSSES（七体番街 Boss，含 pattern）→ 并入敌人表。
+ * 依赖：无。Boss 的 pattern 由 js/director.js 的 updateBossBehavior 分派。
  * 纪律：turn＝角速度上限（度/秒）；zh 一律「破维魔…」，日文原词只进 ja 字段。
  * 加杂兵＝ENEMIES 加一条（必须写 shape）；加 Boss＝BOSSES 加一条 + area.boss 指向它 +
  *   director 的 switch 加一个 pattern（**名称须标注本作二创**）。
@@ -21,62 +20,70 @@ window.KUP = window.KUP || {};
  * 约定用「度」，运行时以 DEG 换算；大体型转得慢 ⇒ tank/elite/Boss 绕圈时更笨重。
  * 未写 turn 的条目回落到 CONFIG.NAV.TURN。 */
 
-/* ========== 破维魔的「形」——八形分类（v0.20.1 · 2026-10-24） ==========
- * 这一层回答的是「它长什么样」，**不是阵营、不是强度**；强度仍只由 hp/dmg/speed 决定。
+/* ========== 破维魔的「形」——八形＝体型/参数原型（v0.20.2） ==========
+ * ★ 2026-10-24 人类要求：「绘制方式等回退，只是改动参数」。
+ *   因此本层**不承载绘制**：所有破维魔仍走 js/entities.js 的同一套多边形故障体，
+ *   观感差异只来自数据参数（`sides` 边数、`color`、`r` 大小、移动速度）。
+ *   八形在这里的作用是**参数原型与命名**——决定"这个敌人该有多快/多硬/多大/怎么转"，
+ *   以及后续图鉴分组；**不是**另一套画法（剪影方案已于本版回退）。
  *
- * 【官方依据】① 官方 3.22 新闻把「既持有テセラクター之姿、又有人型之姿」者称为
- *   ファミリア（盟友）⇒ **破维魔本来就有「人形／非人形」两种姿态**，人形不是本作发明
- *   （docs/lore/related-settings.md §6、worldview.md 行 214–222）。
- *   ② 「鱼类·爬虫·植物等非人形态」见 docs/lore/legacy-research-2025.md 行 165
- *   （⚠️ 该文件已废弃、只作形状佐证，不得据此回填设定）。
- * 【本作归纳】「鱼／人形（杂兵）／人形／爬行／虫／植物／鸟／球」这**八形**是本作为了
- *   让剪影可辨识而归纳的设计分类，**官方没有这套说法**；文案里不得写成官方设定。
- * 【纪律】形只描述外观：五体ファミリア（らぷらす＝青鱼／はすたー＝红鱼／あぐに＝爬虫／
- *   あねもす＝植物／くーげる＝半人半怪）是**盟友**，不得因为「鱼形／爬虫形／植物形」
- *   就把敌人写成他们，也不得给敌人冠以眷魔之名。八形之间不设强弱，只有「像什么」。
- * 【分工】数据侧只写 shape id；剪影在 js/entities.js 的 KUP.ENEMY_SILHOUETTES
- *   （同一 id），两边由 KUP.DATA.audit 与 verify-run 同时校验「八形齐全且一一对应」。
+ * 【现有分工（2026-10-24 人类指定）】
+ *   基本型家族（彼此只差 10–30% 的参数）：`sphere` 基线 / `bird` 鸟型 / `humanoid_mob` 人形（杂兵）
+ *   高速型 ＝ `fish` 鱼形（glitch）：比基本型快约 70%、血更少、转向更灵
+ *   巨躯型 ＝ `reptile` 爬行类（tank）：慢、硬、撞得疼
+ *   精英   ＝ `humanoid` 人形（个体）：数量少、血量高
+ *   Boss   ＝ **先选体型，再另外调参**：Boss 只借用体型的"手感方向"（鱼形偏快、植物形偏慢…），
+ *            数值一律单独写，不继承任何杂兵的 hp/dmg/speed（见 BOSSES 的注释）。
+ *
+ * 【出处与纪律】（与绘制无关，只用于命名与设计的合法性）
+ *   官方 3.22 新闻把「既持有テセラクター之姿、又有人型之姿」者称为ファミリア（盟友）
+ *   ⇒ 破维魔本来就有「人形／非人形」两种姿态（docs/lore/related-settings.md §6、worldview 行 214–222）；
+ *   「鱼类·爬虫·植物等非人形态」见 docs/lore/legacy-research-2025.md 行 165（⚠️ 已废弃稿，只作形状佐证）。
+ *   ★「八形」本身是本作的**设计归纳**，官方没有这套说法；文案里不得写成官方设定。
+ *   ★ 形只描述外观/手感，**不是阵营**：五体ファミリア（らぷらす＝青鱼／はすたー＝红鱼／あぐに＝爬虫／
+ *     あねもす＝植物／くーげる＝半人半怪）是**盟友**，不得因为"鱼形/爬虫形/植物形"就把敌人写成他们，
+ *     也不得给敌人冠以眷魔之名。
  * 【顺序】按人类 2026-10-24 指定的顺序排列（后续图鉴/UI 沿用此序）。 */
 KUP.ENEMY_SHAPES = [
   {
     id: 'fish',
     name: { zh: '鱼形', en: 'Fish-form', ja: '魚型' },
-    note: '纺锤躯干＋分叉尾鳍＋背鳍。游动时整体摆尾，速度感靠"身体在扭"而不是腿。',
+    note: '高速型原型：速度快、血量低、转向灵，靠绕圈与突进施压（glitch＝鱼形）。',
   },
   {
     id: 'humanoid_mob',
     name: { zh: '人形（杂兵）', en: 'Human-form (Rank & File)', ja: '人型（雑兵）' },
-    note: '前倾、细长、双臂前伸的小人形——数量型。头略大、没有五官，靠"像人但不对"制造不安。',
+    note: '基本型变体：比基线略慢、略硬、伤害略高；"像人但不对"的低阶人形（human_mob）。',
   },
   {
     id: 'humanoid',
     name: { zh: '人形', en: 'Human-form', ja: '人型' },
-    note: '宽肩、长臂、步伐沉重的大人形——个体型（精英/Boss 级）。与杂兵同一"人形线"，但一眼更大、更稳。',
+    note: '精英原型：数量少、血厚、转向稳；个体型人形（elite 与〈緘黙〉）。',
   },
   {
     id: 'reptile',
     name: { zh: '爬行类', en: 'Reptilian', ja: '爬虫類' },
-    note: '低伏宽躯干＋摆动长尾＋四条短肢。贴地、笨重、转向慢——用剪影直接解释它的 turn 很低。',
+    note: '巨躯原型：贴地、慢、血厚、撞得疼，turn 最低（tank 与〈再生〉）。',
   },
   {
     id: 'insect',
     name: { zh: '虫型', en: 'Insectoid', ja: '虫型' },
-    note: '长腹节＋三对高频摆动的足＋触角。密集时会"糊成一片"，是数量压力的视觉来源。',
+    note: '敏捷原型：细长、快、转向快；目前只由〈観測〉担任（Boss 选型）。',
   },
   {
     id: 'plant',
     name: { zh: '植物形', en: 'Plant-form', ja: '植物型' },
-    note: '中心球茎＋五片缓慢张合的叶瓣＋后拖根须。不靠移动，靠"扎根／散播"占场。',
+    note: '扎根原型：移动最慢、体积最大，靠散播/占场而不是追人（〈枯死〉）。',
   },
   {
     id: 'bird',
     name: { zh: '鸟型', en: 'Avian', ja: '鳥型' },
-    note: '纺锤躯干＋双翼拍动＋扇形尾羽＋喙。俯冲与投掷类行为的剪影担当。',
+    note: '基本型变体：比基线略快、略脆、转向灵活；游走/绕行的手感（bird）。',
   },
   {
     id: 'sphere',
     name: { zh: '球型', en: 'Orb', ja: '球型' },
-    note: '多面体核心＋绕核碎片（本作的"数字故障体"原型）。最中性、最不像生物，适合当基线。',
+    note: '基线：无肢体、参数居中，作为"标准破维魔"的量尺（noise 与〈消音〉）。',
   },
 ];
 
@@ -84,27 +91,39 @@ KUP.ENEMY_SHAPES = [
 KUP.ENEMY_SHAPE = id => KUP.ENEMY_SHAPES.find(s => s.id === id) || null;
 
 KUP.ENEMIES = {
-  /* 球型：基线。无肢体的多面体核心，玩家第一眼看到的"破维魔"长相。 */
+  /* 球型＝基线。所有"略有区别的变体"都相对它做 ±10–30% 的参数偏移。 */
   noise: {
     id: 'noise', shape: 'sphere',
     name: { zh: '破维魔（基本型）', en: 'Tesseracter (Basic)', ja: 'テセラクター（基本型）' },
     hp: 10, speed: 62, dmg: 8, xp: 1, r: 12, color: '#8d94b8', sides: 7, turn: 600,
   },
-  /* 虫型：高速、蛇行。细长剪影＋六足，在弹幕里"动得比看得清"——但血量最低，仍是可清的杂兵。 */
+  /* 鸟型＝基本型变体（略快、略脆）：更快贴脸，但一碰就碎。 */
+  bird: {
+    id: 'bird', shape: 'bird',
+    name: { zh: '破维魔（鸟型）', en: 'Tesseracter (Avian)', ja: 'テセラクター（鳥型）' },
+    hp: 9, speed: 70, dmg: 7, xp: 1, r: 11, color: '#6fc6b4', sides: 6, turn: 700,
+  },
+  /* 人形（杂兵）＝基本型变体（略慢、略硬、略疼）：逼玩家在"清得快"与"先躲"之间做选择。 */
+  human_mob: {
+    id: 'human_mob', shape: 'humanoid_mob',
+    name: { zh: '破维魔（人形・杂兵）', en: 'Tesseracter (Human-form, Rank & File)', ja: 'テセラクター（人型・雑兵）' },
+    hp: 13, speed: 55, dmg: 9, xp: 2, r: 13, color: '#c48a6e', sides: 4, turn: 520,
+  },
+  /* 鱼形＝高速型：比基本型快约 70%，血量最低、转向最快（turn 900）。 */
   glitch: {
-    id: 'glitch', shape: 'insect',
+    id: 'glitch', shape: 'fish',
     name: { zh: '破维魔（高速型）', en: 'Tesseracter (Swift)', ja: 'テセラクター（高速型）' },
     hp: 7, speed: 108, dmg: 6, xp: 2, r: 9, color: '#5959ff', sides: 5, turn: 900,
   },
-  /* 爬行类：巨躯。低伏宽剪影解释"慢＋撞得疼"，转向上限也最低（turn 300）。 */
+  /* 爬行类＝巨躯型：低伏宽躯的观感与"慢＋撞得疼"的手感一致，turn 300 最低。 */
   tank: {
     id: 'tank', shape: 'reptile',
     name: { zh: '破维魔（巨躯型）', en: 'Tesseracter (Bulwark)', ja: 'テセラクター（巨躯型）' },
     hp: 60, speed: 34, dmg: 18, xp: 6, r: 20, color: '#c2507e', sides: 8, turn: 300,
   },
-  /* 人形（杂兵）：数量型人形。精英出现时是"人形线"第一次抬头——后续同形杂兵都归这里。 */
+  /* 人形（个体）＝精英：1:30/2:30/3:30 出现，血量高、掉落回复。 */
   elite: {
-    id: 'elite', shape: 'humanoid_mob',
+    id: 'elite', shape: 'humanoid',
     /* ★ 原名「異能テセラクター」有误——该词官方指眷魔（盟友）。这里改用中性的「強化型」。 */
     name: { zh: '破维魔（強化型）', en: 'Tesseracter (Elite)', ja: 'テセラクター（強化型）' },
     hp: 260, speed: 74, dmg: 16, xp: 30, r: 26, color: '#ffab5e', sides: 6, elite: true, turn: 450,
@@ -116,7 +135,7 @@ KUP.ENEMIES = {
   },
 };
 
-/* ========== 关卡 Boss：每番街一体（2026-10 追加；2026-10-24 补 shape） ==========
+/* ========== 关卡 Boss：每番街一体（2026-10 追加；2026-10-24 按体型重调参） ==========
  * ⚠️ 全部为**本作二创**的大破维魔名（〈消音〉已是本作自拟；其余同）；
  *    命名取自各番街的官方定位/章节副标题的意象，不涉官方未公开设定。
  *    ★ 引用纪律：官方概念里**没有「消音」这类称号**（lore §12.2「◇ 大テセラクター〈消音〉」，
@@ -131,49 +150,61 @@ KUP.ENEMIES = {
  *   scan   〈観測〉   ：旋转光束扫射 + 分裂体（肆番街·科学研究特区）—— 虫型：复眼扫描
  *   smog   〈爆塵〉   ：随机轰炸 + 短暂视野遮蔽（伍番街·工业）        —— 鸟型：高空投下
  *   regen  〈再生〉   ：两阶段——前半音波环+高速群，后半轰炸+精英召唤（陸番街·终盘）—— 爬行类：蜕皮再生
- * 【2026-10-24 分类说明】七体 Boss 各占一形（球／人形／鱼／植物／虫／鸟／爬行），
- *   于是"八个形"在现有内容里全部有成员；**人形（杂兵）由 elite 担任**、**人形（个体）由 boss1 担任**。
- *   Boss 改形只改 shape 字段，剪影与行为都不受影响（行为由 pattern 决定）。 */
+ *
+ * 【2026-10-24 人类要求：「BOSS 先选体型再另外调参」】
+ *   ① **先选型**：每体 Boss 的 `shape` 先定，决定它的"手感方向"——
+ *      鱼/虫/鸟偏快与灵（turn 高）、人形偏稳、植物/爬行偏慢而重（turn 低）；`r` 也按体型给（植物/爬行更大）。
+ *   ② **再调参**：hp/dmg/speed 一律**单独写**，不继承任何杂兵；只服从关卡顺序的强度曲线
+ *      （hp 2000 → 3800 递增；dmg 24 → 33 递增；速度按体型给出、不强行递增）。
+ *   ③ 因此"同体型的杂兵很弱、Boss 很强"是**设计如此**：体型只借手感，不借数值。
+ *   七体 Boss 各占一形（球／人形／鱼／植物／虫／鸟／爬行）＝现有内容里八形都有成员；
+ *   `humanoid_mob` 由杂兵 human_mob 担任。 */
 KUP.BOSSES = {
   boss0: {
     id: 'boss0', pattern: 'mute', shape: 'sphere',
     name: { zh: '大破维魔〈消音〉', en: 'Grand Tesseracter 〈Mute〉', ja: '大テセラクター〈消音〉' },
-    hp: 2000, speed: 46, dmg: 24, xp: 0, r: 52, color: '#ff5aa8', sides: 9, boss: true,
+    hp: 2000, speed: 46, dmg: 24, xp: 0, r: 52, color: '#ff5aa8', sides: 9, boss: true, turn: 380,
   },
   boss1: {
+    /* 人形：慢而稳、每一步都很疼——冲锋型行为与"沉重脚步"的体型方向一致 */
     id: 'boss1', pattern: 'chase', shape: 'humanoid',
     name: { zh: '大破维魔〈緘黙〉', en: 'Grand Tesseracter 〈Taciturn〉', ja: '大テセラクター〈緘黙〉' },
-    hp: 2200, speed: 42, dmg: 26, xp: 0, r: 50, color: '#55e0ff', sides: 6, boss: true,
+    hp: 2200, speed: 38, dmg: 28, xp: 0, r: 50, color: '#55e0ff', sides: 6, boss: true, turn: 360,
   },
   boss2: {
+    /* 鱼形：七体里最快、转向最灵；伤害略让，靠"追不上"施压 */
     id: 'boss2', pattern: 'swarm', shape: 'fish',
     name: { zh: '大破维魔〈誘惑〉', en: 'Grand Tesseracter 〈Temptation〉', ja: '大テセラクター〈誘惑〉' },
-    hp: 2400, speed: 48, dmg: 25, xp: 0, r: 52, color: '#ff7ad9', sides: 7, boss: true,
+    hp: 2400, speed: 58, dmg: 24, xp: 0, r: 52, color: '#ff7ad9', sides: 7, boss: true, turn: 470,
   },
   boss3: {
+    /* 植物形：全场最慢、体积最大；毒区替它"走路" */
     id: 'boss3', pattern: 'blight', shape: 'plant',
     name: { zh: '大破维魔〈枯死〉', en: 'Grand Tesseracter 〈Blight〉', ja: '大テセラクター〈枯死〉' },
-    hp: 2600, speed: 34, dmg: 24, xp: 0, r: 56, color: '#7dff6a', sides: 8, boss: true,
+    hp: 2700, speed: 26, dmg: 24, xp: 0, r: 58, color: '#7dff6a', sides: 8, boss: true, turn: 280,
   },
   boss4: {
+    /* 虫型：快、转向快；光束本身有前后摇，体型不额外加难度 */
     id: 'boss4', pattern: 'scan', shape: 'insect',
     name: { zh: '大破维魔〈観測〉', en: 'Grand Tesseracter 〈Observation〉', ja: '大テセラクター〈観測〉' },
-    hp: 2800, speed: 44, dmg: 26, xp: 0, r: 54, color: '#b58cff', sides: 10, boss: true,
+    hp: 2800, speed: 50, dmg: 26, xp: 0, r: 54, color: '#b58cff', sides: 10, boss: true, turn: 450,
   },
   boss5: {
+    /* 鸟型：游走、转向最快；血量略低，但轰炸密度弥补 */
     id: 'boss5', pattern: 'smog', shape: 'bird',
     name: { zh: '大破维魔〈爆塵〉', en: 'Grand Tesseracter 〈Smog〉', ja: '大テセラクター〈爆塵〉' },
-    hp: 3000, speed: 40, dmg: 28, xp: 0, r: 56, color: '#ffb25a', sides: 6, boss: true,
+    hp: 2950, speed: 54, dmg: 27, xp: 0, r: 54, color: '#ffb25a', sides: 6, boss: true, turn: 480,
   },
   boss6: {
+    /* 爬行类：最慢、最硬、伤害最高——"终盘重甲"，考走位不考闪避速度 */
     id: 'boss6', pattern: 'regen', shape: 'reptile',
     name: { zh: '大破维魔〈再生〉', en: 'Grand Tesseracter 〈Regenerate〉', ja: '大テセラクター〈再生〉' },
-    hp: 3600, speed: 48, dmg: 30, xp: 0, r: 60, color: '#8fd0ff', sides: 12, boss: true,
+    hp: 3800, speed: 32, dmg: 33, xp: 0, r: 62, color: '#8fd0ff', sides: 12, boss: true, turn: 320,
   },
 };
 KUP.BOSS = id => KUP.BOSSES[id] || KUP.BOSSES.boss0;
-/* 7 体 Boss 一律笨重（380°/s，与 ENEMIES.boss 同值）：它们是「大破维魔」，
- * 转身不该比小怪灵活——逐个手写 7 份没有意义，故在此统一赋值（见顶部 turn 说明）。 */
+/* 新增 Boss 若没写 turn，统一回落到 380（默认"笨重"值）。
+ * 现有七体都按体型显式给了 turn（鱼/虫/鸟偏灵、植物/爬行偏重），循环不会再覆盖它们。 */
 for (const k in KUP.BOSSES) if (KUP.BOSSES[k].turn == null) KUP.BOSSES[k].turn = 380;
 /* 把各番街 Boss 并入敌人表（spawnEnemy 统一按 id 生成；boss0 与 KUP.ENEMIES.boss 同源） */
 for (const k in KUP.BOSSES) KUP.ENEMIES[k] = KUP.BOSSES[k];
@@ -182,8 +213,8 @@ KUP.ENEMIES.boss = KUP.BOSSES.boss0;
 /* 敌人查询（v0.19 新增接口；Boss 用 KUP.BOSS，杂兵/精英用 KUP.ENEMY） */
 KUP.ENEMY = id => KUP.ENEMIES[id] || null;
 
-/* 按「形」反查敌人（v0.20.1；同一对象只返回一次——KUP.ENEMIES 里 boss0 与 boss 是同一体）
- * 用途：图鉴分组、audit/inventory 盘点、以及"这个形还没有杂兵"的缺口检查。 */
+/* 按「形」反查敌人（同一对象只返回一次——KUP.ENEMIES 里 boss0 与 boss 是同一体）
+ * 用途：图鉴分组、audit/inventory 盘点、以及"这个类型还没有杂兵"的缺口检查。 */
 KUP.enemiesOfShape = shape => {
   const seen = new Set(), out = [];
   for (const k in KUP.ENEMIES) {

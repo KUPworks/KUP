@@ -131,12 +131,12 @@ window.KUP = window.KUP || {};
     /* 治安战的怪种分档（越往后越凶；tank 逐渐加入） */
     orderType(wave) {
       const tiers = [
-        { noise: 1 },
-        { noise: 4, glitch: 1 },
-        { noise: 3, glitch: 1.6, tank: 0.25 },
-        { noise: 2.4, glitch: 2, tank: 0.5 },
-        { noise: 2, glitch: 2.2, tank: 0.8 },
-        { noise: 1.6, glitch: 2.4, tank: 1.1 },
+        { noise: 0.7, bird: 0.15, human_mob: 0.15 },
+        { noise: 2.8, bird: 0.6, human_mob: 0.6, glitch: 1 },
+        { noise: 2.1, bird: 0.45, human_mob: 0.45, glitch: 1.6, tank: 0.25 },
+        { noise: 1.68, bird: 0.36, human_mob: 0.36, glitch: 2, tank: 0.5 },
+        { noise: 1.4, bird: 0.3, human_mob: 0.3, glitch: 2.2, tank: 0.8 },
+        { noise: 1.12, bird: 0.24, human_mob: 0.24, glitch: 2.4, tank: 1.1 },
       ];
       const idx = Math.max(0, Math.floor((wave - 1) / 3));
       return U.weightedPick(tiers[Math.min(tiers.length - 1, idx)]);
@@ -192,7 +192,7 @@ window.KUP = window.KUP || {};
           b.minionT -= dt;
           if (b.minionT <= 0) {
             b.minionT = 5;
-            const table = b.enraged ? { glitch: 2, tank: 1.4, elite: 0.35 } : { glitch: 2.2, noise: 1.4, tank: 0.7 };
+            const table = b.enraged ? { glitch: 2, tank: 1.4, elite: 0.35 } : { glitch: 2.2, noise: 0.98, bird: 0.21, human_mob: 0.21, tank: 0.7 };
             for (let i = 0; i < 3; i++) this.spawnEnemy(U.weightedPick(table), b.x, b.y);
           }
           break;

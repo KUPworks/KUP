@@ -446,61 +446,60 @@ check('形態带官方命名法与出处标注（数据层 src）', KUP.FORM('ou
 check('敌人不得使用「異能テセラクター」（该词指眷魔/盟友）',
   ['zh', 'en', 'ja'].every(l => !/異能テセラクター|Aberrant Tesseracter/.test(KUP.ENEMIES.elite.name[l])));
 
-/* ========== v0.20 破维魔八形（数据 KUP.ENEMY_SHAPES ↔ 剪影 KUP.ENEMY_SILHOUETTES） ========== */
+/* ========== v0.20.2 破维魔八形＝体型/参数原型（只改参数，不绑绘制） ========== */
 const SHAPE_IDS = ['fish', 'humanoid_mob', 'humanoid', 'reptile', 'insect', 'plant', 'bird', 'sphere'];
 check('破维魔八形齐全（顺序＝人类指定；三语＋设计注释齐备）',
   KUP.ENEMY_SHAPES.length === 8 && KUP.ENEMY_SHAPES.map(s => s.id).join(',') === SHAPE_IDS.join(',') &&
   KUP.ENEMY_SHAPES.every(s => ['zh', 'en', 'ja'].every(l => typeof s.name[l] === 'string' && s.name[l].length > 0) && !!s.note));
-const ALL_ENEMY_IDS = ['noise', 'glitch', 'tank', 'elite', 'boss0', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', 'boss6'];
-check('每个敌人（4 杂兵/精英 ＋ 7 体 Boss）都写了合法 shape',
+const ALL_ENEMY_IDS = ['noise', 'bird', 'human_mob', 'glitch', 'tank', 'elite',
+  'boss0', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', 'boss6'];
+check('每个敌人（6 杂兵/精英 ＋ 7 体 Boss）都写了合法 shape',
   ALL_ENEMY_IDS.every(id => KUP.ENEMIES[id] && SHAPE_IDS.indexOf(KUP.ENEMIES[id].shape) >= 0));
-check('八形各至少有一个敌人（分类不留空）',
+check('八形各至少一个成员（分类不留空）',
   SHAPE_IDS.every(id => KUP.enemiesOfShape(id).length > 0),
   SHAPE_IDS.map(id => id + ':' + KUP.enemiesOfShape(id).length).join(' '));
-check('七体 Boss 各占一形（不重复，便于按剪影记行为）',
+check('七体 Boss 各占一形（不重复，便于按体型记手感）',
   new Set(Object.values(KUP.BOSSES).map(b => b.shape)).size === 7);
 check('KUP.ENEMY_SHAPE 查询可用（未知 → null）',
   KUP.ENEMY_SHAPE('fish') === KUP.ENEMY_SHAPES[0] && KUP.ENEMY_SHAPE('nope') === null);
-/* 分类**只改观感**：数值快照必须与 v0.19 完全一致（不让"多样化"顺手改难度） */
-check('八形分类不改强度（杂兵/Boss 数值快照不变）',
-  KUP.ENEMIES.noise.hp === 10 && KUP.ENEMIES.glitch.speed === 108 && KUP.ENEMIES.tank.r === 20 &&
-  KUP.ENEMIES.elite.hp === 260 && Object.values(KUP.BOSSES).every(b => b.turn === 380));
-check('剪影与八形一一对应（同一套 id，不多不少）',
-  Object.keys(KUP.ENEMY_SILHOUETTES).length === SHAPE_IDS.length &&
-  SHAPE_IDS.every(id => typeof KUP.ENEMY_SILHOUETTES[id] === 'function'));
-/* 用记录式 ctx 跑一遍绘制路径：① 每个形真的画出多段子路径；② 不消费随机流（可复现）；
- * ③ Enemy._shape 是「构建时旋转、restore 后 fill」（色散错位不被转身带偏）。 */
-const recCtx = () => {
-  const calls = [];
-  const c = {
-    calls,
-    save() { calls.push('save'); }, restore() { calls.push('restore'); },
-    translate() { calls.push('translate'); }, rotate() { calls.push('rotate'); },
-    beginPath() { calls.push('begin'); }, closePath() { calls.push('close'); },
-    moveTo() { calls.push('move'); }, lineTo() { calls.push('line'); },
-    bezierCurveTo() { calls.push('bez'); }, quadraticCurveTo() { calls.push('quad'); },
-    arc() { calls.push('arc'); }, fill() { calls.push('fill'); },
-    stroke() {}, setLineDash() {}, clearRect() {}, fillRect() {},
-  };
-  return c;
-};
-const probeEnemy = { r: 20, phase: 0.37, dirA: 0.9, boss: false, def: { sides: 7 } };
-const silTrace = id => { const c = recCtx(); KUP.ENEMY_SILHOUETTES[id](c, probeEnemy, 1.23); return c.calls.join(','); };
-const silTraces = SHAPE_IDS.map(silTrace);
-const silPathOps = silTraces.map(s => s.split(',').filter(k => k === 'move' || k === 'line' || k === 'bez' || k === 'quad' || k === 'arc').length);
-check('八个剪影都能画出多段子路径（形状不是空的）',
-  silPathOps.every(n => n >= 5), silPathOps.join(','));
-check('剪影绘制不消费随机流（同输入 → 同路径）',
-  SHAPE_IDS.every(id => silTrace(id) === silTrace(id)));
-const eProbe = new KUP.Enemy(KUP.ENEMIES.glitch, 0, 0, 1, 1);
-eProbe.dirA = 0.5;
-const cShape = recCtx();
-eProbe._shape(cShape, 1.0, 3, -4);
-check('Enemy._shape：按朝向旋转构建路径，restore 后再 fill（色散错位不随转身转）',
-  cShape.calls.indexOf('rotate') > cShape.calls.indexOf('translate') &&
-  cShape.calls.indexOf('begin') > cShape.calls.indexOf('rotate') &&
-  cShape.calls[cShape.calls.length - 1] === 'fill' &&
-  cShape.calls.indexOf('restore') < cShape.calls.lastIndexOf('fill'));
+/* 人类 2026-10-24 指定的两项：鱼形做高速型；鸟型／人形（杂兵）做"略有区别的基本型" */
+check('体型分工：鱼形＝高速型，鸟型／人形（杂兵）＝基本型变体',
+  KUP.ENEMIES.glitch.shape === 'fish' && KUP.ENEMIES.noise.shape === 'sphere' &&
+  KUP.ENEMIES.bird.shape === 'bird' && KUP.ENEMIES.human_mob.shape === 'humanoid_mob' &&
+  KUP.ENEMIES.elite.shape === 'humanoid' && KUP.ENEMIES.tank.shape === 'reptile');
+/* 基本型变体只做小幅参数偏移：不能顺手把杂兵难度抬高一档 */
+const rel = (a, b) => Math.abs(a - b) / b;
+check('基本型变体只差 10–35% 的参数（不改变难度量级）',
+  ['bird', 'human_mob'].every(id => {
+    const e = KUP.ENEMIES[id], n = KUP.ENEMIES.noise;
+    return rel(e.hp, n.hp) <= 0.35 && rel(e.speed, n.speed) <= 0.2 &&
+      rel(e.dmg, n.dmg) <= 0.2 && rel(e.r, n.r) <= 0.2 && rel(e.turn, n.turn) <= 0.25;
+  }),
+  ['bird', 'human_mob'].map(id => {
+    const e = KUP.ENEMIES[id], n = KUP.ENEMIES.noise;
+    return id + ' hp' + ((e.hp / n.hp - 1) * 100).toFixed(0) + '% spd' + ((e.speed / n.speed - 1) * 100).toFixed(0) + '%';
+  }).join(' '));
+/* BOSS：先选体型再另外调参 ⇒ 体力曲线与体型解耦（鱼形可以更快但不必更肉） */
+const bossSeq = ['boss0', 'boss1', 'boss2', 'boss3', 'boss4', 'boss5', 'boss6'].map(id => KUP.BOSSES[id]);
+check('Boss 强度曲线：hp 严格递增（速度按体型给、不强行递增）',
+  bossSeq.every((b, i) => i === 0 || b.hp > bossSeq[i - 1].hp) &&
+  KUP.BOSSES.boss2.speed > KUP.BOSSES.boss3.speed);
+check('Boss 转向按体型：鱼/虫/鸟最灵，植物/爬行最重',
+  KUP.BOSSES.boss2.turn > 400 && KUP.BOSSES.boss4.turn > 400 && KUP.BOSSES.boss5.turn > 400 &&
+  KUP.BOSSES.boss0.turn === 380 && KUP.BOSSES.boss1.turn < 380 &&
+  KUP.BOSSES.boss6.turn < 380 && KUP.BOSSES.boss3.turn < 300);
+check('Boss 不继承杂兵数值（同体型 ≠ 同强度）',
+  KUP.BOSSES.boss2.hp > KUP.ENEMIES.glitch.hp * 30 && KUP.BOSSES.boss6.hp > KUP.ENEMIES.tank.hp * 50);
+/* 波次接线：只把基本型权重拆给两个变体，总权重与刷怪率不变 */
+const waveSplitOk = w => w.types.noise > 0 && w.types.bird > 0 && w.types.human_mob > 0 &&
+  Math.abs(w.types.bird / w.types.noise - 0.15 / 0.7) < 0.03 &&
+  Math.abs(w.types.human_mob / w.types.noise - 0.15 / 0.7) < 0.03;
+check('鸟型/人形杂兵已接入波次（全局＋七个番街；权重按 70:15:15 拆基本型）',
+  KUP.WAVES.every(waveSplitOk) &&
+  KUP.AREAS.filter(a => !a.endless).every(a => a.waves.every(waveSplitOk)));
+/* 人类要求「绘制方式等回退」：数据层不再提供剪影绘制钩子，剪影方案已整体撤回 */
+check('绘制已回退（数据层不再有 KUP.ENEMY_SILHOUETTES 剪影钩子）',
+  typeof KUP.ENEMY_SILHOUETTES === 'undefined');
 check('番街出处字段仍在数据层', KUP.AREAS.every(a => a.src === 'regenerate' || a.src === 'narrative' || a.src === 'original'));
 check('形態按角色类型匹配', KUP.formFits(KUP.FORM('ouranchou'), 'witch') && !KUP.formFits(KUP.FORM('ouranchou'), 'recruit') &&
   KUP.formFits(KUP.FORM('kuro'), 'recruit') && !KUP.formFits(KUP.FORM('kuro'), 'companion'));
