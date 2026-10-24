@@ -564,6 +564,8 @@ KUP.WEAPONS = {
   },
   hakuchuumu: {
     id: 'hakuchuumu', icon: '夢', color: '#ffffff', behavior: 'blast', maxLv: 5, owner: 'koko',
+    /* 白色空爆＋**极浅紫**的起爆前摇（默认橙色太"危险"，与白昼夢的梦感不合）。 */
+    warnColor: '#d8c8ff',
     name: { zh: '白昼夢', en: 'Daydream', ja: '白昼夢' },
     desc: {
       zh: '乐曲「白昼夢」化作**白色的空爆**：在自身周围随机落下，短暂延迟后无声炸开。輪廻此処的第二武装。',

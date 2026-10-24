@@ -1392,6 +1392,9 @@ window.KUP = window.KUP || {};
       this.tick = 0;
       this.slow = !!opt.slow;                // 是否给敌人减速（滞留效果）
       this.vis = opt.vis || 1;               // **显示**缩放（判定/作用范围仍用 this.r）
+      /* v0.20.5：起爆前摇的警示圈颜色。缺省橙色（通用空爆），
+       * 白昼夢等武器可用武器表里的 warnColor 覆盖（如极浅紫）。 */
+      this.warnColor = opt.warnColor || '#ff8a5a';
       this.dead = false;
       this.hit = new Set();
     }
@@ -1509,7 +1512,7 @@ window.KUP = window.KUP || {};
       }
       if (!this.armed) {                       // 起爆前摇：警示圈收缩
         const k = Math.max(0, this.age / this.arm);
-        ctx.strokeStyle = '#ff8a5a';
+        ctx.strokeStyle = this.warnColor;
         ctx.globalAlpha = 0.35 + 0.5 * Math.abs(Math.sin(t * 12));
         ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(0, 0, vr, 0, U.TAU); ctx.stroke();

@@ -2516,6 +2516,9 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     KUP.WEAPONS.sayonara.behavior === 'shotgun' && KUP.WEAPONS.kyogen.behavior === 'summon');
   check('白昼夢是「白色空爆」', KUP.WEAPONS.hakuchuumu.color === '#ffffff' &&
     KUP.WEAPONS.hakuchuumu.behavior === 'blast');
+  check('白昼夢的起爆前摇改为极浅紫（默认空爆仍是橙色）',
+    KUP.WEAPONS.hakuchuumu.warnColor === '#d8c8ff' &&
+    new KUP.Zone(0, 0, { kind: 'bomb' }).warnColor === '#ff8a5a');
 
   /* devour：先把敌人拖向中心，收束时群伤 */
   const gDv = new KUP.Game(canvas);

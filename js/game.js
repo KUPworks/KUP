@@ -418,7 +418,7 @@ window.KUP = window.KUP || {};
               const a = U.rng() * U.TAU, d = U.rand(V('minRange', 30), range);
               game.zones.push(new KUP.Zone(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, {
                 r: V('r', 70), dmg: s.dmg * p.dmgMult, arm: V('fuse', 0.95),
-                kind: 'bomb', color: col,
+                kind: 'bomb', color: col, warnColor: this.def.warnColor,
               }));
             }
             KUP.Audio.sfx('warning');
