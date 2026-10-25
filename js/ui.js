@@ -989,6 +989,7 @@ window.KUP = window.KUP || {};
       choices.forEach((c, i) => {
         const card = document.createElement('div');
         card.className = 'lu-card';
+        if (c.kind === 'derived') card.classList.add('lu-derived');   // v0.21 派生卡专用描边
         let tag, tagCls, name, desc, lvline, col = '#8fd0ff';
         if (c.kind === 'awaken') {
           // 覚醒 ★（REGENERATE「魔女の娘へと覚醒する場面」）
@@ -1010,6 +1011,18 @@ window.KUP = window.KUP || {};
             name = KUP.I18N.tv(def.name); desc = KUP.I18N.tv(def.lvDesc[cur]);
             lvline = KUP.I18N.t('lu.lvline.up', { from: cur, to: cur + 1 });
           }
+        } else if (c.kind === 'derived') {
+          /* v0.21 派生（合并）卡：两把武器合一把、释放 1 槽，等级取较低的那把 */
+          const def = KUP.WEAPONS[c.id];
+          col = def.color;
+          tag = KUP.I18N.t('lu.tag.derived'); tagCls = 'derived';
+          name = KUP.I18N.tv(def.name); desc = KUP.I18N.tv(def.desc);
+          const d = KUP.DERIVED[c.id] || { from: [] };
+          const lows = d.from.map(id => {
+            const w = this.game.player.weapons.find(w => w.def.id === id);
+            return w ? w.lv : 1;
+          });
+          lvline = KUP.I18N.t('lu.lvline.derived', { lv: lows.length ? Math.min.apply(null, lows) : 1 });
         } else if (c.kind === 'item') {
           /* 局内道具（v0.8）：护盾／MISS／回血——独立于被动槽，可重复选 */
           const def = KUP.ITEMS[c.id];

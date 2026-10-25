@@ -264,6 +264,19 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .lu-tag.egg { color: #ffe89a; border: 1px solid rgba(255,232,154,.8); background: rgba(255,220,120,.14); animation: egg-pulse 1.8s infinite; }
 @keyframes egg-pulse { 0%,100% { opacity: 1; } 50% { opacity: .82; } }
 .lu-card:has(.lu-tag.egg) { border-color: rgba(255,232,154,.45); box-shadow: 0 0 18px rgba(255,216,110,.12); }
+/* v0.21 派生（合并）卡：两首歌的交界线——双色描边＋一点流光，和普通成长卡区分开 */
+.lu-tag.derived {
+  color: #ffffff;
+  border: 1px solid rgba(255,255,255,.7);
+  background: linear-gradient(100deg, rgba(255,122,198,.35), rgba(143,208,255,.35));
+}
+.lu-card.lu-derived {
+  border-color: rgba(255,255,255,.42);
+  background: linear-gradient(160deg, rgba(52,20,72,.96), rgba(14,22,52,.96));
+  box-shadow: 0 0 20px rgba(255,140,210,.14), inset 0 0 26px rgba(120,170,255,.08);
+}
+.lu-card.lu-derived:hover { border-color: var(--c, #ffffff); box-shadow: 0 0 26px color-mix(in srgb, var(--c, #ffffff) 55%, transparent); }
+.lu-card.lu-derived .lu-lvline { color: #ffb0e0; }
 .lu-card .lu-name { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
 .lu-card .lu-desc { font-size: 12.5px; line-height: 1.75; color: #b9b1e4; min-height: 66px; }
 .lu-card .lu-lvline { margin-top: 8px; font-size: 12px; color: #8fd0ff; font-weight: 700; }

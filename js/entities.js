@@ -1555,6 +1555,9 @@ window.KUP = window.KUP || {};
       /* v0.20.5：起爆前摇的警示圈颜色。缺省橙色（通用空爆），
        * 白昼夢等武器可用武器表里的 warnColor 覆盖（如极浅紫）。 */
       this.warnColor = opt.warnColor || '#ff8a5a';
+      /* v0.21：派生武装（深淵）需要在**收束瞬间**追加效果（从中心射出光束），
+       * 用可选回调表达，避免给 Zone 再塞一堆专用字段。 */
+      this.onBurst = opt.onBurst || null;
       this.dead = false;
       this.hit = new Set();
     }
@@ -1563,6 +1566,8 @@ window.KUP = window.KUP || {};
         if (e.dead) continue;
         if (U.dist2(e.x, e.y, this.x, this.y) < Math.pow(this.r + e.r, 2)) game.damageEnemy(e, this.dmg);
       }
+      /* v0.21：收束追加效果（深淵：吞完之后从中心贯穿光束）——在粒子/音效之前结算 */
+      if (this.onBurst) this.onBurst(game, this);
       game.shake(this.kind === 'bomb' ? 5 : 3);
       const col = this.color;
       /* v0.15.1：地雷起爆＝**两道向外推的圆**（纯表现，不结算）：

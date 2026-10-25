@@ -109,6 +109,9 @@ KUP.I18N = {
       'lu.tag.pnew': '强化 · 新获得', 'lu.tag.pup': '强化 · 升级', 'lu.tag.heal': '回复',
       /* v0.17 記憶の卵（局内現象卡）：罕见额外卡，选中＝1 次復活 */
       'lu.tag.egg': '現象 · 記憶の卵',
+      /* v0.21 派生（合并）卡：两把武器合一把，释放 1 槽 */
+      'lu.tag.derived': '派 生 · 合 并',
+      'lu.lvline.derived': '两把合一 · Lv {lv} · 释放 1 槽',
       'egg.name': '記憶の卵',
       'egg.desc': '現象卡：本局死亡时自动復活一次——回复 50% 生命，并以小范围冲击波推开敌人、获得 2.5 秒无敌帧。',
       'egg.line': '可復活 1 次',
@@ -154,6 +157,7 @@ KUP.I18N = {
       'banner.awaken': '覚醒 —— {name}',
       'banner.ult': '浄化の歌',
       'banner.egg': '現象 —— 記憶の卵',
+      'banner.derived': '派生 —— 二曲合一 · {name}',
       'banner.revive': '記憶の卵 —— 時を巻き戻す',
       'ult.ready': '♪ 浄化の歌 READY（Space）',
       /* v0.14 角色大招（KUP.ULTIMATES）的**名字横幅**：{name} 由数据表填入三语名 */
@@ -321,6 +325,8 @@ KUP.I18N = {
       'lu.tag.pnew': 'PASSIVE · NEW', 'lu.tag.pup': 'PASSIVE · UPGRADE', 'lu.tag.heal': 'RECOVER',
       /* v0.17 Egg of Memory (in-run phenomenon card): rare extra card, pick = 1 revive */
       'lu.tag.egg': 'PHENOMENON · EGG OF MEMORY',
+      'lu.tag.derived': 'DERIVED · MERGE',
+      'lu.lvline.derived': 'Two into one · Lv {lv} · frees 1 slot',
       'egg.name': 'Egg of Memory',
       'egg.desc': 'Phenomenon card: revive once when you die this run — restore 50% HP, unleash a small shockwave that pushes enemies away, and gain 2.5s of invincibility.',
       'egg.line': 'Revive ×1',
@@ -366,6 +372,7 @@ KUP.I18N = {
       'banner.awaken': 'AWAKENED — {name}',
       'banner.ult': 'Song of Purification',
       'banner.egg': 'PHENOMENON — Egg of Memory',
+      'banner.derived': 'DERIVED — two songs into one — {name}',
       'banner.revive': 'Egg of Memory — time rewinds',
       'ult.ready': '♪ Song of Purification READY (Space)',
       /* v0.14 per-character ultimate banner (name comes from KUP.ULTIMATES) */
@@ -532,6 +539,8 @@ KUP.I18N = {
       'lu.tag.pnew': '強化 · 新規', 'lu.tag.pup': '強化 · 強化', 'lu.tag.heal': '回復',
       /* v0.17 記憶の卵（局内の現象カード）：希少な追加カード、選択で復活 1 回 */
       'lu.tag.egg': '現象 · 記憶の卵',
+      'lu.tag.derived': '派生 · 合体',
+      'lu.lvline.derived': '二曲を一つに · Lv {lv} · 枠 1 つ解放',
       'egg.name': '記憶の卵',
       'egg.desc': '現象カード：この一局で死亡時に一度だけ復活する——HP 50% 回復、小範囲の衝撃波で敵を弾き、2.5 秒の無敵。',
       'egg.line': '復活 1 回',
@@ -577,6 +586,7 @@ KUP.I18N = {
       'banner.awaken': '覚醒 —— {name}',
       'banner.ult': '浄化の歌',
       'banner.egg': '現象 —— 記憶の卵',
+      'banner.derived': '派生 —— 二曲合一 · {name}',
       'banner.revive': '記憶の卵 —— 時を巻き戻す',
       'ult.ready': '♪ 浄化の歌 READY（Space）',
       /* v0.14 キャラ別の奥義（KUP.ULTIMATES） */

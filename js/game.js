@@ -372,6 +372,164 @@ window.KUP = window.KUP || {};
           }
           break;
         }
+        /* ===== v0.21 合奏系：派生（合并）武装 =====
+         * 这些模组只由「两把武器合成一把」产生（占 1 槽）。共同口径：
+         *   强于其中任意一把、弱于两把叠加 —— 每轮只跑一套节奏，几何取自两族。
+         * 具体数值全部写在武器等级表里，这里不写死常数。 */
+        case 'chorus': { // 魔法：环绕音球 ＋ 球体轮流齐射的追踪音符
+          const oc = Math.max(1, s.orbCount | 0);
+          while (this.orbs.length < oc) this.orbs.push({ x: p.x, y: p.y, r: V('orbR', 18) });
+          while (this.orbs.length > oc) this.orbs.pop();
+          const Rc = V('r', 48), orbRc = V('orbR', 18);
+          const spinC = V('spin', 4.6) / Math.max(0.35, p.cdMult);
+          const hitCdC = V('hitCd', 0.38) * Math.max(0.45, p.cdMult);
+          this.angle += spinC * dt;
+          this.orbR = orbRc; this.orbitR = Rc;
+          for (let i = 0; i < oc; i++) {
+            const orb = this.orbs[i];
+            const a = this.angle + (U.TAU * i) / oc;
+            orb.x = p.x + Math.cos(a) * Rc;
+            orb.y = p.y + Math.sin(a) * Rc;
+            orb.r = orbRc;
+            for (const e of game.enemies) {
+              if (e.dead || e.orbitT > 0) continue;
+              const rr2 = e.r + orbRc;
+              if (U.dist2(e.x, e.y, orb.x, orb.y) < rr2 * rr2) {
+                e.orbitT = hitCdC;
+                game.damageEnemy(e, s.orbDmg * p.dmgMult, Math.cos(a) * 130, Math.sin(a) * 130);
+              }
+            }
+          }
+          /* 音符齐射：从球体位置出发（球在哪儿，歌就从哪儿起） */
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const nc = Math.max(1, s.count | 0);
+            const sp = V('speed', 380);
+            for (let i = 0; i < nc; i++) {
+              const orb = this.orbs[i % this.orbs.length] || p;
+              const target = game.enemies.length ? U.pick(game.enemies) : null;
+              const a = target
+                ? Math.atan2(target.y - orb.y, target.x - orb.x)
+                : this.angle + (U.TAU * i) / nc;
+              game.projs.push(new KUP.Projectile(orb.x, orb.y, Math.cos(a) * sp, Math.sin(a) * sp, {
+                dmg: s.dmg * p.dmgMult, r: V('pr', 7), life: V('life', 2.0), pierce: 0,
+                homing: V('homing', 5.2), target, color: col, kind: 'homing',
+              }));
+            }
+            KUP.Audio.sfx('shoot');
+          }
+          break;
+        }
+        case 'abyss': { // 深淵：吞噬领域收束 → 自中心贯穿光束
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const n = Math.max(1, s.count | 0);
+            const nb = Math.max(1, s.beams | 0);
+            const beamLen = V('beamLen', 600), beamW = V('beamW', 20);
+            const beamDmg = s.beamDmg * p.dmgMult;
+            const targets = game.nearestEnemies ? game.nearestEnemies(p.x, p.y, n) : [];
+            for (let i = 0; i < n; i++) {
+              const tgt = targets[i] || (i === 0 ? game.nearestEnemy(p.x, p.y) : null);
+              const cx = tgt ? tgt.x : p.x, cy = tgt ? tgt.y : p.y;
+              game.zones.push(new KUP.Zone(cx, cy, {
+                r: V('r', 120), dmg: s.dmg * p.dmgMult, kind: 'devour', color: col,
+                pull: V('pull', 300), life: V('life', 0.7),
+                onBurst: (g, z) => {
+                  /* 收束瞬间的方向取**当前瞄准**：拖拽已经把人堆到中心，
+                   * 光束朝自己正对着的那条线打出去最符合操作直觉。 */
+                  const ad = g.aimDir(g.player);
+                  const base = Math.atan2(ad.y, ad.x);
+                  for (let k = 0; k < nb; k++) {
+                    const a = nb === 1 ? base : base + (k - (nb - 1) / 2) * 0.55;
+                    g.beams.push(new KUP.Beam(z.x, z.y, a, {
+                      len: beamLen, w: beamW, dmg: beamDmg, color: col, game: g,
+                    }));
+                  }
+                  KUP.Audio.sfx('laser');
+                },
+              }));
+            }
+            KUP.Audio.sfx('warning');
+          }
+          break;
+        }
+        case 'gale': { // 本懐：正面窄扇风压 ＋ 推进的巨大重弹
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const ad = game.aimDir(p);
+            const base = Math.atan2(ad.y, ad.x);
+            game.rings.push(new KUP.Ring(p.x, p.y, {
+              maxR: V('ringR', 180), speed: V('ringSpeed', 320), dmg: s.ringDmg * p.dmgMult,
+              kb: V('ringKb', 360), color: col, arc: V('ringArc', 70) * DEG, dir: base,
+            }));
+            const n = Math.max(1, s.count | 0);
+            const sp = V('speed', 250);
+            for (let i = 0; i < n; i++) {
+              const a = base + (i - (n - 1) / 2) * 0.14;
+              game.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
+                dmg: s.dmg * p.dmgMult, r: V('r', 26), life: V('life', 2.6), pierce: s.pierce | 0,
+                homing: 0.5, kb: V('kb', 2.6), color: col, kind: 'typhoon',
+              }));
+            }
+            game.shake(2.2);
+            KUP.Audio.sfx('boom');
+          }
+          break;
+        }
+        case 'scar': { // 古傷：整圈冲击环 ＋ 环内落下的延迟白爆
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            game.rings.push(new KUP.Ring(p.x, p.y, {
+              maxR: V('ringR', 180), speed: V('ringSpeed', 340), dmg: s.ringDmg * p.dmgMult,
+              kb: V('ringKb', 200), color: col,
+            }));
+            const n = Math.max(1, s.count | 0);
+            for (let i = 0; i < n; i++) {
+              const a = U.rng() * U.TAU, d = U.rand(V('minRange', 30), V('range', 240));
+              game.zones.push(new KUP.Zone(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, {
+                r: V('r', 100), dmg: s.dmg * p.dmgMult, arm: V('fuse', 0.8),
+                kind: 'bomb', color: col, warnColor: this.def.warnColor,
+              }));
+            }
+            game.shake(2);
+            KUP.Audio.sfx('warning');
+          }
+          break;
+        }
+        case 'stigma': { // 刻印：穿透音枪齐射 ＋ 同目标脚下的滞留宝光
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const count = Math.max(1, s.count | 0);
+            const spreadS = V('spread', 0.085);
+            const base = (() => { const ad = game.aimDir(p); return Math.atan2(ad.y, ad.x); })();
+            const nTargets = Math.min(count, 2);
+            const targets = game.nearestEnemies ? game.nearestEnemies(p.x, p.y, nTargets) : [];
+            const vol = game.volleyAngles(p, count, { base, spread: spreadS, targets });
+            const sp = V('speed', 560);
+            for (let i = 0; i < count; i++) {
+              const a = vol.angles[i];
+              game.projs.push(new KUP.Projectile(p.x, p.y, Math.cos(a) * sp, Math.sin(a) * sp, {
+                dmg: s.dmg * p.dmgMult, r: V('r', 8), life: 1.6, pierce: s.pierce | 0,
+                color: col, kind: 'sniper',
+              }));
+            }
+            /* 宝光钉在**最近的那一个**目标脚下（齐射的几个弹体本来就打它） */
+            const tgt = targets[0] || game.nearestEnemy(p.x, p.y);
+            if (tgt) {
+              game.zones.push(new KUP.Zone(tgt.x, tgt.y, {
+                r: V('fieldR', 60), dmg: s.fieldDmg * p.dmgMult, life: V('fieldLife', 3),
+                kind: 'field', color: col, slow: true, tickRate: V('tickRate', 0.4),
+              }));
+            }
+            KUP.Audio.sfx('laser');
+          }
+          break;
+        }
         /* ===== 新武器组：滞留・投掷系 ===== */
         case 'lob': { // 残留音块：**分别投向最近 N 个不同的敌人**，落点留下滞留音场
           this.t -= dt;
@@ -453,7 +611,7 @@ window.KUP = window.KUP || {};
     }
 
     drawOrbs(ctx, p) {
-      if (this.def.behavior !== 'orbital') return;
+      if (this.def.behavior !== 'orbital' && this.def.behavior !== 'chorus') return;
       const rr = this.orbR || 11;
       for (const orb of this.orbs) {
         ctx.save();
@@ -548,6 +706,8 @@ window.KUP = window.KUP || {};
       /* v0.17 記憶の卵（現象卡）：本局是否已抽过（番街一局最多一次）、復活充能、已復活次数 */
       this.eggOffered = false; this.eggCharge = 0; this.eggUsed = 0;
       this._eggLevel = -1; this._eggHit = false;   // 同等级抽卡结果缓存（重掷不刷卵）
+      /* v0.21 派生卡（合并武装）：同等级只掷一次，重掷不刷派生 */
+      this._derivedLevel = -1; this._derivedHit = null;
       /* v0.18 不可解空間：Boss 出现时按概率进入；觸发体被击破后退回基础规则 */
       this.space = null; this.spaceBoss = null; this.spacePending = null;
       this.spaceT = 0; this.spaceRotT = 0; this.spaceFog = 0; this.spacesSeen = [];
@@ -1459,6 +1619,57 @@ window.KUP = window.KUP || {};
       if (this._eggHit) this.eggOffered = true;
       return this._eggHit;
     }
+    /* ---------- 派生卡（v0.21 合并武装）：抽取 ----------
+     * 玩家**同时持有** `derived.from` 里的两把武器时，升级卡池有**中等几率**
+     * （KUP.CONFIG.DERIVED.CHANCE，缺省 0.45）出现对应的派生卡——不是必出。
+     * 它和普通卡一样只占**一格**，不会额外多给一张；与記憶の卵同口径：
+     * 同一等级的多次 rollChoices（重掷／连级）结果不变，避免「重掷刷派生」。 */
+    derivedCandidates() {
+      const p = this.player;
+      const owned = new Set(p.weapons.map(w => w.def.id));
+      const out = [];
+      for (const id in KUP.DERIVED) {
+        if (owned.has(id)) continue;                       // 已经合并过
+        if (this.banned && this.banned.has(id)) continue;  // 本局被封禁过
+        const d = KUP.DERIVED[id];
+        if (d.from.every(w => owned.has(w))) out.push({ kind: 'derived', id });
+      }
+      return out;
+    }
+    rollDerivedCard() {
+      const cands = this.derivedCandidates();
+      if (!cands.length) return null;
+      if (this._derivedLevel === this.level) {             // 同等级重掷：结果不变
+        const c = this._derivedHit;
+        return (c && cands.some(x => x.id === c.id)) ? c : null;
+      }
+      const C = KUP.CONFIG.DERIVED || {};
+      const chance = C.CHANCE != null ? C.CHANCE : 0.45;
+      this._derivedLevel = this.level;
+      this._derivedHit = ((this.debug && this.debug.derived) || U.rng() < chance) ? U.pick(cands) : null;
+      return this._derivedHit;
+    }
+    /* 选中派生卡：两把武器**合成一把**（释放 1 个武器槽），等级取两者中**较低**的那把。
+     * 合并武装本身没有 evolved 表：两把都覚醒时，合并形态直接以覚醒状态登场。 */
+    takeDerivedCard(mergedId) {
+      const p = this.player;
+      const d = KUP.DERIVED[mergedId], def = KUP.WEAPONS[mergedId];
+      if (!d || !def) return false;
+      const a = p.weapons.find(w => w.def.id === d.from[0]);
+      const b = p.weapons.find(w => w.def.id === d.from[1]);
+      if (!a || !b) return false;
+      const lv = Math.max(1, Math.min(a.lv, b.lv, def.maxLv));
+      const evo = !!(a.evolved && b.evolved && def.evolved);
+      /* 用新数组替换：先移除两把，再把合并武装放进释放出来的槽位 */
+      p.weapons = p.weapons.filter(w => w !== a && w !== b);
+      const rt = new WeaponRuntime(def, lv);
+      rt.evolved = evo;
+      p.weapons.push(rt);
+      this.addText(p.x, p.y - 34, KUP.I18N.tv(def.name), def.color, 17);
+      KUP.UI.banner(KUP.I18N.t('banner.derived', { name: KUP.I18N.tv(def.name) }), 2.4);
+      KUP.Audio.sfx('select');
+      return true;
+    }
     /* 选中現象卡：获得 1 次復活充能（不附带其它成长——用一次升级换一条命） */
     takeEggCard() {
       this.eggCharge++;
@@ -1832,6 +2043,7 @@ window.KUP = window.KUP || {};
        * v0.11「武装解锁」：未招募对应角色前，其专属武器不入池（META.isWeaponUnlocked）。 */
       if (ownedW.length < 5) {
         for (const id in KUP.WEAPONS) {
+          if (KUP.WEAPONS[id].derived) continue;   // 派生武装只能由合并产生，不进「新武器」池
           if (ownedW.indexOf(id) < 0 && !banned.has(id) &&
               (!KUP.META || KUP.META.isWeaponUnlocked(id))) buckets.weapon.push({ kind: 'weapon-new', id });
         }
@@ -1866,9 +2078,13 @@ window.KUP = window.KUP || {};
         used.add(c.kind + ':' + c.id); out.push(c); return true;
       };
       if (buckets.awaken.length) take(U.pick(buckets.awaken));         // 1. 覚醒优先
+      /* 1.5 派生卡（v0.21）：两把武器都在手时**中等几率**给一张，占普通一格；
+       * 命中时「武器」配额让给它，避免同一抽里既合并又塞新武器。 */
+      const deriv = this.rollDerivedCard();
+      if (deriv) take(deriv);
       /* 2. 分桶保底：血线危险时「生存优先」——道具占 2 格且优先抽取 */
       const hurt = p.hp < p.maxhp * 0.45;
-      const quotas = { weapon: 1, passive: 1, item: hurt ? 2 : 1 };
+      const quotas = { weapon: deriv ? 0 : 1, passive: 1, item: hurt ? 2 : 1 };
       const order = hurt ? ['item', 'weapon', 'passive'] : ['weapon', 'passive', 'item'];
       for (const key of order) {
         for (let n = 0; n < quotas[key] && out.length < 4; n++) {
@@ -1889,12 +2105,13 @@ window.KUP = window.KUP || {};
         if (out.length >= 4) out.length = 3;   // 让出第 4 格给卵卡
         out.push({ kind: 'egg' });
       }
-      // 调试：?pick=heart,heal,ward 强制指定升级选项（确定性验证；支持被动/武器/道具 id）
+      // 调试：?pick=heart,heal,ward 强制指定升级选项（确定性验证；支持被动/武器/道具/派生 id）
       if (this.debug.pick) {
         const mk = s => s === 'heal' ? { kind: 'heal' }
+          : (KUP.DERIVED[s] ? { kind: 'derived', id: s }
           : (KUP.ITEMS[s] ? { kind: 'item', id: s }
           : (KUP.PASSIVES[s] ? { kind: (s in p.passives) ? 'passive-up' : 'passive-new', id: s }
-          : (KUP.WEAPONS[s] && ownedW.indexOf(s) < 0 ? { kind: 'weapon-new', id: s } : null)));
+          : (KUP.WEAPONS[s] && ownedW.indexOf(s) < 0 ? { kind: 'weapon-new', id: s } : null))));
         const forced = this.debug.pick.split(',').map(mk).filter(Boolean);
         for (let i = 0; i < forced.length && i < 4; i++) out[i] = forced[i];
       }
@@ -1938,6 +2155,9 @@ window.KUP = window.KUP || {};
         if (w) w.lv++;
       } else if (c.kind === 'weapon-new') {
         p.weapons.push(new WeaponRuntime(KUP.WEAPONS[c.id], 1));
+      } else if (c.kind === 'derived') {
+        /* 派生（合并）：两把合一把，释放 1 槽，等级取较低者（见 takeDerivedCard） */
+        this.takeDerivedCard(c.id);
       } else if (c.kind === 'passive-up' || c.kind === 'passive-new') {
         p.addPassive(c.id);
         if (c.id === 'heart') {

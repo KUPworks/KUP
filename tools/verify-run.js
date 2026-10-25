@@ -402,8 +402,8 @@ const poolB = gA.rollChoices();
 check('觉醒后不再出现觉醒/升级项', !poolB.some(c => c.kind === 'awaken') && !poolB.some(c => c.kind === 'weapon-up' && c.id === 'note'));
 const statAfter = wNote.stat();
 check('觉醒后 stat 切换到进化形态', wNote.evolved && statAfter === wNote.def.evolved.stats && statAfter.dmg > wNote.def.levels[4].dmg);
-check('全部武器均配进化形态数据', Object.keys(KUP.WEAPONS).length === 21 &&
-  Object.values(KUP.WEAPONS).every(w => w.evolved && w.evolved.stats && w.evolved.name));
+check('全部普通武器均配进化形态数据（派生武装除外：合并本身即覚醒）',
+  Object.values(KUP.WEAPONS).every(w => w.derived ? !w.evolved : (w.evolved && w.evolved.stats && w.evolved.name)));
 
 // 11b. 主角＝魔女之子（角色 ≠ 声优）；招募角色与同伴
 check('主角为魔女之子而非声优',
@@ -1660,8 +1660,8 @@ KUP.META.reset();
     SW.levels.every((l, i, a) => i === 0 || (l.arc > a[i - 1].arc && l.len > a[i - 1].len)) &&
     SW.evolved.stats.arc > SW.levels[4].arc && SW.evolved.stats.len > SW.levels[4].len,
     'arc=' + SW.levels.map(l => l.arc).join('/') + ' len=' + SW.levels.map(l => l.len).join('/'));
-  check('武器总数 21 · 行为 15 种', Object.keys(KUP.WEAPONS).length === 21 &&
-    new Set(Object.values(KUP.WEAPONS).map(w => w.behavior)).size === 15);
+  check('武器总数 26 · 行为 20 种（21 普通 ＋ 5 派生）', Object.keys(KUP.WEAPONS).length === 26 &&
+    new Set(Object.values(KUP.WEAPONS).map(w => w.behavior)).size === 20);
   /* 扇形判定：正前方中、正侧方不中（窄扇形）、刀长外不中 */
   const mkSlashGame = seed => {
     const g = new KUP.Game(canvas);
@@ -3261,5 +3261,156 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   const c1 = runCrit(), c2 = runCrit();
   check('同 seed 同操作 → 会心次数可复现', c1 === c2 && c1 > 40, c1 + '/' + c2);
 }
+/* ========== v0.21 派生（合并）卡 ==========
+ * 人类 2026-10-25：按当前持有的武器**有中等几率**抽到派生卡；选择后两把合成一把
+ * （释放 1 个武器槽），合并武器强于任一把、弱于两把叠加，等级取较低的那把。
+ * 曲名取自 V.W.P《繁殖》（docs/lore/discography.md §2.6.1）。 */
+{
+  const DER = KUP.DERIVED;
+  const ids = Object.keys(DER);
+  check('派生表 5 条（V.W.P 试验批次）', ids.length === 5, ids.join(','));
+  const ALBUM = ['歯車', '刻印', '牢獄', '逆絶', '深淵', '暗闇', '残火', '夢魔', '甘粒', '魔法',
+    '本懐', '泡沫', '生存', '愛憎', '一服', '私的', '不的', '素的', '魔的', '古傷'];
+  check('派生曲名全部出自《繁殖》20 曲对唱清单', ids.every(id => ALBUM.indexOf(DER[id].song) >= 0),
+    ids.map(id => DER[id].song).join('/'));
+  check('每条派生的来源都是两把不同的普通武器',
+    ids.every(id => DER[id].from.length === 2 && DER[id].from[0] !== DER[id].from[1] &&
+      DER[id].from.every(w => KUP.WEAPONS[w] && !KUP.WEAPONS[w].derived)));
+  check('派生武装全部属于合奏系（duet）且没有 owner / evolved',
+    ids.every(id => KUP.FAMILY_OF(id).id === 'duet' && !KUP.WEAPONS[id].owner && !KUP.WEAPONS[id].evolved));
+  check('派生反向查询可用（note → 魔法，通用武器无派生）',
+    KUP.DERIVED_OF('note').length === 1 && KUP.DERIVED_OF('note')[0].id === 'mahou' &&
+    KUP.DERIVED_OF('mg').length === 0);
+  check('派生武装的模组只给它自己用（普通武器不得引用合奏系模组）',
+    KUP.WEAPONS_OF('chorus').length === 1 && KUP.WEAPONS_OF('chorus')[0].id === 'mahou');
+
+  /* ---- 出现条件：两把都在手才有派生卡 ---- */
+  const mkDer = seed => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'kaf', area: 'area0', seed });
+    g.state = 'levelup';                       // rollChoices 的两态之一（eggEligible 口径）
+    g.player.weapons = [];
+    return g;
+  };
+  const gOnly = mkDer(1201);
+  gOnly.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.note, 2));
+  check('只有一把来源武器 → 没有任何派生候选', gOnly.derivedCandidates().length === 0);
+  const g2 = mkDer(1202);
+  g2.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.note, 2));
+  g2.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 4));
+  check('两把来源武器都在手 → 出现对应派生候选（mahou）',
+    g2.derivedCandidates().length === 1 && g2.derivedCandidates()[0].id === 'mahou',
+    g2.derivedCandidates().map(c => c.id).join(','));
+  check('派生概率是「中等」而不是必出（0 < CHANCE < 1）',
+    KUP.CONFIG.DERIVED.CHANCE > 0.2 && KUP.CONFIG.DERIVED.CHANCE < 0.8,
+    'CHANCE=' + KUP.CONFIG.DERIVED.CHANCE);
+
+  /* ---- 概率抽样：40 个等级里出现若干次，但绝不是每次都有 ---- */
+  const gS = mkDer(1203);
+  gS.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.note, 2));
+  gS.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 4));
+  let hits = 0, multi = 0, badLen = 0;
+  for (let i = 0; i < 40; i++) {
+    gS.level = 10 + i;                         // 换等级 → 重新掷（同等级不重复掷）
+    const out = gS.rollChoices();
+    if (out.length !== 4) badLen++;
+    const dc = out.filter(c => c.kind === 'derived');
+    if (dc.length) hits++;
+    if (dc.length > 1) multi++;
+  }
+  check('派生卡占普通一格：四选一始终是 4 张', badLen === 0, 'bad=' + badLen);
+  check('一抽最多一张派生卡', multi === 0);
+  check('40 抽里出现过派生卡（不是永远不出）', hits > 0, 'hits=' + hits + '/40');
+  check('40 抽里也有不出的（不是必出）', hits < 40, 'hits=' + hits + '/40');
+
+  /* ---- 选中：两把合一把、释放槽位、等级取较低者 ---- */
+  const gT = mkDer(1204);
+  gT.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.note, 2));
+  gT.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 4));
+  const before = gT.player.weapons.length;
+  const ok = gT.takeDerivedCard('mahou');
+  const wl = gT.player.weapons;
+  check('合并成功：两把移除、一把登场', ok && before === 2 && wl.length === 1 && wl[0].def.id === 'mahou',
+    wl.map(w => w.def.id + w.lv).join(','));
+  check('合并武器等级取较低的那把（2 与 4 → 2）', wl[0].lv === 2, 'lv=' + wl[0].lv);
+  check('合并释放 1 个武器槽（2 把 → 1 把）', wl.length === before - 1);
+  check('合并后不再出现该派生候选（已合并过）', gT.derivedCandidates().length === 0);
+
+  /* ---- 封禁：本局不再出现 ---- */
+  const gB = mkDer(1205);
+  gB.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.note, 2));
+  gB.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 4));
+  gB.banned.add('mahou');
+  check('封禁派生卡后不再进入候选', gB.derivedCandidates().length === 0);
+
+  /* ---- 派生卡不会作为「新武器」直接出现在池子里 ---- */
+  const gN = mkDer(1206);
+  let leaked = null;
+  for (let i = 0; i < 30; i++) {
+    gN.level = 20 + i;
+    const bad = gN.rollChoices().find(c => c.kind === 'weapon-new' && KUP.WEAPONS[c.id].derived);
+    if (bad) { leaked = bad.id; break; }
+  }
+  check('派生武装不会作为新武器直接掉落', leaked === null, leaked || '无泄漏');
+
+  /* ---- 五个合奏模组都能真的产出实体 ---- */
+  const mkRun = (wid, seed) => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'kaf', area: 'area0', seed });
+    g.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS[wid], 5)];
+    return g;
+  };
+  const step = (g, n) => { for (let i = 0; i < n; i++) { for (const w of g.player.weapons) w.update(0.2, g); g.zones.forEach(z => z.update(0.2, g)); g.zones = g.zones.filter(z => !z.dead); } };
+
+  const gCh = mkRun('mahou', 1210);
+  step(gCh, 24);
+  const chW = gCh.player.weapons[0];
+  check('魔法：音球在绕（orbCount 个）且射出追踪音符',
+    chW.orbs.length === KUP.WEAPONS.mahou.levels[4].orbCount && gCh.projs.length > 0,
+    'orbs=' + chW.orbs.length + ' projs=' + gCh.projs.length);
+  check('魔法：音符带追踪（homing > 0，kind=homing）',
+    gCh.projs.every(pr => pr.homing > 0) && gCh.projs.some(pr => pr.kind === 'homing'));
+
+  const gAb = mkRun('shinen', 1211);
+  step(gAb, 30);
+  check('深淵：张开吞噬领域并在收束时射出光束',
+    gAb.beams.length > 0 && gAb.beams.every(b => b.len === KUP.WEAPONS.shinen.levels[4].beamLen),
+    'beams=' + gAb.beams.length);
+
+  const gGa = mkRun('honkai', 1212);
+  step(gGa, 12);
+  check('本懐：同时产出扇形冲击环与巨大弹体',
+    gGa.rings.length > 0 && gGa.projs.some(pr => pr.kind === 'typhoon'),
+    'rings=' + gGa.rings.length + ' projs=' + gGa.projs.length);
+
+  const gSc = mkRun('koshou', 1213);
+  let sawBomb = false, sawScarRing = false;
+  for (let i = 0; i < 12; i++) {
+    for (const w of gSc.player.weapons) w.update(0.2, gSc);
+    if (gSc.rings.length) sawScarRing = true;
+    for (const z of gSc.zones) { if (z.kind === 'bomb') sawBomb = true; z.update(0.2, gSc); }
+    gSc.zones = gSc.zones.filter(z => !z.dead);
+  }
+  check('古傷：整圈冲击环 ＋ 延迟白爆（bomb 区）', sawScarRing && sawBomb,
+    'ring=' + sawScarRing + ' bomb=' + sawBomb);
+
+  const gSt = mkRun('kokuin', 1214);
+  gSt.spawnEnemy('noise', gSt.player.x + 160, gSt.player.y);
+  let sawField = false, sawSniper = false;
+  for (let i = 0; i < 12; i++) {
+    for (const w of gSt.player.weapons) w.update(0.2, gSt);
+    if (gSt.projs.some(pr => pr.kind === 'sniper')) sawSniper = true;
+    if (gSt.zones.some(z => z.kind === 'field')) sawField = true;
+    gSt.zones.forEach(z => z.update(0.2, gSt));
+    gSt.zones = gSt.zones.filter(z => !z.dead);
+  }
+  check('刻印：穿透音枪齐射 ＋ 目标脚下的滞留宝光（field 区）', sawSniper && sawField,
+    'sniper=' + sawSniper + ' field=' + sawField);
+
+  /* ---- 强度口径：每个等级都是 5 级、且合并形态没有额外覚醒档 ---- */
+  check('派生武装 5 级齐全且没有 evolved（合并即覚醒）',
+    ids.every(id => KUP.WEAPONS[id].levels.length === 5 && KUP.WEAPONS[id].maxLv === 5 && !KUP.WEAPONS[id].evolved));
+}
+
 console.log(fail === 0 ? '\nALL PASS (' + total + ' checks)' : '\n' + fail + ' FAILED / ' + total + ' checks');
 process.exit(fail === 0 ? 0 : 1);

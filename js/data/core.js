@@ -184,7 +184,27 @@ window.KUP = window.KUP || {};
         need(Array.isArray(w.levels) && w.levels.length === w.maxLv, '武器 ' + id + ' 的 levels 数应等于 maxLv');
         need(Array.isArray(w.lvDesc) && w.lvDesc.length === w.maxLv, '武器 ' + id + ' 的 lvDesc 数应等于 maxLv');
         (w.lvDesc || []).forEach(function (d, i) { needTri(d, '武器 ' + id + ' 的 lvDesc[' + i + ']'); });
-        need(isObj(w.evolved) && isObj(w.evolved.stats), '武器 ' + id + ' 缺少 evolved');
+        need(isObj(w.evolved) || w.derived, '武器 ' + id + ' 缺少 evolved（派生武装可省略：合并本身即覚醒）');
+        if (w.derived) {
+          /* ---------- 派生（合并）武装（v0.21）----------
+           * `from` 必须是**两把不同的普通武器**（不能再拿合并武器去合并），
+           * `song` 是《繁殖》里的对唱曲名；派生武装不挂 owner、没有 evolved。 */
+          need(Array.isArray(w.derived.from) && w.derived.from.length === 2,
+            '派生武器 ' + id + ' 的 derived.from 应为两把武器 id');
+          (w.derived.from || []).forEach(function (src) {
+            need(KUP.WEAPONS[src], '派生武器 ' + id + ' 的来源武器「' + src + '」不存在');
+            need(!(KUP.WEAPONS[src] && KUP.WEAPONS[src].derived), '派生武器 ' + id + ' 的来源「' + src + '」本身是派生武装（不能二次合并）');
+          });
+          need(w.derived.from && w.derived.from[0] !== w.derived.from[1], '派生武器 ' + id + ' 的两个来源不能是同一把');
+          needStr(w.derived.song, '派生武器 ' + id + ' 缺少 derived.song（派生曲名）');
+          need(!w.owner, '派生武器 ' + id + ' 不应有 owner（它属于合并，而不属于某位角色）');
+          need(!w.evolved, '派生武器 ' + id + ' 不应有 evolved（合并本身即覚醒）');
+          var fam = KUP.FAMILY_OF ? KUP.FAMILY_OF(id) : null;
+          need(fam && fam.id === 'duet', '派生武器 ' + id + ' 的模组应属于合奏系（duet）');
+          (w.derived.pairing || []).forEach(function (c) {
+            need(charSet[c], '派生武器 ' + id + ' 的 pairing 含未知角色「' + c + '」');
+          });
+        }
         if (isObj(w.evolved)) {
           needTri(w.evolved.name, '武器 ' + id + ' 的 evolved.name');
           needTri(w.evolved.desc, '武器 ' + id + ' 的 evolved.desc');
@@ -226,6 +246,18 @@ window.KUP = window.KUP || {};
         var m = mods[id];
         need(KUP.FAMILY && KUP.FAMILY(m.family), '武器模组 ' + id + ' 的 family「' + m.family + '」不存在');
         need(!weapons[id], '模组 id「' + id + '」与武器 id 重名：模组是行为、武器是数据，必须拆成两个命名空间');
+        /* v0.21：合奏系只服务派生（合并）武装，普通武器不得直接拿合奏模组；
+         * 反之派生武装必须是合奏系。两个方向都钉住，避免「普通武器带派生模组」漏网。 */
+        var users = KUP.WEAPONS_OF ? KUP.WEAPONS_OF(id) : [];
+        if (m.family === 'duet') {
+          users.forEach(function (w) {
+            need(w.derived, '模组 ' + id + '（合奏系）只能给派生武装使用，却被普通武器「' + w.id + '」引用');
+          });
+        } else {
+          users.forEach(function (w) {
+            need(!w.derived, '派生武器 ' + w.id + ' 必须使用合奏系模组，不能用「' + id + '」');
+          });
+        }
       });
 
       /* ---------- 3. 被动 / 局内道具 ---------- */
@@ -367,7 +399,7 @@ window.KUP = window.KUP || {};
       /* ---------- 7. 查询接口齐全 ---------- */
       ['CHAR', 'charUnlockText', 'CRIT_OF', 'nameOf', 'shortOf', 'cvOf',
         'MODULE', 'WEAPONS_OF', 'MODULE_OF', 'WEAPON', 'FAMILY', 'MODULES_OF_FAMILY',
-        'FAMILY_OF_MODULE', 'FAMILY_OF', 'ULTIMATE',
+        'FAMILY_OF_MODULE', 'FAMILY_OF', 'ULTIMATE', 'DERIVED_OF',
         'ITEM', 'ENEMY', 'BOSS', 'ENEMY_SHAPE', 'enemiesOfShape', 'COMPANION', 'companionsActive',
         'SUPPORT', 'FORM', 'defaultForm', 'formFits', 'formsFor',
         'formsOfChar', 'formGroups', 'charKind', 'SHOP_ITEM', 'shopCost'].forEach(needFn);

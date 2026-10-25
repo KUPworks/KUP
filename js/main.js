@@ -38,6 +38,7 @@ window.KUP = window.KUP || {};
     game.debug.hurt = parseFloat(q.get('hurt')) || 0; // 初始损失 HP 比例
     game.debug.pick = q.get('pick');                  // 强制升级选项（逗号分隔）
     game.debug.egg = q.get('egg') === '1';            // v0.17 调试：下一次升级必出記憶の卵（現象卡）
+    game.debug.derived = q.get('derived') === '1';    // v0.21 调试：必出派生卡（验证合并武装手感）
     game.debug.revive = q.get('revive') === '1';      // v0.17 调试：开局带 1 次復活充能（验证復活手感）
     game.debug.space = q.get('space');                // v0.18 调试：?space=<id> 指定 / ?space=1 随机 / ?space=off 关闭
     /* v0.20.4 调试：强制本局 Boss（如 ?boss=boss7 直接看射弹 Boss〈弹片〉）；
