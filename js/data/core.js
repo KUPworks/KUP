@@ -260,6 +260,40 @@ window.KUP = window.KUP || {};
         }
       });
 
+      /* ---------- 2c. 三层关系总览（v0.21.3「重新梳理模组族／模组／武器」）----------
+       * `KUP.FAMILY_TREE()` 把两张真值表（武器.behavior、模组.family）拼成一棵树。
+       * 这里钉住四条不变量，保证"树"与"表"永远一致：
+       *   ① 每把武器在树里**恰好出现一次**（不漏挂、不重复挂）；
+       *   ② 每个模组只属于一个族，且该族的 modules 清单里正好有它；
+       *   ③ 每个族至少一个模组、每个模组至少一把武器（没有空节点）；
+       *   ④ 族/模组/武器的 id 互不重名（三层命名空间隔离）。 */
+      if (KUP.FAMILY_TREE) {
+        var tree = KUP.FAMILY_TREE();
+        var seenW = Object.create(null);
+        var dupW = [];
+        var modOwner = Object.create(null);
+        tree.forEach(function (node) {
+          need(node.modules.length > 0, '模组族 ' + node.id + ' 在总览里没有任何模组');
+          node.modules.forEach(function (mi) {
+            need(mi.weapons.length > 0, '模组 ' + mi.id + ' 在总览里没有任何武器');
+            need(!modOwner[mi.id], '模组 ' + mi.id + ' 同时挂在族 ' + modOwner[mi.id] + ' 与 ' + node.id + ' 下');
+            modOwner[mi.id] = node.id;
+            mi.weapons.forEach(function (w) {
+              if (seenW[w.id]) dupW.push(w.id);
+              seenW[w.id] = true;
+            });
+          });
+        });
+        Object.keys(weapons).forEach(function (id) {
+          need(seenW[id], '武器 ' + id + ' 没有出现在任何模组族／模组下（三层关系不完整）');
+        });
+        need(dupW.length === 0, '武器被重复挂到多个模组下：' + dupW.join(','));
+        /* 模组必须被某个族的 modules 清单收着（不能只在自己的 family 字段里"自称"） */
+        Object.keys(mods).forEach(function (id) {
+          need(modOwner[id], '模组 ' + id + ' 没有被任何模组族的 modules 清单登记');
+        });
+      }
+
       /* ---------- 3. 被动 / 局内道具 ---------- */
       var passives = KUP.PASSIVES || {};
       /* 被动以 id 为键、条目内不重复写 id：直接校验键唯一性。 */
@@ -399,7 +433,7 @@ window.KUP = window.KUP || {};
       /* ---------- 7. 查询接口齐全 ---------- */
       ['CHAR', 'charUnlockText', 'CRIT_OF', 'nameOf', 'shortOf', 'cvOf',
         'MODULE', 'WEAPONS_OF', 'MODULE_OF', 'WEAPON', 'FAMILY', 'MODULES_OF_FAMILY',
-        'FAMILY_OF_MODULE', 'FAMILY_OF', 'ULTIMATE', 'DERIVED_OF',
+        'FAMILY_OF_MODULE', 'FAMILY_OF', 'ULTIMATE', 'DERIVED_OF', 'FAMILY_TREE',
         'ITEM', 'ENEMY', 'BOSS', 'ENEMY_SHAPE', 'enemiesOfShape', 'COMPANION', 'companionsActive',
         'SUPPORT', 'FORM', 'defaultForm', 'formFits', 'formsFor',
         'formsOfChar', 'formGroups', 'charKind', 'SHOP_ITEM', 'shopCost'].forEach(needFn);

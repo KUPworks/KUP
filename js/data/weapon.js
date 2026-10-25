@@ -158,8 +158,12 @@ KUP.WEAPON_MODULES = {
     id: 'shock', family: 'wave', entity: 'Ring',
     name: { zh: '圆形波', en: 'Shock Ring', ja: '衝撃リング' },
     desc: { zh: '以玩家为中心扩散的冲击环（可定向成扇形）；扩散半径随「范围」放大。', en: 'A ring expanding from you (can be a sector); radius scales with Area.', ja: '自機中心に広がる衝撃環（扇形化も可）。半径は「範囲」で拡大。' },
-    params: ['cd', 'dmg', 'r', 'double', 'arc', 'kb'],
-    base: { speed: 300, kb: 170, arc: 360, doubleSpeed: 220, doubleKb: 140, doubleDmgMul: 0.7 },
+    /* v0.21.3：同一个「圆形波」模组下养两种性格——
+     *   Terra   ：慢、大、重（dmg/击退高，冷却 2.6–3.2s，Lv5 双环）
+     *   湛蓝之梦：快、小、柔（冷却 1.4–2.2s，半径更小，命中附带减速 slow/slowSec）
+     * 两者共用几何与判定，只靠等级表把"重量感"调开。 */
+    params: ['cd', 'dmg', 'r', 'double', 'arc', 'kb', 'slow', 'slowSec'],
+    base: { speed: 300, kb: 170, arc: 360, doubleSpeed: 220, doubleKb: 140, doubleDmgMul: 0.7, slow: 0, slowSec: 0.9 },
     area: ['r'],
   },
   cleave: {
@@ -293,8 +297,8 @@ KUP.WEAPON_MODULES = {
       en: 'Opens a **small field of falling notes** near you: notes pour down densely and each one bursts where it lands — **long cooldown, high damage per note**.',
       ja: '自機の近くに**小範囲の音符の雨**を張る。音符が密に降り、1 枚ずつ着地点で炸ける——**冷却は長く、1 枚あたりの威力は高い**。',
     },
-    params: ['cd', 'dmg', 'r', 'rain', 'noteR', 'fall', 'life', 'off'],
-    base: { rain: 30, noteR: 28, fall: 0.28, life: 1.6, off: 40 },
+    params: ['cd', 'dmg', 'r', 'rain', 'noteR', 'fall', 'life', 'off', 'followSpeed'],
+    base: { rain: 30, noteR: 28, fall: 0.28, life: 1.6, off: 40, followSpeed: 210 },
     area: ['r', 'noteR'],
   },
   abyss: {
@@ -562,19 +566,21 @@ KUP.WEAPONS = {
       en: 'A bass shockwave that quakes the earth, from the song "Terra". ASANUSHI HARU\'s starting weapon.',
       ja: '大地を震わせる低音衝撃波、楽曲「テラ」より。朝主派流の初期武装。',
     },
+    /* v0.21.3：Terra＝**重**的那一半（慢、大、推开）。与「湛蓝之梦」同模组：
+     * 它靠"一次很重"取胜，湛蓝之梦靠"来得勤 + 减速"取胜。 */
     lvDesc: [
-      { zh: '以自身为中心释放冲击环。', en: 'Releases a shock ring around you.', ja: '自身を中心に衝撃環を放つ。' },
+      { zh: '以自身为中心释放**沉重的一圈**，击退强。', en: 'One **heavy ring** around you with strong knockback.', ja: '自身を中心に**重い一撃**、ノックバックも強い。' },
       { zh: '伤害与范围提升。', en: 'More damage and range.', ja: 'ダメージと範囲アップ。' },
-      { zh: '释放间隔缩短。', en: 'Shorter interval.', ja: '発射間隔短縮。' },
-      { zh: '范围大幅扩大。', en: 'Much wider range.', ja: '範囲が大幅拡大。' },
+      { zh: '范围继续扩大（冷却仍然很长）。', en: 'Wider still (cooldown stays long).', ja: 'さらに範囲拡大（冷却は長いまま）。' },
+      { zh: '伤害大幅提升。', en: 'Much more damage.', ja: 'ダメージ大幅アップ。' },
       { zh: '冲击环 ×2 —— 重低音粉碎街区。', en: '2 rings — the bass smashes the streets.', ja: '衝撃環 ×2 —— 重低音が街を砕く。' },
     ],
     levels: [
-      { cd: 3.2, dmg: 22, r: 150, double: false },
-      { cd: 3.0, dmg: 28, r: 165, double: false },
-      { cd: 2.5, dmg: 30, r: 165, double: false },
-      { cd: 2.4, dmg: 36, r: 200, double: false },
-      { cd: 2.6, dmg: 40, r: 200, double: true },
+      { cd: 3.4, dmg: 24, r: 150, double: false },
+      { cd: 3.2, dmg: 31, r: 170, double: false },
+      { cd: 3.0, dmg: 34, r: 185, double: false },
+      { cd: 2.8, dmg: 41, r: 205, double: false },
+      { cd: 2.7, dmg: 47, r: 220, double: true },
     ],
     evolved: {
       name: { zh: 'テラ -quake-', en: 'Terra -Quake-', ja: 'テラ -quake-' },
@@ -583,7 +589,7 @@ KUP.WEAPONS = {
         en: 'Awakened — "Terra" quakes and splits the earth.',
         ja: '覚醒——「テラ」が大地を崩落させる二重の低音衝撃。',
       },
-      stats: { cd: 1.7, dmg: 46, r: 235, double: true },
+      stats: { cd: 1.9, dmg: 54, r: 250, double: true },
     },
   },
   taifuu: {
@@ -759,19 +765,23 @@ KUP.WEAPONS = {
       en: 'The song "Aoi Yume" becomes a bell-like shockwave. AMANE ARU\'s starting weapon.',
       ja: '楽曲「あおいゆめ」が鐘の衝撃環となる。天祢亜留の初期武装。',
     },
+    /* v0.21.3：湛蓝之梦＝**轻**的那一半（来得勤、圈子小、命中减速）。
+     * 与 Terra 同用 shock 模组，但手感完全分开：
+     *   Terra：2.7–3.4s 一次，半径 220，单发 47，击退强 → "一记重锤"
+     *   湛蓝 ：1.4–2.2s 一次，半径 180，单发 26，命中减速 → "钟声连绵，让敌人慢下来" */
     lvDesc: [
-      { zh: '以自身为中心敲响钟声冲击环。', en: 'Rings a shockwave around you.', ja: '自身を中心に鐘の衝撃環を鳴らす。' },
-      { zh: '伤害与范围提升。', en: 'More damage and range.', ja: 'ダメージと範囲アップ。' },
+      { zh: '敲响钟声冲击环，命中**减速**敌人。', en: 'A bell ring that **slows** what it hits.', ja: '鐘の衝撃環、当たった敵を**減速**させる。' },
       { zh: '敲响间隔缩短。', en: 'Shorter interval.', ja: '発動間隔短縮。' },
-      { zh: '范围大幅扩大。', en: 'Much wider range.', ja: '範囲が大幅拡大。' },
-      { zh: '钟声 ×2 —— 救济的余音不散。', en: '2 bells — the requiem lingers.', ja: '鐘 ×2 —— 救済の余音は消えない。' },
+      { zh: '减速更明显、持续更久。', en: 'Stronger, longer slow.', ja: '減速が強く、長く続く。' },
+      { zh: '间隔进一步缩短。', en: 'Even shorter interval.', ja: 'さらに間隔短縮。' },
+      { zh: '钟声 ×2、间隔最短 —— 救济的余音不散。', en: '2 bells at the shortest interval — the requiem lingers.', ja: '鐘 ×2・最短間隔 —— 救済の余音は消えない。' },
     ],
     levels: [
-      { cd: 3.0, dmg: 20, r: 145, double: false },
-      { cd: 2.8, dmg: 26, r: 160, double: false },
-      { cd: 2.4, dmg: 28, r: 160, double: false },
-      { cd: 2.2, dmg: 34, r: 195, double: false },
-      { cd: 2.4, dmg: 38, r: 195, double: true },
+      { cd: 2.2, dmg: 15, r: 125, slow: 0.70, slowSec: 0.9, double: false },
+      { cd: 2.0, dmg: 18, r: 140, slow: 0.68, slowSec: 1.0, double: false },
+      { cd: 1.8, dmg: 20, r: 152, slow: 0.65, slowSec: 1.1, double: false },
+      { cd: 1.6, dmg: 23, r: 166, slow: 0.62, slowSec: 1.2, double: false },
+      { cd: 1.4, dmg: 26, r: 180, slow: 0.60, slowSec: 1.3, double: true },
     ],
     evolved: {
       name: { zh: 'あおいゆめ -requiem-', en: 'Aoi Yume -Requiem-', ja: 'あおいゆめ -requiem-' },
@@ -780,7 +790,7 @@ KUP.WEAPONS = {
         en: 'Awakened — the bells of "Aoi Yume" become a twin requiem quake.',
         ja: '覚醒——「あおいゆめ」の鐘は鎮魂の二重衝撃となり、街に安魂を捧げる。',
       },
-      stats: { cd: 1.6, dmg: 44, r: 230, double: true },
+      stats: { cd: 0.95, dmg: 32, r: 200, slow: 0.55, slowSec: 1.5, double: true },
     },
   },
   sayonara: {
@@ -1064,17 +1074,19 @@ KUP.WEAPONS = {
       { zh: '范围与落点判定扩大。', en: 'Wider field and blast.', ja: '範囲と着弾判定アップ。' },
       { zh: '半径 170、覆盖率更高 —— 整片街区下起音符。', en: 'R 170 and denser — the whole block rains notes.', ja: '半径 170、密度最大 —— 街路ごと音符が降る。' },
     ],
-    /* 数值口径（人类 2026-10-25「小范围长冷却的高伤害音符雨区」）：
-     *   ① **小范围**：r 105→170（对比深渊 200–290、古傷 210），且中心贴着玩家；
-     *   ② **长冷却**：5.4→3.4 秒（普通武器 1–3 秒，派生里也最长）；
-     *   ③ **高伤害**：单枚 30→44，配合每秒 24–44 枚的密度，清场靠"落点全中"，
-     *      而不是靠一块无脑覆盖的区域（落点半径 noteR 只有 26–34）。 */
+    /* 数值口径（人类 2026-10-25「小范围长冷却的高伤害音符雨区」→ 2026-10-25 追加
+     * 「追着玩家行动（略缩小半径以平衡机制）」）：
+     *   ① **小范围**：r 88→140（跟随玩家前是 105→170，整体 ×0.84；对比深渊 200–290、古傷 210）；
+     *   ② **追人**：雨区跟着玩家走（follow.speed 210px/s，有速度上限 ⇒ 是"追"不是"贴"），
+     *      因为一直罩着自己，覆盖效率比固定雨区高，所以半径必须缩；
+     *   ③ **长冷却**：5.4→3.4 秒（普通武器 1–3 秒，派生里也最长）；
+     *   ④ **高伤害**：单枚 30→44，落点半径 noteR 只有 26–34，靠密集落点而不是大覆盖。 */
     levels: [
-      { cd: 5.4, dmg: 30, r: 105, rain: 24, noteR: 26, fall: 0.30, life: 1.6, off: 36 },
-      { cd: 5.0, dmg: 33, r: 118, rain: 28, noteR: 27, fall: 0.29, life: 1.7, off: 38 },
-      { cd: 4.6, dmg: 36, r: 132, rain: 32, noteR: 28, fall: 0.28, life: 1.8, off: 40 },
-      { cd: 4.0, dmg: 40, r: 148, rain: 38, noteR: 31, fall: 0.27, life: 1.9, off: 42 },
-      { cd: 3.4, dmg: 44, r: 170, rain: 44, noteR: 34, fall: 0.26, life: 2.0, off: 44 },
+      { cd: 5.4, dmg: 30, r: 88, rain: 24, noteR: 26, fall: 0.30, life: 1.6, off: 32, followSpeed: 195 },
+      { cd: 5.0, dmg: 33, r: 99, rain: 28, noteR: 27, fall: 0.29, life: 1.7, off: 34, followSpeed: 200 },
+      { cd: 4.6, dmg: 36, r: 110, rain: 32, noteR: 28, fall: 0.28, life: 1.8, off: 36, followSpeed: 205 },
+      { cd: 4.0, dmg: 40, r: 124, rain: 38, noteR: 31, fall: 0.27, life: 1.9, off: 38, followSpeed: 210 },
+      { cd: 3.4, dmg: 44, r: 140, rain: 44, noteR: 34, fall: 0.26, life: 2.0, off: 40, followSpeed: 215 },
     ],
   },
   shinen: {
@@ -1245,6 +1257,29 @@ KUP.WEAPONS = {
 
 /* 具体武器查询（v0.19 新增接口；与 KUP.MODULE_OF / KUP.WEAPONS_OF 配套） */
 KUP.WEAPON = id => KUP.WEAPONS[id] || null;
+
+/* ---------- 三层关系总览（v0.21.3）----------
+ * 人类 2026-10-25：「重新梳理模组族、模组、武器的关系」。
+ * 唯一真值仍然只有两处：`WEAPONS[id].behavior`（武器→模组）与
+ * `WEAPON_MODULES[id].family`（模组→族）。这个函数把它们拼成**一棵树**，
+ * 文档、盘点脚本与 audit 都从这里取数据，别再各自手写对应表：
+ *
+ *   族（family） ── 模组（module） ── 武器（weapon）
+ *   projectile  ── homing      ── note（私論理）…
+ *
+ * 返回：[{ id, family, modules: [{ id, module, weapons: [武器对象] }] }] */
+KUP.FAMILY_TREE = () => Object.keys(KUP.WEAPON_FAMILIES).map(fid => {
+  const f = KUP.WEAPON_FAMILIES[fid];
+  return {
+    id: fid,
+    family: f,
+    modules: (f.modules || []).map(mid => ({
+      id: mid,
+      module: KUP.WEAPON_MODULES[mid],
+      weapons: KUP.WEAPONS_OF(mid),
+    })),
+  };
+});
 
 /* ---------- 派生（合并）武装索引（v0.21）----------
  * 唯一真值仍是 KUP.WEAPONS 里每把武器的 `derived` 字段；这里只是按「来源武器」建反向索引，

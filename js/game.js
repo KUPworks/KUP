@@ -137,11 +137,14 @@ window.KUP = window.KUP || {};
             game.rings.push(new KUP.Ring(p.x, p.y, {
               maxR: V('r', 80), speed: V('speed', 300), dmg: s.dmg * p.dmgMult, kb: V('kb', 170), color: col,
               arc: barc, dir: bdir,
+              /* v0.21.3：减速（湛蓝之梦）——Terra 不填这两项，所以只有它吃 0 */
+              slow: V('slow', 0), slowSec: V('slowSec', 0.9),
             }));
             if (s.double) {
               game.rings.push(new KUP.Ring(p.x, p.y, {
                 maxR: V('r', 80), speed: V('doubleSpeed', 220), dmg: s.dmg * p.dmgMult * V('doubleDmgMul', 0.7),
                 kb: V('doubleKb', 140), color: col, arc: barc, dir: bdir,
+                slow: V('slow', 0), slowSec: V('slowSec', 0.9),
               }));
             }
             game.shake(3);
@@ -385,19 +388,20 @@ window.KUP = window.KUP || {};
          *   scar  ＝旧伤在四周**裂开**：数道偏心冲击环同时炸开
          *   stigma＝给敌人**刻印**：印记期间受伤加成，到期/击杀时爆裂并传给别人
          * 具体数值全部写在武器等级表里，这里不写死常数。 */
-        case 'chorus': { // 魔法：玩家附近的小范围**音符雨区**（长冷却、高伤害）
+        case 'chorus': { // 魔法：追着玩家走的**音符雨区**（小范围、长冷却、高伤害）
           this.t -= dt;
           if (this.t <= 0) {
             this.t = s.cd * m;
             const ad = game.aimDir(p);
-            const off = V('off', 40);                    // 雨区中心相对玩家的偏移
-            const cx = p.x + ad.x * off, cy = p.y + ad.y * off;
-            game.zones.push(new KUP.Zone(cx, cy, {
+            const off = V('off', 40);                    // 雨区中心相对玩家的偏移（朝瞄准侧）
+            game.zones.push(new KUP.Zone(p.x + ad.x * off, p.y + ad.y * off, {
               r: V('r', 120), kind: 'field', color: col, life: V('life', 1.6),
               /* 雨区自己不结算：dmg 只当"这是个活的伤害区"的标记，真正的伤害在雨滴落地算 */
               dmg: s.dmg * p.dmgMult, rain: V('rain', 30),
               rainDmg: s.dmg * p.dmgMult, rainR: V('noteR', 28),
               rainFall: V('fall', 0.28),
+              /* v0.21.3：整片雨区**追着玩家**（速度上限内跟随；略微缩小半径来平衡） */
+              follow: { x: ad.x * off, y: ad.y * off, speed: V('followSpeed', 210) },
             }));
             KUP.Audio.sfx('laser');
           }

@@ -3498,5 +3498,81 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     ids.every(id => KUP.WEAPONS[id].levels.length === 5 && KUP.WEAPONS[id].maxLv === 5 && !KUP.WEAPONS[id].evolved));
 }
 
+/* ========== v0.21.3 三层关系梳理 ＋ 魔法追人 ＋ Terra/湛蓝之梦 分家 ========== */
+{
+  /* ---- 1. 族 → 模组 → 武器：一棵树，覆盖每把武器一次 ---- */
+  const tree = KUP.FAMILY_TREE();
+  const flat = [];
+  tree.forEach(f => f.modules.forEach(m => m.weapons.forEach(w => flat.push(w.id))));
+  check('三层总览：9 族 / 20 模组 / 26 武器，且每把武器恰好出现一次',
+    tree.length === 9 && tree.reduce((n, f) => n + f.modules.length, 0) === 20 &&
+    flat.length === Object.keys(KUP.WEAPONS).length && new Set(flat).size === flat.length,
+    tree.length + ' 族 / ' + tree.reduce((n, f) => n + f.modules.length, 0) + ' 模组 / ' + flat.length + ' 武器');
+  check('三层总览：没有空的族或模组',
+    tree.every(f => f.modules.length > 0 && f.modules.every(m => m.weapons.length > 0)));
+  check('三层总览：派生（合并）武装全部落在合奏系 duet',
+    tree.filter(f => f.id === 'duet')[0].modules.every(m => m.weapons.every(w => w.derived)) &&
+    tree.filter(f => f.id !== 'duet').every(f => f.modules.every(m => m.weapons.every(w => !w.derived))));
+  check('三层总览与单把武器查询自洽（FAMILY_OF / MODULE_OF / WEAPONS_OF）',
+    flat.every(id => KUP.FAMILY_OF(id) && KUP.MODULE_OF(id) &&
+      KUP.WEAPONS_OF(KUP.WEAPONS[id].behavior).some(w => w.id === id)));
+  check('三层总览：模组只属于一个族（无重复挂载）',
+    tree.reduce((n, f) => n + f.modules.length, 0) === new Set(tree.reduce((a, f) => a.concat(f.modules.map(m => m.id)), [])).size);
+
+  /* ---- 2. 魔法：雨区追着玩家走，半径略缩 ---- */
+  const gM = new KUP.Game(canvas);
+  gM.start({ char: 'kaf', area: 'area0', seed: 1401 });
+  gM.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS.mahou, 5)];
+  for (let i = 0; i < 5; i++) gM.player.weapons[0].update(0.1, gM);
+  const rz = gM.zones.find(z => z.rain > 0);
+  check('魔法：雨区带跟随参数（follow.speed > 0）',
+    !!(rz && rz.follow && rz.follow.speed > 0), rz && rz.follow ? 'speed=' + rz.follow.speed : '无');
+  const before = { x: rz.x, y: rz.y };
+  gM.player.x += 300;
+  for (let i = 0; i < 20; i++) rz.update(0.1, gM);
+  const dAfter = Math.hypot(rz.x - gM.player.x, rz.y - gM.player.y);
+  check('魔法：玩家移动 300px 后雨区跟上来（不是留在地上）',
+    rz.x - before.x > 150 && dAfter < 90,
+    'moved=' + Math.round(rz.x - before.x) + ' d=' + Math.round(dAfter));
+  check('魔法：跟随机制下半径略缩（Lv5 ≤ 145，比 v0.21.2 的 170 小）',
+    KUP.WEAPONS.mahou.levels[4].r <= 145 && KUP.WEAPONS.mahou.levels[0].r <= 90,
+    'r=' + KUP.WEAPONS.mahou.levels.map(l => l.r).join('/'));
+
+  /* ---- 3. Terra 与 湛蓝之梦：同模组、两种性格 ---- */
+  const B = KUP.WEAPONS.bass, P = KUP.WEAPONS.prayer;
+  check('Terra 与 湛蓝之梦 共用 shock 模组（同几何、不同重量感）',
+    B.behavior === 'shock' && P.behavior === 'shock');
+  check('湛蓝之梦 冷却更短（每一级都比 Terra 快）',
+    P.levels.every((l, i) => l.cd < B.levels[i].cd),
+    'bass=' + B.levels.map(l => l.cd).join('/') + ' prayer=' + P.levels.map(l => l.cd).join('/'));
+  check('湛蓝之梦 范围更小（更轻），Terra 更大（更重）',
+    P.levels.every((l, i) => l.r < B.levels[i].r),
+    'bass=' + B.levels.map(l => l.r).join('/') + ' prayer=' + P.levels.map(l => l.r).join('/'));
+  check('湛蓝之梦 命中减速、Terra 不减速（数据口径）',
+    P.levels.every(l => l.slow > 0 && l.slow < 1) && B.levels.every(l => !l.slow));
+
+  const mkShock = (wid, seed) => {
+    const g = new KUP.Game(canvas);
+    g.start({ char: 'kaf', area: 'area0', seed });
+    g.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS[wid], 5)];
+    const e = g.spawnEnemy('noise', g.player.x + 40, g.player.y);
+    e.maxhp = 1e9; e.hp = 1e9;
+    return { g, e };
+  };
+  const sp = mkShock('prayer', 1402);
+  for (let i = 0; i < 24; i++) {
+    sp.g.player.weapons[0].update(0.1, sp.g);
+    for (const r of sp.g.rings) r.update(0.02, sp.g);
+  }
+  check('湛蓝之梦：冲击环命中后敌人被减速（slowT > 0）', sp.e.slowT > 0,
+    'slowT=' + sp.e.slowT.toFixed(2) + ' mul=' + sp.e.slowMul);
+  const st = mkShock('bass', 1403);
+  for (let i = 0; i < 24; i++) {
+    st.g.player.weapons[0].update(0.1, st.g);
+    for (const r of st.g.rings) r.update(0.02, st.g);
+  }
+  check('Terra：冲击环不附带减速（是"重锤"不是"钟声"）', st.e.slowT === 0);
+}
+
 console.log(fail === 0 ? '\nALL PASS (' + total + ' checks)' : '\n' + fail + ' FAILED / ' + total + ' checks');
 process.exit(fail === 0 ? 0 : 1);

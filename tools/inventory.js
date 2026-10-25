@@ -29,6 +29,23 @@ console.log('CHARS      ' + KUP.CHARS.length + '（招募 ' + KUP.CHARS.filter(c
 console.log('COMPANIONS ' + KUP.COMPANIONS.length + '（登场 ' + KUP.companionsActive().length + '）');
 console.log('SUPPORTS   ' + KUP.SUPPORTS.length + ' ' + KUP.SUPPORTS.map(s => s.id).join(','));
 console.log('WEAPONS    ' + Object.keys(KUP.WEAPONS).length + ' 行为: ' + [...new Set(Object.values(KUP.WEAPONS).map(w => w.behavior))].join('/'));
+/* v0.21.3 三层关系总览：族 → 模组 → 武器（唯一数据源是 KUP.FAMILY_TREE()，
+ * 不在这里手写对应表；加武器/加模组后跑一次就能看到挂在哪一支下面）。 */
+if (KUP.FAMILY_TREE) {
+  const tree = KUP.FAMILY_TREE();
+  const famCount = tree.length;
+  const modCount = tree.reduce((n, f) => n + f.modules.length, 0);
+  console.log('TREE       ' + famCount + ' 族 / ' + modCount + ' 模组 / ' + Object.keys(KUP.WEAPONS).length + ' 武器');
+  for (const f of tree) {
+    const mods = f.modules.map(m => m.id + '(' + m.module.name.zh + ')×' + m.weapons.length);
+    console.log('  ' + f.id.padEnd(11) + f.family.name.zh + '  ' + mods.join('  '));
+    for (const m of f.modules) {
+      const ws = m.weapons.map(w => w.id + (w.derived ? '*' : '')).join(' ');
+      console.log('    ' + m.id.padEnd(11) + m.module.name.zh.padEnd(8) + ws);
+    }
+  }
+  console.log('  （* ＝派生／合并武装，只能由合并产生）');
+}
 console.log('PASSIVES   ' + Object.keys(KUP.PASSIVES).length);
 console.log('ITEMS      ' + Object.keys(KUP.ITEMS).length);
 console.log('SHOP       ' + KUP.SHOP.length);

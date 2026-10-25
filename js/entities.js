@@ -1071,6 +1071,10 @@ window.KUP = window.KUP || {};
       this.x = x; this.y = y; this.r = opt.r0 || 6;
       this.maxR = opt.maxR; this.speed = opt.speed || 300;
       this.dmg = opt.dmg; this.kb = opt.kb || 0;
+      /* v0.21.3：冲击环也可以**减速**（湛蓝之梦）：命中时按 (slowSec, slow) 施加一次，
+       * 与 Terra 的"大范围高击退"形成两种手感（同模组、不同性格）。 */
+      this.slow = opt.slow || 0;
+      this.slowSec = opt.slowSec || 0.9;
       this.color = opt.color || '#8fd0ff';
       /* v0.12 圆形波的**角度参数**：
        *   arc ＝ 扇形角度（rad），缺省 TAU＝整圆（既有武器行为不变）
@@ -1099,6 +1103,7 @@ window.KUP = window.KUP || {};
         if (Math.abs(d - this.r) < e.r + 9 && this.inArc(e.x, e.y)) {
           this.hit.add(e);
           const a = Math.atan2(e.y - this.y, e.x - this.x);
+          if (this.slow && e.applySlow) e.applySlow(this.slowSec, this.slow);
           game.damageEnemy(e, this.dmg, Math.cos(a) * this.kb, Math.sin(a) * this.kb);
         }
       }
@@ -1625,6 +1630,9 @@ window.KUP = window.KUP || {};
       this.rainR = opt.rainR || 28;
       this.rainFall = opt.rainFall || 0.28;
       this.rainAcc = 0;
+      /* v0.21.3「魔法」追人：follow＝{x,y} 是**相对玩家的偏移**，雨区会以
+       * follow.speed（px/s）追着玩家移动——不是瞬移贴脸，读感是"一片云跟着你走"。 */
+      this.follow = opt.follow || null;
       this.dead = false;
       this.hit = new Set();
     }
@@ -1659,6 +1667,16 @@ window.KUP = window.KUP || {};
     }
     update(dt, game) {
       this.age += dt;
+      /* v0.21.3：跟着玩家走（魔法：一片云追着你）。按速度上限追，不瞬移。 */
+      if (this.follow && game.player) {
+        const tx = game.player.x + this.follow.x, ty = game.player.y + this.follow.y;
+        const dx = tx - this.x, dy = ty - this.y, d = Math.hypot(dx, dy);
+        if (d > 0.5) {
+          const step = Math.min(d, (this.follow.speed || 210) * dt);
+          this.x += (dx / d) * step;
+          this.y += (dy / d) * step;
+        }
+      }
       /* v0.20 吞噬（devour）：先把范围内的敌人拖向中心，收束时引爆；
        * 拖拽走 collideCity，避免被推进楼体。Boss 不吃拖拽（只吃最后的伤害）。 */
       if (this.kind === 'devour') {
