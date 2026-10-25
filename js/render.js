@@ -51,6 +51,8 @@ window.KUP = window.KUP || {};
       }
       /* v0.20：召唤物（虚言）画在玩家之后、弹幕之前 */
       for (const sm of this.summons || []) sm.draw(ctx, t);
+      /* v0.21.2：音符雨的单枚音符（派生武装「魔法」）——画在弹体之前，落点提示更清楚 */
+      for (const nt of this.notes || []) nt.draw(ctx, t);
       /* v0.13.6：弹体密集时关掉每个弹体的 shadowBlur（canvas 阴影＝独立模糊 pass，
        * 400 弹体时单帧 render 会冲到 15ms+ ⇒ 卡顿）。阈值 140：
        * 正常游玩基本触不到，治安战高波次才降级为「实心弹体」。 */

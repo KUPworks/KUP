@@ -379,50 +379,27 @@ window.KUP = window.KUP || {};
          *   强于其中任意一把、弱于两把叠加；**而且必须是合成后的"新东西"**，
          *   不能是「A 的效果 + B 的效果」并排放（人类 2026-10-25 明确要求）。
          * 所以每个合奏模组只跑**一条机制**，只是这条机制本身同时用到了两把父武器的母题：
-         *   chorus＝音球碰到谁就从谁身上"唱出"音符（接触触发，没有独立齐射计时器）
+         *   chorus＝玩家附近的小范围**音符雨区**（长冷却、高伤害；orbit 的"近身" × homing 的"音符"）
          *   abyss ＝吞噬领域持续**向内收缩**的一条深渊（没有光束）
          *   gale  ＝一枚**蛇行**的巨弹，沿途不断甩出风压环（风道跟着弹走）
          *   scar  ＝旧伤在四周**裂开**：数道偏心冲击环同时炸开
          *   stigma＝给敌人**刻印**：印记期间受伤加成，到期/击杀时爆裂并传给别人
          * 具体数值全部写在武器等级表里，这里不写死常数。 */
-        case 'chorus': { // 魔法：音球碰到敌人 → 从敌人身上唱出音符
-          const oc = Math.max(1, s.orbCount | 0);
-          while (this.orbs.length < oc) this.orbs.push({ x: p.x, y: p.y, r: V('orbR', 18) });
-          while (this.orbs.length > oc) this.orbs.pop();
-          const Rc = V('r', 48), orbRc = V('orbR', 18);
-          const spinC = V('spin', 4.6) / Math.max(0.35, p.cdMult);
-          const hitCdC = V('hitCd', 0.38) * Math.max(0.45, p.cdMult);
-          this.angle += spinC * dt;
-          this.orbR = orbRc; this.orbitR = Rc;
-          this.singT = Math.max(0, (this.singT || 0) - dt);   // 音符迸发的节流
-          for (let i = 0; i < oc; i++) {
-            const orb = this.orbs[i];
-            const a = this.angle + (U.TAU * i) / oc;
-            orb.x = p.x + Math.cos(a) * Rc;
-            orb.y = p.y + Math.sin(a) * Rc;
-            orb.r = orbRc;
-            for (const e of game.enemies) {
-              if (e.dead || e.orbitT > 0) continue;
-              const rr2 = e.r + orbRc;
-              if (U.dist2(e.x, e.y, orb.x, orb.y) < rr2 * rr2) {
-                e.orbitT = hitCdC;
-                game.damageEnemy(e, s.orbDmg * p.dmgMult, Math.cos(a) * 130, Math.sin(a) * 130);
-                /* ★ 合成后的新性质：碰到谁，就从谁身上迸出音符（带节流，不会爆量） */
-                if (this.singT <= 0) {
-                  this.singT = V('singCd', 0.24);
-                  const nn = Math.max(1, s.notes | 0);
-                  const sp = V('speed', 380);
-                  for (let k = 0; k < nn; k++) {
-                    const na = a + Math.PI + (k - (nn - 1) / 2) * 0.7;
-                    game.projs.push(new KUP.Projectile(e.x, e.y, Math.cos(na) * sp, Math.sin(na) * sp, {
-                      dmg: s.dmg * p.dmgMult, r: V('pr', 7), life: V('life', 1.8), pierce: 0,
-                      homing: V('homing', 5.2), color: col, kind: 'homing',
-                    }));
-                  }
-                  KUP.Audio.sfx('shoot');
-                }
-              }
-            }
+        case 'chorus': { // 魔法：玩家附近的小范围**音符雨区**（长冷却、高伤害）
+          this.t -= dt;
+          if (this.t <= 0) {
+            this.t = s.cd * m;
+            const ad = game.aimDir(p);
+            const off = V('off', 40);                    // 雨区中心相对玩家的偏移
+            const cx = p.x + ad.x * off, cy = p.y + ad.y * off;
+            game.zones.push(new KUP.Zone(cx, cy, {
+              r: V('r', 120), kind: 'field', color: col, life: V('life', 1.6),
+              /* 雨区自己不结算：dmg 只当"这是个活的伤害区"的标记，真正的伤害在雨滴落地算 */
+              dmg: s.dmg * p.dmgMult, rain: V('rain', 30),
+              rainDmg: s.dmg * p.dmgMult, rainR: V('noteR', 28),
+              rainFall: V('fall', 0.28),
+            }));
+            KUP.Audio.sfx('laser');
           }
           break;
         }
@@ -664,6 +641,8 @@ window.KUP = window.KUP || {};
       this.zones = []; this.tosses = [];
       /* v0.20：召唤物（虚言等） */
       this.summons = [];
+      /* v0.21.2：音符雨的单个音符（派生武装「魔法」） */
+      this.notes = [];
       /* 纯表现层（不参与任何判定）：地雷起爆的向外冲击波等，见 KUP.Shockwave */
       this.fx = [];
       /* 敌方攻击（Danger）：与玩家武器分离，统一预警与高对比外观 */
@@ -1291,6 +1270,7 @@ window.KUP = window.KUP || {};
       for (const z of this.zones) z.update(dt, this);
       for (const ts of this.tosses) ts.update(dt, this);
       for (const sm of this.summons) sm.update(dt, this);
+      for (const nt of this.notes) nt.update(dt, this);
       for (const f of this.fx) f.update(dt);
       for (const dg of this.dangers) dg.update(dt, this);
       for (const g of this.gems) { g.update(dt, this); if (!g.dead) this.collideCity(g); }
@@ -1307,6 +1287,7 @@ window.KUP = window.KUP || {};
       this.zones = this.zones.filter(z => !z.dead);
       this.tosses = this.tosses.filter(t => !t.dead);
       this.summons = this.summons.filter(s => !s.dead);
+      this.notes = this.notes.filter(n => !n.dead);
       this.fx = this.fx.filter(f => !f.dead);
       this.dangers = this.dangers.filter(d => !d.dead);
       /* 敌袭预警 HUD：有未生效的 Danger 贴近玩家时提示 */
@@ -1408,6 +1389,16 @@ window.KUP = window.KUP || {};
           }
         }
       }
+    }
+
+    /* ---------- 音符雨（v0.21.2 派生武装「魔法」）----------
+     * Zone（kind='field'，带 rain 参数）按自身频率调用这里，在区域内随机点**落音符**；
+     * 音符落地才结算（NoteDrop，见 js/entities.js）。走 collide 之外的一条极轻路径：
+     * 只在区域范围里掷点，不参与弹体空间索引。 */
+    dropNotes(x, y, r, dmg, fall, color) {
+      if (!this.notes) this.notes = [];
+      if (this.notes.length > 240) return;      // 兜底：极端密度下不再追加
+      this.notes.push(new KUP.NoteDrop(x, y, { r, dmg, fall, color }));
     }
 
     spawnSplit(pr) {

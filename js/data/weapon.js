@@ -279,23 +279,23 @@ KUP.WEAPON_MODULES = {
    *   「强于其中任意一把·弱于两把叠加」——做法不是简单相加，而是保留两族的
    * **核心手感**、把每一轮压成一套节奏：
    * ★ v0.21.1：**不是"A 的效果 + B 的效果"并排**——每个合奏模组只有一条机制：
-   *   chorus＝音球碰到谁就从谁身上"唱出"音符（接触触发；orbit 的接触 × homing 的音符）
+   *   chorus＝玩家附近的小范围**音符雨区**（长冷却、高伤害；orbit 的"近身" × homing 的"音符"）
    *   abyss ＝吞噬领域一直向内收缩到底（devour 的聚怪被推到极限，**没有光束**）
    *   gale  ＝蛇行巨弹沿途甩风压环（typhoon 的巨物 × shock 的推力，合成"风道"）
    *   scar  ＝数道偏心冲击环同时裂开（shock 的环 × blast 的"不在地心"落点）
    *   stigma＝给敌人刻印，受伤加成 → 到期/击杀爆裂 → 传染（sniper 的"点" × lob 的"留痕"）
    * 这些模组只服务派生武装，**不会给普通武器使用**（audit 会校验）。 */
   chorus: {
-    id: 'chorus', family: 'duet', entity: 'WeaponRuntime.orbs + Projectile',
-    name: { zh: '环唱', en: 'Round Chorus', ja: '環唱' },
+    id: 'chorus', family: 'duet', entity: 'Zone（rain）→ NoteDrop',
+    name: { zh: '音符雨', en: 'Note Rain', ja: '音符の雨' },
     desc: {
-      zh: '音球贴着玩家绕转，**碰到谁就从谁身上唱出追踪音符**——只有一条机制：接触即发声。',
-      en: 'Orbs circle close to you and **sing notes out of whoever they touch** — one mechanic only: contact makes sound.',
-      ja: '音球が自機の周りを回り、**触れた敵から追尾音符を歌い出す**。機構は一つ——接触が音になる。',
+      zh: '在玩家附近张开一片**小范围的音符雨区**：音符密集落下，每枚砸在自己的落点上——**冷却长、单发伤害高**。',
+      en: 'Opens a **small field of falling notes** near you: notes pour down densely and each one bursts where it lands — **long cooldown, high damage per note**.',
+      ja: '自機の近くに**小範囲の音符の雨**を張る。音符が密に降り、1 枚ずつ着地点で炸ける——**冷却は長く、1 枚あたりの威力は高い**。',
     },
-    params: ['orbCount', 'r', 'orbR', 'orbDmg', 'hitCd', 'spin', 'notes', 'singCd', 'dmg', 'pr', 'speed', 'homing', 'life'],
-    base: { speed: 380, pr: 7, life: 1.8, homing: 5.2 },
-    area: ['r', 'orbR', 'pr'],
+    params: ['cd', 'dmg', 'r', 'rain', 'noteR', 'fall', 'life', 'off'],
+    base: { rain: 30, noteR: 28, fall: 0.28, life: 1.6, off: 40 },
+    area: ['r', 'noteR'],
   },
   abyss: {
     id: 'abyss', family: 'duet', entity: 'Zone（devour·shrink）',
@@ -1053,23 +1053,28 @@ KUP.WEAPONS = {
     derived: { from: ['note', 'orbit'], song: '魔法', pairing: ['kaf', 'rim'] },
     name: { zh: '魔法', en: 'Mahou', ja: '魔法' },
     desc: {
-      zh: '派生——「私論理」与「食虫植物」合成一曲：音球照旧绕身，但**碰到谁就从谁身上唱出追踪音符**（接触触发的唯一机制，没有独立的齐射）。森先化歩×谷置狸眼。',
-      en: 'Derived — "Watashi Ronri" and the carnivorous orbs become one song: the orbs still circle, but <b>whoever they touch sings out homing notes</b> (one contact-triggered mechanic, no separate volley). MORISAKI KAFU × TANIOKI RIME.',
-      ja: '派生——「私論理」と「食虫植物」が一つの曲になる。音球は周回したまま、<b>触れた敵から追尾音符が歌い出る</b>（接触トリガーのみ、別枠の斉射はない）。森先化歩×谷置狸眼。',
+      zh: '派生——「私論理」的音符与「食虫植物」的**近身**合成一曲：在玩家附近张开一片**小范围的音符雨**。冷却很长，但每一枚落下的音符都很痛——是那种轻快、密集、哗一下砸下来的歌。森先化歩×谷置狸眼。',
+      en: 'Derived — the notes of "Watashi Ronri" and the **close range** of the carnivorous plant become one song: a **small field of falling notes** near you. Long cooldown, but every note that lands hits hard — light, dense, and it all comes down at once. MORISAKI KAFU × TANIOKI RIME.',
+      ja: '派生——「私論理」の音符と「食虫植物」の**近さ**が一つの曲になる。自機の近くに**小範囲の音符の雨**を張る。冷却は長いが、落ちた 1 枚 1 枚が重い——軽快で、密で、一気に降ってくる歌。森先化歩×谷置狸眼。',
     },
     lvDesc: [
-      { zh: '音球 ×2，碰到的敌人迸出 2 枚音符。', en: '2 orbs; each touched foe yields 2 notes.', ja: '音球 ×2、触れた敵から音符 ×2。' },
-      { zh: '音球 ×3，音符伤害提升。', en: '3 orbs, stronger notes.', ja: '音球 ×3、音符のダメージアップ。' },
-      { zh: '迸发更快，接触伤害提升。', en: 'Faster bursts, stronger contact.', ja: '迸発が速くなり、接触ダメージアップ。' },
-      { zh: '音球 ×4，每次 3 枚音符。', en: '4 orbs, 3 notes per burst.', ja: '音球 ×4、1 回 3 枚。' },
-      { zh: '音球 ×5、每次 4 枚 —— 魔法在两首歌之间成立。', en: '5 orbs, 4 notes per burst — magic takes hold between two songs.', ja: '音球 ×5、1 回 4 枚 —— 二曲の間に魔法が成る。' },
+      { zh: '身边下起音符雨（半径 105、1.6 秒、约 24 枚）。', en: 'A note rain beside you (r 105, 1.6s, ~24 notes).', ja: '自機のそばに音符の雨（半径 105、1.6 秒、およそ 24 枚）。' },
+      { zh: '雨区变大，落下的音符更痛。', en: 'Wider rain, harder notes.', ja: '雨域拡大、1 枚の威力アップ。' },
+      { zh: '音符更密，冷却缩短。', en: 'Denser rain, shorter cooldown.', ja: '雨が密になり、冷却短縮。' },
+      { zh: '范围与落点判定扩大。', en: 'Wider field and blast.', ja: '範囲と着弾判定アップ。' },
+      { zh: '半径 170、覆盖率更高 —— 整片街区下起音符。', en: 'R 170 and denser — the whole block rains notes.', ja: '半径 170、密度最大 —— 街路ごと音符が降る。' },
     ],
+    /* 数值口径（人类 2026-10-25「小范围长冷却的高伤害音符雨区」）：
+     *   ① **小范围**：r 105→170（对比深渊 200–290、古傷 210），且中心贴着玩家；
+     *   ② **长冷却**：5.4→3.4 秒（普通武器 1–3 秒，派生里也最长）；
+     *   ③ **高伤害**：单枚 30→44，配合每秒 24–44 枚的密度，清场靠"落点全中"，
+     *      而不是靠一块无脑覆盖的区域（落点半径 noteR 只有 26–34）。 */
     levels: [
-      { orbCount: 2, r: 46, orbR: 18, orbDmg: 9, hitCd: 0.42, spin: 4.8, notes: 2, singCd: 0.32, dmg: 13, pr: 7, speed: 380, homing: 5.2, life: 1.8 },
-      { orbCount: 3, r: 48, orbR: 19, orbDmg: 10, hitCd: 0.40, spin: 4.7, notes: 2, singCd: 0.30, dmg: 15, pr: 7, speed: 380, homing: 5.2, life: 1.8 },
-      { orbCount: 3, r: 50, orbR: 20, orbDmg: 11, hitCd: 0.38, spin: 4.6, notes: 3, singCd: 0.26, dmg: 17, pr: 7, speed: 390, homing: 5.2, life: 1.9 },
-      { orbCount: 4, r: 52, orbR: 21, orbDmg: 12, hitCd: 0.36, spin: 4.5, notes: 3, singCd: 0.24, dmg: 19, pr: 8, speed: 390, homing: 5.4, life: 1.9 },
-      { orbCount: 5, r: 54, orbR: 22, orbDmg: 13, hitCd: 0.34, spin: 4.4, notes: 4, singCd: 0.20, dmg: 21, pr: 8, speed: 400, homing: 5.6, life: 2.0 },
+      { cd: 5.4, dmg: 30, r: 105, rain: 24, noteR: 26, fall: 0.30, life: 1.6, off: 36 },
+      { cd: 5.0, dmg: 33, r: 118, rain: 28, noteR: 27, fall: 0.29, life: 1.7, off: 38 },
+      { cd: 4.6, dmg: 36, r: 132, rain: 32, noteR: 28, fall: 0.28, life: 1.8, off: 40 },
+      { cd: 4.0, dmg: 40, r: 148, rain: 38, noteR: 31, fall: 0.27, life: 1.9, off: 42 },
+      { cd: 3.4, dmg: 44, r: 170, rain: 44, noteR: 34, fall: 0.26, life: 2.0, off: 44 },
     ],
   },
   shinen: {

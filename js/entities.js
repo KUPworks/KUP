@@ -1617,6 +1617,14 @@ window.KUP = window.KUP || {};
       /* v0.21：派生武装（深淵）需要在**收束瞬间**追加效果（从中心射出光束），
        * 用可选回调表达，避免给 Zone 再塞一堆专用字段。 */
       this.onBurst = opt.onBurst || null;
+      /* v0.21.2 音符雨（派生武装「魔法」）：一次冷却只放一片雨区——
+       *   rain＝每秒落下的音符数；rainDmg｜rainR｜rainFall＝每枚音符的伤害/命中半径/下落时间；
+       *   音符落点就在雨区里随机挑，落下时把那一点炸掉（小范围、高频，读感是"雨"）。 */
+      this.rain = opt.rain || 0;
+      this.rainDmg = opt.rainDmg || 0;
+      this.rainR = opt.rainR || 28;
+      this.rainFall = opt.rainFall || 0.28;
+      this.rainAcc = 0;
       this.dead = false;
       this.hit = new Set();
     }
@@ -1718,6 +1726,17 @@ window.KUP = window.KUP || {};
       this.tick -= dt;
       const doTick = this.tick <= 0;
       if (doTick) this.tick = this.tickRate;
+      /* 音符雨（v0.21.2）：按 rain 频率在区域内撒音符——每枚落下时在落点炸开。
+       * 用"累计器"而不是定时器：低频（rain 小）时也不会漏发，帧率无关。 */
+      if (this.rain > 0 && this.dmg > 0 && this.age < this.life) {
+        this.rainAcc += this.rain * dt;
+        while (this.rainAcc >= 1) {
+          this.rainAcc -= 1;
+          const a = U.rng() * U.TAU, d = Math.sqrt(U.rng()) * this.r * 0.9;
+          const nx = this.x + Math.cos(a) * d, ny = this.y + Math.sin(a) * d;
+          if (game.dropNotes) game.dropNotes(nx, ny, this.rainR, this.dmg, this.rainFall, this.color);
+        }
+      }
       for (const e of game.enemies) {
         if (e.dead) continue;
         if (U.dist2(e.x, e.y, this.x, this.y) < Math.pow(this.r + e.r, 2)) {
@@ -1797,6 +1816,49 @@ window.KUP = window.KUP || {};
         ctx.fillStyle = '#fff';
         ctx.beginPath(); ctx.arc(0, 0, 4 * this.vis, 0, U.TAU); ctx.fill();
       }
+      ctx.restore();
+    }
+  }
+
+  /* ---------- 音符雨的单枚音符（v0.21.2 派生武装「魔法」）----------
+   * 从落点上方"掉"下来，落地（fx <= 0）时把落点 R 内的敌人一起结算。
+   * 纯玩家武器侧，只做伤害，不影响任何敌袭逻辑。 */
+  class NoteDrop {
+    constructor(x, y, opt) {
+      opt = opt || {};
+      this.x = x; this.y = y;
+      this.r = opt.r || 26;
+      this.dmg = opt.dmg || 12;
+      this.fall = opt.fall || 0.28; this.t = 0;
+      this.color = opt.color || '#ff7ac6';
+      this.dead = false;
+    }
+    update(dt, game) {
+      this.t += dt;
+      if (this.t < this.fall) return;
+      this.dead = true;
+      for (const e of game.enemies) {
+        if (e.dead) continue;
+        if (U.dist2(e.x, e.y, this.x, this.y) < Math.pow(this.r + e.r, 2)) game.damageEnemy(e, this.dmg);
+      }
+      game.fx.push(new Shockwave(this.x, this.y, { r0: 2, r1: this.r, dur: 0.2, color: this.color, width: 2.2 }));
+      KUP.Audio.sfx('hit');
+    }
+    draw(ctx) {
+      const k = Math.min(1, this.t / this.fall);          // 0→1 下落进度
+      const off = (1 - k) * 26;                            // 视觉：从上方 26px 落下
+      ctx.save();
+      ctx.globalAlpha = 0.35 + 0.65 * k;
+      ctx.fillStyle = this.color;
+      ctx.shadowColor = this.color; ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y - off + 7);
+      ctx.quadraticCurveTo(this.x + 6, this.y - off, this.x, this.y - off - 5);
+      ctx.quadraticCurveTo(this.x - 6, this.y - off, this.x, this.y - off + 7);
+      ctx.fill();
+      ctx.globalAlpha = 0.25 * k;                          // 落点提示圈
+      ctx.strokeStyle = this.color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(this.x, this.y, this.r * k, 0, U.TAU); ctx.stroke();
       ctx.restore();
     }
   }
@@ -1896,6 +1958,7 @@ window.KUP = window.KUP || {};
   KUP.Shockwave = Shockwave;
   KUP.Toss = Toss;
   KUP.Summon = Summon;
+KUP.NoteDrop = NoteDrop;
   KUP.Particle = Particle;
   KUP.FloatText = FloatText;
 })();

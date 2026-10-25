@@ -3361,35 +3361,50 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     return g;
   };
 
-  /* 魔法：音球**碰到敌人**才迸出音符（没有独立的齐射计时器） */
+  /* 魔法：玩家附近的**小范围音符雨区**（长冷却、高伤害） */
   const gCh = mkRun('mahou', 1210);
-  const pCh = gCh.player;
-  const eCh = gCh.spawnEnemy('noise', pCh.x + 46, pCh.y);
-  eCh.maxhp = 1e9; eCh.hp = 1e9;
-  let bursts = 0;
-  for (let i = 0; i < 60; i++) {
-    const orbN = gCh.projs.length;
-    const w = gCh.player.weapons[0];
-    /* 把敌人钉在球道上（测试里没有 Enemy.update 在跑，手动清「同目标再命中间隔」） */
-    const R = w.orbitR || 54;
-    eCh.x = pCh.x + R; eCh.y = pCh.y;
-    eCh.orbitT = 0;
-    w.update(0.1, gCh);
-    if (gCh.projs.length > orbN) bursts++;
+  const wCh = gCh.player.weapons[0];
+  wCh.update(0.1, gCh);                       // 武器初始 t=0.3，先走几帧
+  for (let i = 0; i < 4; i++) wCh.update(0.1, gCh);
+  const rainZone = gCh.zones.find(z => z.kind === 'field' && z.rain > 0);
+  check('魔法：冷却结束时在玩家附近张开一片音符雨区',
+    !!rainZone, rainZone ? 'r=' + rainZone.r + ' rain=' + rainZone.rain : '无雨区');
+  check('魔法：雨区中心贴着玩家（不是远处的大范围覆盖）',
+    !!rainZone && Math.hypot(rainZone.x - gCh.player.x, rainZone.y - gCh.player.y) < 80,
+    rainZone ? Math.round(Math.hypot(rainZone.x - gCh.player.x, rainZone.y - gCh.player.y)) + 'px' : '-');
+  check('魔法：范围明显小于其它派生大范围武器（深渊 ≥200、古傷 ≥210）',
+    !!rainZone && rainZone.r < 200, rainZone ? 'r=' + rainZone.r : '-');
+  check('魔法：冷却在派生里最长一档（≥3 秒，对比普通武器 1–3 秒）',
+    KUP.WEAPONS.mahou.levels[4].cd >= 3 && KUP.WEAPONS.mahou.levels[0].cd >= 5,
+    'cd=' + KUP.WEAPONS.mahou.levels.map(l => l.cd).join('/'));
+  /* 雨区的音符：按 rain 频率落下，落地才结算 */
+  let fell = 0;
+  const fellList = [];
+  const tn = gCh.spawnEnemy('noise', rainZone.x, rainZone.y);
+  tn.maxhp = 1e9; tn.hp = 1e9;
+  const hp0 = tn.hp;
+  for (let i = 0; i < 8; i++) {
+    rainZone.update(0.1, gCh);
+    /* 先把这一帧已经落地（fall 到期）的音符结算掉，再清理 */
+    for (const n of gCh.notes) { n.t = n.fall; n.update(0.0001, gCh); }
+    gCh.notes.forEach(n => { if (n.dead) fellList.push(n); });
+    fell += gCh.notes.filter(n => n.dead).length;
+    gCh.notes = gCh.notes.filter(n => !n.dead);
   }
-  check('魔法：音球碰到敌人即迸出追踪音符（接触触发，不是独立齐射）',
-    bursts >= 2, 'bursts=' + bursts);
-  /* 反证：把敌人挪出球道 ⇒ 一颗音符都不该出现（没有独立齐射计时器） */
-  const gCh2 = mkRun('mahou', 1215);
-  const far = gCh2.spawnEnemy('noise', gCh2.player.x + 900, gCh2.player.y);
-  far.maxhp = 1e9; far.hp = 1e9;
-  for (let i = 0; i < 40; i++) gCh2.player.weapons[0].update(0.1, gCh2);
-  check('魔法：没有接触就完全不产弹（确认没有独立的齐射）',
-    gCh2.projs.length === 0, 'projs=' + gCh2.projs.length);
-  check('魔法：音符是追踪弹（kind=homing 且 homing > 0）',
-    gCh.projs.every(pr => pr.homing > 0) && gCh.projs.every(pr => pr.kind === 'homing'));
-  check('魔法：音球数量随等级（Lv5 ＝ 5 颗）',
-    gCh.player.weapons[0].orbs.length === KUP.WEAPONS.mahou.levels[4].orbCount);
+  check('魔法：音符按频率不停落下（0.8 秒内落下多枚）', fell >= 5, 'fell=' + fell);
+  const inR = fellList.filter(n => Math.hypot(n.x - tn.x, n.y - tn.y) <= n.r + tn.r).length;
+  const outR = fellList.length - inR;
+  /* 只有落在脚下的音符命中（每枚 = dmg × 玩家倍率，可能带会心所以取 ≥） */
+  const unit = KUP.WEAPONS.mahou.levels[4].dmg * gCh.player.dmgMult;
+  check('魔法：落下的音符在落点结算伤害（脚下的都命中、范围外的不命中）',
+    inR > 0 && (hp0 - tn.hp) >= inR * unit * 0.999 && (hp0 - tn.hp) < (fellList.length + 1) * unit * 2.2,
+    'inR=' + inR + ' outR=' + outR + ' loss=' + Math.round(hp0 - tn.hp));
+  check('魔法：单枚音符伤害高于普通追踪音符（高伤害口径）',
+    KUP.WEAPONS.mahou.levels[4].dmg > KUP.WEAPONS.note.levels[4].dmg * 2,
+    'mahou=' + KUP.WEAPONS.mahou.levels[4].dmg + ' note=' + KUP.WEAPONS.note.levels[4].dmg);
+  check('魔法：落点判定是小圈（noteR < 40），靠密集落点而不是大覆盖',
+    KUP.WEAPONS.mahou.levels.every(l => l.noteR < 40));
+
 
   /* 深淵：一片**持续向内收缩**的吞噬领域，完全没有光束 */
   const gAb = mkRun('shinen', 1211);
