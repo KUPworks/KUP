@@ -228,8 +228,11 @@ KUP.WEAPON_MODULES = {
       en: 'A big, slow projectile with **heavy knockback** that pierces several foes; hit radius scales with Area.',
       ja: '大きく遅い弾体。**ノックバックが極めて強く**、複数の敵を貫く。命中半径は「範囲」で拡大。',
     },
-    params: ['cd', 'dmg', 'count', 'r', 'pierce', 'kb'],
-    base: { speed: 250, r: 26, life: 2.8, pierce: 3, homing: 0.7, kb: 3.0 },
+    params: ['cd', 'dmg', 'count', 'r', 'pierce', 'kb', 'wobble', 'wobbleF'],
+    /* v0.21.1：巨弹的**路径波动**（人类：「台风之子的路径波动再做得稍微大一些」）——
+     * wobble＝摆动角速度峰值（rad/s）、wobbleF＝摆动频率（Hz）；只扭"速度方向"，
+     * 不改变平均前进方向，所以是看得见的蛇行而不是乱飞。 */
+    base: { speed: 250, r: 26, life: 2.8, pierce: 3, homing: 0.7, kb: 3.0, wobble: 1.35, wobbleF: 1.9 },
     area: ['r'],
   },
   /* v0.20：**吞噬**——先聚怪、再群伤（Zone kind='devour'）。 */
@@ -275,71 +278,73 @@ KUP.WEAPON_MODULES = {
    * 派生武装＝**两把普通武器合成一把**（释放 1 个武器槽），所以强度口径是
    *   「强于其中任意一把·弱于两把叠加」——做法不是简单相加，而是保留两族的
    * **核心手感**、把每一轮压成一套节奏：
-   *   chorus＝环绕音球（orbit）＋ 由球体轮流齐射的追踪音符（homing）
-   *   abyss ＝吞噬领域（devour）＋ 收束时自中心贯穿的双光束（beam）
-   *   gale  ＝正面窄扇风压（shock 窄扇）＋ 推进去的巨大重弹（typhoon）
-   *   scar  ＝整圈冲击环（shock 全圆）＋ 环内落下的延迟空爆（blast）
-   *   stigma＝穿透音枪齐射（sniper）＋ 同一目标脚下的滞留宝光（lob）
+   * ★ v0.21.1：**不是"A 的效果 + B 的效果"并排**——每个合奏模组只有一条机制：
+   *   chorus＝音球碰到谁就从谁身上"唱出"音符（接触触发；orbit 的接触 × homing 的音符）
+   *   abyss ＝吞噬领域一直向内收缩到底（devour 的聚怪被推到极限，**没有光束**）
+   *   gale  ＝蛇行巨弹沿途甩风压环（typhoon 的巨物 × shock 的推力，合成"风道"）
+   *   scar  ＝数道偏心冲击环同时裂开（shock 的环 × blast 的"不在地心"落点）
+   *   stigma＝给敌人刻印，受伤加成 → 到期/击杀爆裂 → 传染（sniper 的"点" × lob 的"留痕"）
    * 这些模组只服务派生武装，**不会给普通武器使用**（audit 会校验）。 */
   chorus: {
     id: 'chorus', family: 'duet', entity: 'WeaponRuntime.orbs + Projectile',
     name: { zh: '环唱', en: 'Round Chorus', ja: '環唱' },
     desc: {
-      zh: '音球贴着玩家绕转并造成接触伤害，同时**轮流从球体位置射出追踪音符**。',
-      en: 'Orbs circle close to you dealing contact damage while **taking turns firing homing notes** from their positions.',
-      ja: '音球が自機の周りを回り接触ダメージを与えつつ、**順番に球体から追尾音符を放つ**。',
+      zh: '音球贴着玩家绕转，**碰到谁就从谁身上唱出追踪音符**——只有一条机制：接触即发声。',
+      en: 'Orbs circle close to you and **sing notes out of whoever they touch** — one mechanic only: contact makes sound.',
+      ja: '音球が自機の周りを回り、**触れた敵から追尾音符を歌い出す**。機構は一つ——接触が音になる。',
     },
-    params: ['cd', 'dmg', 'count', 'orbCount', 'r', 'orbR', 'orbDmg', 'hitCd', 'spin', 'pr', 'speed', 'homing', 'life'],
-    base: { speed: 380, pr: 7, life: 2.0, homing: 5.2, spin: 4.6 },
+    params: ['orbCount', 'r', 'orbR', 'orbDmg', 'hitCd', 'spin', 'notes', 'singCd', 'dmg', 'pr', 'speed', 'homing', 'life'],
+    base: { speed: 380, pr: 7, life: 1.8, homing: 5.2 },
     area: ['r', 'orbR', 'pr'],
   },
   abyss: {
-    id: 'abyss', family: 'duet', entity: 'Zone（devour）+ Beam',
+    id: 'abyss', family: 'duet', entity: 'Zone（devour·shrink）',
     name: { zh: '深渊', en: 'Abyss', ja: '深淵' },
     desc: {
-      zh: '在最近敌人处张开吞噬领域把敌人拖向中心，**收束时从中心贯穿双光束**。',
-      en: 'Opens a devouring field on the nearest foe, dragging foes in — then **two beams pierce out from its center** when it bursts.',
-      ja: '最寄りの敵に捕食領域を開いて引き寄せ、**収束時に中心から二条のビームが貫く**。',
+      zh: '一枚**不断向内收缩**的吞噬领域：越收越紧、拖力越强、边上持续掉血，收到底时整片塌进去。没有光束。',
+      en: 'A devouring field that **keeps shrinking inward**: tighter, stronger drag, continuous damage, then the whole thing collapses. No beams.',
+      ja: '**内側へ収縮し続ける**捕食領域。締まるほど引き込みが強まり、縁は削られ続け、最後は丸ごと崩れ落ちる。ビームはない。',
     },
-    params: ['cd', 'dmg', 'count', 'r', 'pull', 'life', 'beamDmg', 'beamLen', 'beamW', 'beams'],
-    base: { beams: 2 },
-    area: ['r', 'beamLen'],
+    params: ['cd', 'dmg', 'count', 'r', 'pull', 'shrink', 'tick', 'tickRate', 'boomMul'],
+    base: { shrink: 160, tickRate: 0.32, boomMul: 1.6 },
+    area: ['r'],
   },
   gale: {
-    id: 'gale', family: 'duet', entity: 'Ring（扇形）+ Projectile',
-    name: { zh: '风压重弹', en: 'Gale & Weight', ja: '風圧重弾' },
+    id: 'gale', family: 'duet', entity: 'Projectile（蛇行＋风道 Ring）',
+    name: { zh: '风道重弹', en: 'Gale Lane', ja: '風道重弾' },
     desc: {
-      zh: '先朝正面吹出一道**窄扇风压**推开敌人，再推进一枚巨大重弹——先清道，再碾过。',
-      en: 'First a **narrow fan of wind pressure** shoves the front open, then a huge heavy shot rolls through — clear the lane, then flatten it.',
-      ja: 'まず正面へ**狭い扇の風圧**を吹いて押し開き、続いて巨大な重弾が進む——道を空けてから轢く。',
+      zh: '一枚**蛇行**的巨大重弹，沿途不断甩出风压环——风道跟着弹走，经过的地方都被推开。',
+      en: 'One huge **serpentine** shot that keeps shedding wind-pressure rings — the lane moves with the shot and shoves everything aside.',
+      ja: '**蛇行する**巨大弾が、進みながら風圧の輪を落とし続ける。風の道が弾とともに進み、通った場所を押し開ける。',
     },
-    params: ['cd', 'dmg', 'count', 'r', 'life', 'pierce', 'kb', 'speed', 'ringR', 'ringArc', 'ringKb', 'ringDmg', 'ringSpeed'],
-    base: { speed: 250, life: 2.6, ringArc: 70, ringSpeed: 320 },
-    area: ['r', 'ringR'],
+    params: ['cd', 'dmg', 'count', 'r', 'life', 'pierce', 'kb', 'speed', 'homing', 'wobble', 'wobbleF',
+      'trailCd', 'trailR', 'trailSpeed', 'trailDmg', 'trailKb'],
+    base: { speed: 240, life: 2.6, homing: 0.45, trailSpeed: 320 },
+    area: ['r', 'trailR'],
   },
   scar: {
-    id: 'scar', family: 'duet', entity: 'Ring（全圆）+ Zone（bomb）',
-    name: { zh: '旧伤环爆', en: 'Scar Ring', ja: '旧傷環爆' },
+    id: 'scar', family: 'duet', entity: 'Ring（多道偏心）',
+    name: { zh: '裂伤环', en: 'Splitting Scars', ja: '裂傷環' },
     desc: {
-      zh: '一圈**整圆冲击环**向外推开敌人，同时环内落下数枚**延迟白爆**，在四面上留下旧伤。',
-      en: 'A **full shock ring** pushes everything out while **delayed bursts** fall inside it, leaving old scars on every side.',
-      ja: '**全周の衝撃環**が敵を押し出し、同時に環の内側へ**遅延爆発**が落ちて四方に旧傷を残す。',
+      zh: '旧伤**在四周同时裂开**：数道圆心各自偏移的冲击环朝不同方向炸出去，形成互相重叠的裂痕。',
+      en: 'Old wounds **split open on several sides at once**: several rings with offset centers burst outward, overlapping into a lattice of scars.',
+      ja: '旧傷が**四方で同時に裂ける**。中心をずらした複数の衝撃環が別方向へ炸け、重なり合って傷跡の網になる。',
     },
-    params: ['cd', 'dmg', 'count', 'r', 'range', 'fuse', 'minRange', 'ringR', 'ringKb', 'ringDmg', 'ringSpeed'],
-    base: { minRange: 30, ringR: 180, ringSpeed: 340 },
-    area: ['r', 'range', 'ringR'],
+    params: ['cd', 'dmg', 'count', 'r', 'range', 'speed', 'kb'],
+    base: { speed: 360 },
+    area: ['r', 'range'],
   },
   stigma: {
-    id: 'stigma', family: 'duet', entity: 'Projectile + Zone（field）',
-    name: { zh: '圣痕枪光', en: 'Stigma Shot', ja: '聖痕槍光' },
+    id: 'stigma', family: 'duet', entity: 'Enemy.stigma + Shockwave',
+    name: { zh: '刻印', en: 'Stigma', ja: '刻印' },
     desc: {
-      zh: '向最近敌人齐射**穿透音枪**，并在同一目标脚下留下**滞留宝光**持续切割。',
-      en: 'Fires a volley of **piercing lances** at the nearest foe and leaves **lingering gem-light** under that same target.',
-      ja: '最寄りへ**貫通音槍**を斉射し、同じ目標の足元に**残る宝光**を残して切り続ける。',
+      zh: '给敌人**刻印**：被刻印者受到的伤害加成，印记到期或宿主被击破时**爆裂**，并把印记传给旁边的敌人。',
+      en: 'Brands foes with a **stigma**: they take extra damage, and when the mark expires or the host dies it **bursts**, passing the brand on.',
+      ja: '敵に**刻印**を打つ。刻まれた者は受けるダメージが増え、刻印が切れるか宿主が倒れると**炸裂**し、印は隣へ伝う。',
     },
-    params: ['cd', 'dmg', 'count', 'spread', 'pierce', 'fieldDmg', 'fieldR', 'fieldLife', 'tickRate'],
-    base: { spread: 0.085, tickRate: 0.4 },
-    area: ['fieldR'],
+    params: ['cd', 'count', 'max', 'life', 'amp', 'r'],
+    base: { count: 1, max: 2, life: 2.4, amp: 0.25, r: 90 },
+    area: ['r'],
   },
   lob: {
     id: 'lob', family: 'field', entity: 'Toss → Zone',
@@ -483,7 +488,7 @@ KUP.WEAPONS = {
   },
   orbit: {
     id: 'orbit', icon: '◎', color: '#ff6bb5', behavior: 'orbital', maxLv: 5, owner: 'rim',
-    name: { zh: '暴食音球', en: 'Carnivorous Bit', ja: 'カーニヴォラス・ビット' },
+    name: { zh: '食虫植物', en: 'Shokuchuu Shokubutsu', ja: '食虫植物' },
     desc: {
       zh: '乐曲「食虫植物」般环绕捕食的音球。谷置狸眼的初期武装。<br><span class="cv-note">球体接触判定 · 体积随「范围」、转速随「冷却」成长</span>',
       en: 'Orbs that orbit and devour like "Shokuchuu Shokubutsu". TANIOKI RIME\'s starting weapon.<br><span class="cv-note">Orb-body contact · radius & size scale with Area, spin with Cooldown</span>',
@@ -551,7 +556,7 @@ KUP.WEAPONS = {
   },
   bass: {
     id: 'bass', icon: '低', color: '#ffb25a', behavior: 'shock', maxLv: 5, owner: 'harusaruhi',
-    name: { zh: '泰拉坠击', en: 'Terra Drop', ja: 'テラ・ドロップ' },
+    name: { zh: 'Terra', en: 'Terra', ja: 'テラ' },
     desc: {
       zh: '令大地震颤的低音冲击波，取自乐曲「テラ」。朝主派流的初期武装。',
       en: 'A bass shockwave that quakes the earth, from the song "Terra". ASANUSHI HARU\'s starting weapon.',
@@ -1031,28 +1036,40 @@ KUP.WEAPONS = {
    *   - 合并后**没有覚醒形态**（合并本身就是觉醒），maxLv 仍是 5。
    * 曲名取自《繁殖》（派生曲 1st Album，20 曲）中**这两位角色**的对唱曲，
    * 出处：docs/lore/discography.md §2.6.1。本次只做 V.W.P 五人的试验批次。 */
+  /* ===== v0.21 派生（合并）武装：V.W.P《繁殖》对唱曲 =====
+   * 规则（见 DESIGN.md §6.9.3）：
+   *   - `derived.from` 是**两把具体武器**；两者同时在手时，升级卡池有**中等几率**
+   *     出现对应的派生卡（KUP.CONFIG.DERIVED.CHANCE，缺省 0.45）；
+   *   - 选择后两把武器**合成一把**（释放 1 个武器槽），等级取两者中**较低**的那把；
+   *     两把父武器本局**作废**（game.forged）：不会再回到卡池、也不能二次合并；
+   *   - 强度口径：强于其中任意一把、弱于两把叠加；
+   *   - ★ v0.21.1：**合并武器不是"A 的效果 + B 的效果"**，而是合成后的**一个新机制**
+   *     （深渊＝一直内缩的一条深渊、刻印＝在敌人身上打记号），见各条 desc；
+   *   - 合并后**没有覚醒形态**（合并本身就是觉醒），maxLv 仍是 5。
+   * 曲名取自《繁殖》（派生曲 1st Album，20 曲）中**这两位角色**的对唱曲，
+   * 出处：docs/lore/discography.md §2.6.1。本次只做 V.W.P 五人的试验批次。 */
   mahou: {
     id: 'mahou', icon: '魔', color: '#ff7ac6', behavior: 'chorus', maxLv: 5,
     derived: { from: ['note', 'orbit'], song: '魔法', pairing: ['kaf', 'rim'] },
     name: { zh: '魔法', en: 'Mahou', ja: '魔法' },
     desc: {
-      zh: '派生——「私論理」与「暴食音球」同唱一曲：音球照旧绕身，<b>轮流从球体射出追踪音符</b>。森先化歩×谷置狸眼。',
-      en: 'Derived — "Watashi Ronri" and the carnivorous orbs sing together: the orbs keep circling and <b>take turns firing homing notes</b>. MORISAKI KAFU × TANIOKI RIME.',
-      ja: '派生——「私論理」と「食虫植物」の音球が同じ曲を歌う。球は周回したまま、<b>順番に追尾音符を放つ</b>。森先化歩×谷置狸眼。',
+      zh: '派生——「私論理」与「食虫植物」合成一曲：音球照旧绕身，但**碰到谁就从谁身上唱出追踪音符**（接触触发的唯一机制，没有独立的齐射）。森先化歩×谷置狸眼。',
+      en: 'Derived — "Watashi Ronri" and the carnivorous orbs become one song: the orbs still circle, but <b>whoever they touch sings out homing notes</b> (one contact-triggered mechanic, no separate volley). MORISAKI KAFU × TANIOKI RIME.',
+      ja: '派生——「私論理」と「食虫植物」が一つの曲になる。音球は周回したまま、<b>触れた敵から追尾音符が歌い出る</b>（接触トリガーのみ、別枠の斉射はない）。森先化歩×谷置狸眼。',
     },
     lvDesc: [
-      { zh: '音球 ×2，每轮 2 枚追踪音符。', en: '2 orbs, 2 homing notes per cycle.', ja: '音球 ×2、毎巡 2 枚の追尾音符。' },
+      { zh: '音球 ×2，碰到的敌人迸出 2 枚音符。', en: '2 orbs; each touched foe yields 2 notes.', ja: '音球 ×2、触れた敵から音符 ×2。' },
       { zh: '音球 ×3，音符伤害提升。', en: '3 orbs, stronger notes.', ja: '音球 ×3、音符のダメージアップ。' },
-      { zh: '每轮 3 枚，接触伤害提升。', en: '3 notes per cycle, stronger contact.', ja: '毎巡 3 枚、接触ダメージアップ。' },
-      { zh: '音球 ×4，每轮 4 枚。', en: '4 orbs, 4 notes per cycle.', ja: '音球 ×4、毎巡 4 枚。' },
-      { zh: '音球 ×4、每轮 5 枚 —— 魔法在两首歌之间成立。', en: '4 orbs, 5 notes — magic takes hold between two songs.', ja: '音球 ×4、毎巡 5 枚 —— 二曲の間に魔法が成る。' },
+      { zh: '迸发更快，接触伤害提升。', en: 'Faster bursts, stronger contact.', ja: '迸発が速くなり、接触ダメージアップ。' },
+      { zh: '音球 ×4，每次 3 枚音符。', en: '4 orbs, 3 notes per burst.', ja: '音球 ×4、1 回 3 枚。' },
+      { zh: '音球 ×5、每次 4 枚 —— 魔法在两首歌之间成立。', en: '5 orbs, 4 notes per burst — magic takes hold between two songs.', ja: '音球 ×5、1 回 4 枚 —— 二曲の間に魔法が成る。' },
     ],
     levels: [
-      { cd: 1.5, dmg: 15, count: 2, orbCount: 2, r: 46, orbR: 18, orbDmg: 9, hitCd: 0.42, spin: 4.8 },
-      { cd: 1.35, dmg: 17, count: 3, orbCount: 3, r: 48, orbR: 19, orbDmg: 10, hitCd: 0.40, spin: 4.7 },
-      { cd: 1.2, dmg: 19, count: 3, orbCount: 3, r: 50, orbR: 20, orbDmg: 11, hitCd: 0.38, spin: 4.6 },
-      { cd: 1.05, dmg: 21, count: 4, orbCount: 4, r: 52, orbR: 21, orbDmg: 12, hitCd: 0.36, spin: 4.5 },
-      { cd: 0.95, dmg: 24, count: 5, orbCount: 4, r: 54, orbR: 22, orbDmg: 13, hitCd: 0.34, spin: 4.4 },
+      { orbCount: 2, r: 46, orbR: 18, orbDmg: 9, hitCd: 0.42, spin: 4.8, notes: 2, singCd: 0.32, dmg: 13, pr: 7, speed: 380, homing: 5.2, life: 1.8 },
+      { orbCount: 3, r: 48, orbR: 19, orbDmg: 10, hitCd: 0.40, spin: 4.7, notes: 2, singCd: 0.30, dmg: 15, pr: 7, speed: 380, homing: 5.2, life: 1.8 },
+      { orbCount: 3, r: 50, orbR: 20, orbDmg: 11, hitCd: 0.38, spin: 4.6, notes: 3, singCd: 0.26, dmg: 17, pr: 7, speed: 390, homing: 5.2, life: 1.9 },
+      { orbCount: 4, r: 52, orbR: 21, orbDmg: 12, hitCd: 0.36, spin: 4.5, notes: 3, singCd: 0.24, dmg: 19, pr: 8, speed: 390, homing: 5.4, life: 1.9 },
+      { orbCount: 5, r: 54, orbR: 22, orbDmg: 13, hitCd: 0.34, spin: 4.4, notes: 4, singCd: 0.20, dmg: 21, pr: 8, speed: 400, homing: 5.6, life: 2.0 },
     ],
   },
   shinen: {
@@ -1060,23 +1077,23 @@ KUP.WEAPONS = {
     derived: { from: ['kuu', 'laser'], song: '深淵', pairing: ['kaf', 'isekaijoucho'] },
     name: { zh: '深淵', en: 'Shin\'en', ja: '深淵' },
     desc: {
-      zh: '派生——「過去を喰らう」吞下敌人，「シリウスの心臓」在收束的瞬间从领域中心贯穿双光束。森先化歩×夜河世界。',
-      en: 'Derived — the past is devoured, and at the instant the field closes, beams of "Sirius no Shinzou" pierce out from its center. MORISAKI KAFU × YORUKAWA SEKAI.',
-      ja: '派生——「過去を喰らう」が敵を呑み、収束の瞬間に「シリウスの心臓」の光が領域中心から貫く。森先化歩×夜河世界。',
+      zh: '派生——「過去を喰らう」的**加强版**：张开一片范围更大的吞噬领域，然后**一直向内收缩**——越收越紧、拖力越强、边缘持续掉血，收到底时整片塌进去。**没有光束**。森先化歩×夜河世界。',
+      en: 'Derived — a **stronger** "Kako wo Kurau": a wider devouring field that **keeps shrinking inward** — tighter, stronger drag, continuous damage, then collapses. **No beams.** MORISAKI KAFU × YORUKAWA SEKAI.',
+      ja: '派生——「過去を喰らう」の**強化版**。より広い捕食領域が**内側へ収縮し続け**、締まるほど引き込みが強まり、縁は削られ、最後は丸ごと崩れる。**ビームはない**。森先化歩×夜河世界。',
     },
     lvDesc: [
-      { zh: '吞噬领域收束时从中心射出 1 道光束。', en: '1 beam pierces from the center when the field closes.', ja: '収束時に中心から 1 条のビーム。' },
-      { zh: '领域与光束伤害提升。', en: 'More field and beam damage.', ja: '領域とビームのダメージアップ。' },
-      { zh: '拖拽力增强，光束延长。', en: 'Stronger pull, longer beams.', ja: '引き寄せ強化、ビーム延長。' },
-      { zh: '同时张开 2 个领域，每个 2 道光束。', en: '2 fields at once, 2 beams each.', ja: '領域 ×2、各 2 条のビーム。' },
-      { zh: '领域 ×2、光束 ×2 —— 深渊没有底。', en: '2 fields, 2 beams — the abyss has no floor.', ja: '領域 ×2、ビーム ×2 —— 深淵に底はない。' },
+      { zh: '张开半径 200 的深渊，向内收缩并持续刮伤。', en: 'A 200-radius abyss shrinks inward, carving as it goes.', ja: '半径 200 の深淵が内へ縮み、削り続ける。' },
+      { zh: '范围与拖拽力提升。', en: 'Wider field, stronger drag.', ja: '範囲と引き込みアップ。' },
+      { zh: '持续伤害提升，收缩更快。', en: 'More damage, faster collapse.', ja: '継続ダメージと収縮速度アップ。' },
+      { zh: '同时张开 2 片深渊。', en: '2 abysses at once.', ja: '深淵 ×2。' },
+      { zh: '半径 290、收到底时整片塌陷 —— 深渊没有底。', en: '290 radius; the final collapse takes everything — the abyss has no floor.', ja: '半径 290、最後は丸ごと崩落 —— 深淵に底はない。' },
     ],
     levels: [
-      { cd: 4.2, dmg: 18, count: 1, r: 118, pull: 250, life: 0.62, beamDmg: 18, beamLen: 520, beamW: 16, beams: 1 },
-      { cd: 3.9, dmg: 21, count: 1, r: 132, pull: 280, life: 0.68, beamDmg: 20, beamLen: 580, beamW: 18, beams: 1 },
-      { cd: 3.6, dmg: 24, count: 1, r: 146, pull: 310, life: 0.74, beamDmg: 22, beamLen: 640, beamW: 20, beams: 1 },
-      { cd: 3.3, dmg: 28, count: 2, r: 158, pull: 350, life: 0.82, beamDmg: 24, beamLen: 700, beamW: 22, beams: 2 },
-      { cd: 3.0, dmg: 30, count: 2, r: 170, pull: 390, life: 0.92, beamDmg: 26, beamLen: 760, beamW: 22, beams: 2 },
+      { cd: 4.6, dmg: 18, count: 1, r: 200, pull: 300, shrink: 140, tick: 7, tickRate: 0.36, boomMul: 1.5 },
+      { cd: 4.2, dmg: 22, count: 1, r: 220, pull: 330, shrink: 155, tick: 9, tickRate: 0.34, boomMul: 1.5 },
+      { cd: 3.8, dmg: 26, count: 1, r: 240, pull: 360, shrink: 170, tick: 11, tickRate: 0.32, boomMul: 1.6 },
+      { cd: 3.4, dmg: 30, count: 2, r: 260, pull: 400, shrink: 185, tick: 13, tickRate: 0.30, boomMul: 1.7 },
+      { cd: 3.0, dmg: 36, count: 2, r: 290, pull: 440, shrink: 200, tick: 16, tickRate: 0.28, boomMul: 1.8 },
     ],
   },
   honkai: {
@@ -1084,47 +1101,47 @@ KUP.WEAPONS = {
     derived: { from: ['horagai', 'taifuu'], song: '本懐', pairing: ['rim', 'harusaruhi'] },
     name: { zh: '本懐', en: 'Honkai', ja: '本懐' },
     desc: {
-      zh: '派生——「法螺話」先把正面吹开一条道，「台風の子」随即碾过去。谷置狸眼×朝主派流。',
-      en: 'Derived — "Horagai" blows the front open, then the child of the typhoon rolls through. TANIOKI RIME × ASANUSHI HARU.',
-      ja: '派生——「法螺話」が正面を吹き開け、「台風の子」がそのまま轢いていく。谷置狸眼×朝主派流。',
+      zh: '派生——一枚**蛇行**的巨大重弹，飞行途中不断甩下**风压环**：风道跟着弹走，经过的整条街都被推开。谷置狸眼×朝主派流。',
+      en: 'Derived — one huge **serpentine** shot that keeps shedding **wind-pressure rings**: the lane travels with the shot and shoves the whole street aside. TANIOKI RIME × ASANUSHI HARU.',
+      ja: '派生——**蛇行する**巨大弾が、進みながら**風圧の輪**を落とし続ける。風の道が弾とともに進み、通った街路ごと押し開ける。谷置狸眼×朝主派流。',
     },
     lvDesc: [
-      { zh: '扇风压 70° ＋ 巨大弹体 1 枚。', en: '70° wind fan + 1 heavy shot.', ja: '70° の風圧 ＋ 巨大弾 ×1。' },
-      { zh: '弹体伤害与击退提升。', en: 'Stronger shot and knockback.', ja: '弾体のダメージとノックバックアップ。' },
-      { zh: '扇风压加宽，弹体更大。', en: 'Wider fan, bigger shot.', ja: '扇角拡大、弾体拡大。' },
-      { zh: '弹体 ×2，风压更强。', en: '2 shots, stronger wind.', ja: '弾体 ×2、風圧強化。' },
-      { zh: '弹体 ×2、78° —— 本懐を遂げる。', en: '2 shots at 78° — the wish is fulfilled.', ja: '弾体 ×2、78° —— 本懐を遂げる。' },
+      { zh: '蛇行巨弹 1 枚，沿途甩出小风压环。', en: '1 serpentine shot shedding small wind rings.', ja: '蛇行巨弾 ×1、沿道に小さな風圧環。' },
+      { zh: '弹体伤害与风压击退提升。', en: 'Stronger shot and wind push.', ja: '弾体ダメージと風圧アップ。' },
+      { zh: '弹体更大，风道更宽。', en: 'Bigger shot, wider lane.', ja: '弾体拡大、風道拡大。' },
+      { zh: '巨弹 ×2。', en: '2 shots.', ja: '巨弾 ×2。' },
+      { zh: '巨弹 ×2、风压环更密 —— 本懐を遂げる。', en: '2 shots with denser rings — the wish is fulfilled.', ja: '巨弾 ×2、風圧環が濃くなる —— 本懐を遂げる。' },
     ],
     levels: [
-      { cd: 2.9, dmg: 26, count: 1, r: 24, life: 2.4, pierce: 3, kb: 2.4, ringR: 175, ringArc: 70, ringKb: 350, ringDmg: 11 },
-      { cd: 2.7, dmg: 29, count: 1, r: 26, life: 2.5, pierce: 3, kb: 2.5, ringR: 190, ringArc: 72, ringKb: 370, ringDmg: 13 },
-      { cd: 2.5, dmg: 32, count: 1, r: 28, life: 2.6, pierce: 4, kb: 2.6, ringR: 205, ringArc: 74, ringKb: 390, ringDmg: 15 },
-      { cd: 2.2, dmg: 36, count: 2, r: 30, life: 2.7, pierce: 4, kb: 2.8, ringR: 220, ringArc: 76, ringKb: 410, ringDmg: 16 },
-      { cd: 1.95, dmg: 40, count: 2, r: 32, life: 2.8, pierce: 5, kb: 3.0, ringR: 235, ringArc: 78, ringKb: 430, ringDmg: 18 },
+      { cd: 2.9, dmg: 26, count: 1, r: 26, life: 2.6, pierce: 3, kb: 2.4, speed: 240, homing: 0.45, wobble: 0.85, wobbleF: 1.5, trailCd: 0.20, trailR: 52, trailSpeed: 320, trailDmg: 6, trailKb: 220 },
+      { cd: 2.7, dmg: 29, count: 1, r: 28, life: 2.7, pierce: 3, kb: 2.5, speed: 240, homing: 0.45, wobble: 0.9, wobbleF: 1.6, trailCd: 0.19, trailR: 58, trailSpeed: 320, trailDmg: 7, trailKb: 240 },
+      { cd: 2.5, dmg: 32, count: 1, r: 30, life: 2.8, pierce: 4, kb: 2.6, speed: 245, homing: 0.5, wobble: 0.95, wobbleF: 1.6, trailCd: 0.18, trailR: 64, trailSpeed: 330, trailDmg: 8, trailKb: 260 },
+      { cd: 2.3, dmg: 36, count: 2, r: 32, life: 2.9, pierce: 4, kb: 2.8, speed: 250, homing: 0.5, wobble: 1.0, wobbleF: 1.7, trailCd: 0.16, trailR: 70, trailSpeed: 330, trailDmg: 9, trailKb: 280 },
+      { cd: 2.0, dmg: 40, count: 2, r: 34, life: 3.0, pierce: 5, kb: 3.0, speed: 250, homing: 0.55, wobble: 1.1, wobbleF: 1.8, trailCd: 0.14, trailR: 76, trailSpeed: 340, trailDmg: 11, trailKb: 300 },
     ],
   },
   koshou: {
-    id: 'koshou', icon: '傷', color: '#c96a7a', behavior: 'scar', maxLv: 5, warnColor: '#ffc2b8',
+    id: 'koshou', icon: '傷', color: '#c96a7a', behavior: 'scar', maxLv: 5,
     derived: { from: ['bass', 'hakuchuumu'], song: '古傷', pairing: ['harusaruhi', 'koko'] },
     name: { zh: '古傷', en: 'Koshou', ja: '古傷' },
     desc: {
-      zh: '派生——「テラ」的整圈冲击环向外推开敌人，环内同时落下白色的「白昼夢」空爆。朝主派流×輪廻此処。',
-      en: 'Derived — a full "Terra" ring shoves everything out while white daydream bursts fall inside it. ASANUSHI HARU × RINNE KOKO.',
-      ja: '派生——「テラ」の全周衝撃環が敵を押し出し、内側に白い「白昼夢」の空爆が落ちる。朝主派流×輪廻此処。',
+      zh: '派生——旧伤**在四周同时裂开**：数道圆心各自偏移的冲击环朝不同方向炸出去，重叠成一张裂痕。朝主派流×輪廻此処。',
+      en: 'Derived — old wounds **split open on several sides at once**: rings with offset centers burst outward and overlap into a lattice of scars. ASANUSHI HARU × RINNE KOKO.',
+      ja: '派生——旧傷が**四方で同時に裂ける**。中心をずらした複数の衝撃環が別方向へ炸け、重なって傷跡の網になる。朝主派流×輪廻此処。',
     },
     lvDesc: [
-      { zh: '冲击环 ＋ 1 枚延迟白爆。', en: 'Shock ring + 1 delayed burst.', ja: '衝撃環 ＋ 遅延爆発 ×1。' },
-      { zh: '环与白爆伤害提升。', en: 'Stronger ring and bursts.', ja: '環と爆発のダメージアップ。' },
-      { zh: '白爆 ×2。', en: '2 bursts.', ja: '爆発 ×2。' },
-      { zh: '冷却缩短，信管加快。', en: 'Shorter cooldown and fuse.', ja: '冷却短縮、信管短縮。' },
-      { zh: '白爆 ×3 —— 旧伤在四面八方同时裂开。', en: '3 bursts — old wounds split open on every side.', ja: '爆発 ×3 —— 旧傷が四方に裂ける。' },
+      { zh: '2 道偏心冲击环同时裂开。', en: '2 offset rings split open at once.', ja: '偏心した衝撃環 ×2 が同時に裂ける。' },
+      { zh: '伤害与破口范围提升。', en: 'More damage and wider spread.', ja: 'ダメージと裂け範囲アップ。' },
+      { zh: '3 道环。', en: '3 rings.', ja: '環 ×3。' },
+      { zh: '冷却缩短，破口更远。', en: 'Shorter cooldown, wider spread.', ja: '冷却短縮、裂け範囲拡大。' },
+      { zh: '4 道环 —— 旧伤在四面八方同时裂开。', en: '4 rings — old wounds split on every side.', ja: '環 ×4 —— 旧傷が四方で裂ける。' },
     ],
     levels: [
-      { cd: 3.6, dmg: 24, count: 1, r: 88, range: 200, fuse: 0.9, ringR: 155, ringKb: 180, ringDmg: 18 },
-      { cd: 3.3, dmg: 28, count: 1, r: 94, range: 215, fuse: 0.85, ringR: 168, ringKb: 195, ringDmg: 21 },
-      { cd: 3.0, dmg: 32, count: 2, r: 100, range: 235, fuse: 0.8, ringR: 180, ringKb: 210, ringDmg: 24 },
-      { cd: 2.8, dmg: 36, count: 2, r: 108, range: 255, fuse: 0.72, ringR: 192, ringKb: 226, ringDmg: 28 },
-      { cd: 2.6, dmg: 40, count: 3, r: 118, range: 280, fuse: 0.65, ringR: 205, ringKb: 240, ringDmg: 32 },
+      { cd: 3.4, dmg: 26, count: 2, r: 150, range: 90, speed: 360, kb: 190 },
+      { cd: 3.1, dmg: 30, count: 2, r: 165, range: 105, speed: 370, kb: 205 },
+      { cd: 2.9, dmg: 34, count: 3, r: 180, range: 120, speed: 380, kb: 220 },
+      { cd: 2.6, dmg: 38, count: 3, r: 195, range: 135, speed: 390, kb: 235 },
+      { cd: 2.4, dmg: 42, count: 4, r: 210, range: 150, speed: 400, kb: 250 },
     ],
   },
   kokuin: {
@@ -1132,26 +1149,25 @@ KUP.WEAPONS = {
     derived: { from: ['lance', 'housekitan'], song: '刻印', pairing: ['koko', 'isekaijoucho'] },
     name: { zh: '刻印', en: 'Kokuin', ja: '刻印' },
     desc: {
-      zh: '派生——「the last bullet」贯进目标的同时，「ヰ世界の宝石譚」在同一个脚下留下刻印般的宝光。輪廻此処×夜河世界。',
-      en: 'Derived — the last bullet pierces the target while gem-light is stamped under the same foe like a seal. RINNE KOKO × YORUKAWA SEKAI.',
-      ja: '派生——「the last bullet」が貫いた対象の足元に、「ヰ世界の宝石譚」の宝光が刻印のように残る。輪廻此処×夜河世界。',
+      zh: '派生——不再是一枪一角：直接给敌人**刻印**。被刻印者受到的伤害 +30%，印记到期或宿主被击破时**爆裂**（伤害按期间累计值算），并把印记传给旁边的敌人。輪廻此処×夜河世界。',
+      en: 'Derived — no longer a shot plus a field: it **brands** foes. Marked foes take +30% damage; when the mark expires or the host dies it **bursts** (scaled by damage taken meanwhile) and passes the brand on. RINNE KOKO × YORUKAWA SEKAI.',
+      ja: '派生——弾と残響ではなく、敵に**刻印**を打つ。刻まれた者は被ダメージ +30%、刻印が切れるか宿主が倒れると**炸裂**（刻印中の累積ダメージで規模が決まる）し、印は隣へ伝う。輪廻此処×夜河世界。',
     },
     lvDesc: [
-      { zh: '音枪 ×2，目标脚下留下宝光。', en: '2 lances; gem-light lingers under the target.', ja: '音槍 ×2、対象の足元に宝光。' },
-      { zh: '音枪 ×3，宝光伤害提升。', en: '3 lances, stronger light.', ja: '音槍 ×3、宝光のダメージアップ。' },
-      { zh: '贯穿 +1，宝光范围扩大。', en: 'Pierce +1, wider light.', ja: '貫通 +1、宝光の範囲拡大。' },
-      { zh: '音枪 ×4，宝光持续更久。', en: '4 lances, longer light.', ja: '音槍 ×4、宝光の持続延長。' },
-      { zh: '音枪 ×5 —— 刻印钉进街区。', en: '5 lances — the seal is nailed into the district.', ja: '音槍 ×5 —— 刻印が街に打ち込まれる。' },
+      { zh: '刻印 1 体（同时最多 2 个印记），受伤 +25%。', en: 'Brands 1 foe (2 marks max), +25% damage taken.', ja: '刻印 ×1（同時 2 個まで）、被ダメ +25%。' },
+      { zh: '印记更久、加成提升。', en: 'Longer marks, stronger amp.', ja: '刻印が長く、加成アップ。' },
+      { zh: '一次刻印 2 体。', en: 'Brands 2 at a time.', ja: '同時に 2 体を刻む。' },
+      { zh: '同时 4 个印记，爆裂范围扩大。', en: '4 marks max, wider bursts.', ja: '同時 4 個、炸裂範囲拡大。' },
+      { zh: '一次 3 体、+36% —— 刻印钉进敌群并一路传下去。', en: '3 at once at +36% — the stigma nails into the swarm and keeps spreading.', ja: '同時 3 体・+36% —— 刻印が敵群に打ち込まれ、伝わり続ける。' },
     ],
     levels: [
-      { cd: 1.6, dmg: 14, count: 2, pierce: 1, fieldDmg: 9, fieldR: 58, fieldLife: 2.8 },
-      { cd: 1.5, dmg: 16, count: 3, pierce: 1, fieldDmg: 10, fieldR: 64, fieldLife: 3.1 },
-      { cd: 1.4, dmg: 18, count: 3, pierce: 2, fieldDmg: 11, fieldR: 70, fieldLife: 3.4 },
-      { cd: 1.2, dmg: 21, count: 4, pierce: 2, fieldDmg: 12, fieldR: 76, fieldLife: 3.8 },
-      { cd: 0.95, dmg: 24, count: 5, pierce: 3, fieldDmg: 14, fieldR: 82, fieldLife: 4.2 },
+      { cd: 2.2, count: 1, max: 2, life: 2.4, amp: 0.25, r: 80 },
+      { cd: 2.0, count: 1, max: 3, life: 2.6, amp: 0.28, r: 88 },
+      { cd: 1.8, count: 2, max: 3, life: 2.8, amp: 0.30, r: 96 },
+      { cd: 1.6, count: 2, max: 4, life: 3.0, amp: 0.33, r: 104 },
+      { cd: 1.4, count: 3, max: 4, life: 3.2, amp: 0.36, r: 112 },
     ],
   },
-
   /* ===== v0.20 通用弹道：连射 / 散弹（通用组，无 owner）=====
    * 这两把同时是 projectile 大模组里 machinegun / shotgun 的**首个使用者**：
    *   mg  ：验证「弹夹 mag ＋ 换弹 reload ＋ 连射 cd」；

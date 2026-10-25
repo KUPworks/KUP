@@ -587,6 +587,10 @@ window.KUP = window.KUP || {};
        *   stunT  ＝ 僵直／冷冻剩余秒数（完全停止：不移动、不行动、不造成接触伤害）
        *   slowT  ＝ 减速剩余秒数；slowMul ＝ 减速倍率（越小越慢，取「最强」来源） */
       this.stunT = 0; this.slowMul = 1; this.stunMax = 0;
+      /* v0.21.1「刻印」（派生武装 kokuin）：stigmaT＝印记剩余秒数，
+       * stigmaAmp＝期间受到伤害的加成（0.3＝+30%），stigmaAcc＝累计受到的伤害
+       * （印记到期/宿主死亡时按它结算爆裂）。印记不是减益状态，只是"被打得更痛"。 */
+      this.stigmaT = 0; this.stigmaAmp = 0; this.stigmaAcc = 0;
       /* v0.13.1 绕楼寻路：navX/navY ＝ 避障后的可走方向；navSide/navHold ＝
        * 「粘住哪一侧」的滞回（见 game.steerCity）；freezeAt ＝ 冻住那一刻的
        * 视觉时钟（冻僵的敌人连形变与故障抖动都定格，一眼可辨）。 */
@@ -604,6 +608,12 @@ window.KUP = window.KUP || {};
     update(dt, game) {
       const p = game.player;
       this.flash -= dt; this.orbitT -= dt;
+      /* 刻印到期：爆裂（在被刻印者身上炸开，并把印记传给旁边的敌人）。
+       * 放在冷冻/僵直判断**之前**——冻住的敌人身上的印也会按时炸。 */
+      if (this.stigmaT > 0) {
+        this.stigmaT -= dt;
+        if (this.stigmaT <= 0 && game.stigmaBurst) game.stigmaBurst(this);
+      }
       if (this.stunT > 0) { this.stunT -= dt; this.kx = 0; this.ky = 0; return; }  // 冷冻：完全静止
       if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) { this.slowT = 0; this.slowMul = 1; } }
       const dx = p.x - this.x, dy = p.y - this.y;
@@ -741,6 +751,24 @@ window.KUP = window.KUP || {};
         ctx.beginPath(); ctx.arc(0, 0, this.r + 4, 0, U.TAU); ctx.stroke();
         ctx.globalAlpha = 1;
       }
+      /* 刻印（v0.21.1）：紫色印章环 + 四根刻线，缓慢自转；剩余时间越少越闪 */
+      if (this.stigmaT > 0) {
+        const blink = this.stigmaT < 0.5 ? (0.35 + 0.65 * Math.abs(Math.sin(t * 22))) : 1;
+        ctx.save();
+        ctx.rotate(t * 1.2);
+        ctx.globalAlpha = 0.8 * blink;
+        ctx.strokeStyle = '#9b8cff'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(0, 0, this.r * 1.2, 0, U.TAU); ctx.stroke();
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * U.TAU;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * this.r * 0.5, Math.sin(a) * this.r * 0.5);
+          ctx.lineTo(Math.cos(a) * this.r * 1.2, Math.sin(a) * this.r * 1.2);
+          ctx.stroke();
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
       // 精英 / Boss 血条
       if (this.elite || this.boss) {
         const w = this.r * 2.2, ratio = Math.max(0, this.hp / this.maxhp);
@@ -766,10 +794,20 @@ window.KUP = window.KUP || {};
       this.kind = opt.kind || 'orb';   // homing | sniper | bullet | pellet | orb | mini
       this.kb = opt.kb === undefined ? 1 : opt.kb;   // v0.20：击退倍率（基础击退＝速度×0.12）
       this.split = opt.split || 0;
+      /* v0.21.1：巨大弹体的**蛇行**（台风之子／本懐）——wobble＝摆动角速度峰值
+       * （rad/s），wobbleF＝摆动频率（Hz）。走的是「把速度方向左右扭」，
+       * 不是追尾，所以路径本身看得见在扭。
+       * trail＝风道尾迹（本懐）：飞行途中每隔 trail.cd 秒在弹体处放一个小风压环。 */
+      this.wobble = opt.wobble || 0;
+      this.wobbleF = opt.wobbleF || 2.2;
+      this.trail = opt.trail || null;
+      this.trailT = 0;
+      this.age = 0;
       this.hits = new Set();
       this.dead = false;
     }
     update(dt, game) {
+      this.age += dt;
       if (this.homing > 0) {
         if (!this.target || this.target.dead) this.target = game.nearestEnemy(this.x, this.y);
         if (this.target) {
@@ -778,6 +816,20 @@ window.KUP = window.KUP || {};
           const na = U.aimAngle(ca, ta, this.homing, dt);
           const sp = Math.hypot(this.vx, this.vy);
           this.vx = Math.cos(na) * sp; this.vy = Math.sin(na) * sp;
+        }
+      }
+      if (this.wobble > 0) {
+        /* 蛇行：每帧把速度方向按 sin 扭一点，回程对称 ⇒ 整体仍朝原方向前进 */
+        const w = Math.sin(this.age * this.wobbleF * U.TAU) * this.wobble * dt;
+        const c = Math.cos(w), s = Math.sin(w);
+        const vx = this.vx * c - this.vy * s, vy = this.vx * s + this.vy * c;
+        this.vx = vx; this.vy = vy;
+      }
+      if (this.trail) {
+        this.trailT -= dt;
+        if (this.trailT <= 0) {
+          this.trailT = this.trail.cd;
+          game.rings.push(new Ring(this.x, this.y, Object.assign({ edges: false }, this.trail.ring)));
         }
       }
       this.x += this.vx * dt; this.y += this.vy * dt;
@@ -1548,6 +1600,13 @@ window.KUP = window.KUP || {};
       this.arm = opt.arm || 0;               // 引爆延迟（空爆的起爆前摇）
       this.armed = this.arm <= 0;
       this.pull = opt.pull || 0;             // devour：每秒把敌人拖向中心的距离
+      /* v0.21.1 深渊（派生武装「深淵」）：吞噬领域可以**持续向内收缩**——
+       * shrink＝每秒收掉的半径（px/s）；收缩期间按 tickRate 持续造成 tickDmg，
+       * 半径归零时原地引爆（boomMul 倍）。shrink 为 0 时退回旧口径（life 到点引爆）。 */
+      this.shrink = opt.shrink || 0;
+      this.tickDmg = opt.tickDmg || 0;
+      this.boomMul = opt.boomMul || 1;
+      this.r0 = this.r;
       this.tickRate = opt.tickRate || 0.45;
       this.tick = 0;
       this.slow = !!opt.slow;                // 是否给敌人减速（滞留效果）
@@ -1595,6 +1654,10 @@ window.KUP = window.KUP || {};
       /* v0.20 吞噬（devour）：先把范围内的敌人拖向中心，收束时引爆；
        * 拖拽走 collideCity，避免被推进楼体。Boss 不吃拖拽（只吃最后的伤害）。 */
       if (this.kind === 'devour') {
+        /* 深渊（收缩型）：半径持续变小、拖拽力随收缩增强、持续 tick 伤害 */
+        const shrinkK = this.shrink > 0 && this.r0 > 0
+          ? 1 + (1 - Math.max(0, this.r) / this.r0) * 0.9
+          : 1;
         for (const e of game.enemies) {
           if (e.dead || e.boss) continue;
           const dx = this.x - e.x, dy = this.y - e.y;
@@ -1602,9 +1665,29 @@ window.KUP = window.KUP || {};
           const rr = this.r + e.r;
           if (d2 > rr * rr || d2 < 1) continue;
           const d = Math.sqrt(d2);
-          const step = Math.min(d, this.pull * dt);
+          const step = Math.min(d, this.pull * shrinkK * dt);
           e.x += (dx / d) * step; e.y += (dy / d) * step;
           if (game.collideCity) game.collideCity(e);
+        }
+        if (this.shrink > 0) {
+          this.r = Math.max(0, this.r - this.shrink * dt);
+          this.tick -= dt;
+          const doTick = this.tick <= 0;
+          if (doTick) this.tick = this.tickRate;
+          if (doTick && this.tickDmg) {
+            for (const e of game.enemies) {
+              if (e.dead) continue;
+              if (U.dist2(e.x, e.y, this.x, this.y) < Math.pow(this.r + e.r, 2)) {
+                game.damageEnemy(e, this.tickDmg);
+              }
+            }
+          }
+          if (this.r <= 1) {
+            this.dmg *= this.boomMul;
+            this.detonate(game);
+            this.dead = true;
+          }
+          return;
         }
         if (this.age >= this.life) { this.detonate(game); this.dead = true; }
         return;
@@ -1686,6 +1769,23 @@ window.KUP = window.KUP || {};
         return;
       }
       const a = this.oneShot ? 0.75 : 0.16 + 0.2 * left;
+      /* 深渊（v0.21.1）：向内收的三层同心环 + 暗核——读感是「地面被吸进去」 */
+      if (this.kind === 'devour' && this.shrink > 0) {
+        ctx.globalAlpha = 0.85;
+        ctx.fillStyle = 'rgba(8,3,22,.58)';
+        ctx.beginPath(); ctx.arc(0, 0, vr, 0, U.TAU); ctx.fill();
+        for (let i = 1; i <= 3; i++) {
+          const k = (t * 0.55 + i / 3) % 1;
+          ctx.globalAlpha = 0.5 * (1 - k);
+          ctx.strokeStyle = this.color; ctx.lineWidth = 2 + 3 * (1 - k);
+          ctx.beginPath(); ctx.arc(0, 0, vr * k, 0, U.TAU); ctx.stroke();
+        }
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = this.color; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, vr, 0, U.TAU); ctx.stroke();
+        ctx.restore();
+        return;
+      }
       ctx.globalAlpha = a;
       ctx.fillStyle = this.color;
       ctx.beginPath(); ctx.arc(0, 0, vr, 0, U.TAU); ctx.fill();

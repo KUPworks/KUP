@@ -3353,59 +3353,130 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
   }
   check('派生武装不会作为新武器直接掉落', leaked === null, leaked || '无泄漏');
 
-  /* ---- 五个合奏模组都能真的产出实体 ---- */
+  /* ---- v0.21.1：合并武器是"新机制"，不是两把效果相加 ---- */
   const mkRun = (wid, seed) => {
     const g = new KUP.Game(canvas);
     g.start({ char: 'kaf', area: 'area0', seed });
     g.player.weapons = [new KUP.WeaponRuntime(KUP.WEAPONS[wid], 5)];
     return g;
   };
-  const step = (g, n) => { for (let i = 0; i < n; i++) { for (const w of g.player.weapons) w.update(0.2, g); g.zones.forEach(z => z.update(0.2, g)); g.zones = g.zones.filter(z => !z.dead); } };
 
+  /* 魔法：音球**碰到敌人**才迸出音符（没有独立的齐射计时器） */
   const gCh = mkRun('mahou', 1210);
-  step(gCh, 24);
-  const chW = gCh.player.weapons[0];
-  check('魔法：音球在绕（orbCount 个）且射出追踪音符',
-    chW.orbs.length === KUP.WEAPONS.mahou.levels[4].orbCount && gCh.projs.length > 0,
-    'orbs=' + chW.orbs.length + ' projs=' + gCh.projs.length);
-  check('魔法：音符带追踪（homing > 0，kind=homing）',
-    gCh.projs.every(pr => pr.homing > 0) && gCh.projs.some(pr => pr.kind === 'homing'));
+  const pCh = gCh.player;
+  const eCh = gCh.spawnEnemy('noise', pCh.x + 46, pCh.y);
+  eCh.maxhp = 1e9; eCh.hp = 1e9;
+  let bursts = 0;
+  for (let i = 0; i < 60; i++) {
+    const orbN = gCh.projs.length;
+    const w = gCh.player.weapons[0];
+    /* 把敌人钉在球道上（测试里没有 Enemy.update 在跑，手动清「同目标再命中间隔」） */
+    const R = w.orbitR || 54;
+    eCh.x = pCh.x + R; eCh.y = pCh.y;
+    eCh.orbitT = 0;
+    w.update(0.1, gCh);
+    if (gCh.projs.length > orbN) bursts++;
+  }
+  check('魔法：音球碰到敌人即迸出追踪音符（接触触发，不是独立齐射）',
+    bursts >= 2, 'bursts=' + bursts);
+  /* 反证：把敌人挪出球道 ⇒ 一颗音符都不该出现（没有独立齐射计时器） */
+  const gCh2 = mkRun('mahou', 1215);
+  const far = gCh2.spawnEnemy('noise', gCh2.player.x + 900, gCh2.player.y);
+  far.maxhp = 1e9; far.hp = 1e9;
+  for (let i = 0; i < 40; i++) gCh2.player.weapons[0].update(0.1, gCh2);
+  check('魔法：没有接触就完全不产弹（确认没有独立的齐射）',
+    gCh2.projs.length === 0, 'projs=' + gCh2.projs.length);
+  check('魔法：音符是追踪弹（kind=homing 且 homing > 0）',
+    gCh.projs.every(pr => pr.homing > 0) && gCh.projs.every(pr => pr.kind === 'homing'));
+  check('魔法：音球数量随等级（Lv5 ＝ 5 颗）',
+    gCh.player.weapons[0].orbs.length === KUP.WEAPONS.mahou.levels[4].orbCount);
 
+  /* 深淵：一片**持续向内收缩**的吞噬领域，完全没有光束 */
   const gAb = mkRun('shinen', 1211);
-  step(gAb, 30);
-  check('深淵：张开吞噬领域并在收束时射出光束',
-    gAb.beams.length > 0 && gAb.beams.every(b => b.len === KUP.WEAPONS.shinen.levels[4].beamLen),
-    'beams=' + gAb.beams.length);
+  const wAb = gAb.player.weapons[0];
+  gAb.spawnEnemy('noise', gAb.player.x + 120, gAb.player.y);
+  let r0 = null, minR = Infinity;
+  for (let i = 0; i < 80; i++) {
+    wAb.update(0.1, gAb);
+    for (const z of gAb.zones) {
+      if (z.kind !== 'devour') continue;
+      if (r0 === null) r0 = z.r;
+      minR = Math.min(minR, z.r);
+    }
+    gAb.zones.forEach(z => z.update(0.1, gAb));
+    gAb.zones = gAb.zones.filter(z => !z.dead);
+  }
+  check('深淵：吞噬领域持续向内收缩（半径一路变小）',
+    r0 !== null && minR < r0 * 0.4, 'r0=' + (r0 && r0.toFixed(0)) + ' min=' + (minR === Infinity ? 'x' : minR.toFixed(0)));
+  check('深淵：完全没有光束（是"更强的吞噬"，不是吞噬＋光束相加）', gAb.beams.length === 0);
+  check('深淵：收缩期间持续刮伤范围内敌人（tick 伤害）',
+    KUP.WEAPONS.shinen.levels[4].tick > 0 && KUP.WEAPONS.shinen.levels[4].shrink > 0);
 
+  /* 本懐：蛇行巨弹，沿途甩风压环（风道跟着弹走） */
   const gGa = mkRun('honkai', 1212);
-  step(gGa, 12);
-  check('本懐：同时产出扇形冲击环与巨大弹体',
-    gGa.rings.length > 0 && gGa.projs.some(pr => pr.kind === 'typhoon'),
-    'rings=' + gGa.rings.length + ' projs=' + gGa.projs.length);
+  let sawTrailRing = false, sawTyphoon = false;
+  for (let i = 0; i < 40; i++) {
+    gGa.player.weapons[0].update(0.1, gGa);
+    gGa.projs.forEach(pr => pr.update(0.1, gGa));
+    if (gGa.rings.length > 0) sawTrailRing = true;
+    if (gGa.projs.some(pr => pr.kind === 'typhoon')) sawTyphoon = true;
+  }
+  check('本懐：巨弹沿路甩出风压环（风道跟着弹走）', sawTyphoon && sawTrailRing,
+    'typhoon=' + sawTyphoon + ' trail=' + sawTrailRing);
+  check('本懐：巨弹走的是蛇行路径（wobble > 0）',
+    gGa.projs.length === 0 || gGa.projs.every(pr => pr.wobble > 0));
 
+  /* 古傷：数道**圆心不同**的冲击环同时裂开 */
   const gSc = mkRun('koshou', 1213);
-  let sawBomb = false, sawScarRing = false;
-  for (let i = 0; i < 12; i++) {
-    for (const w of gSc.player.weapons) w.update(0.2, gSc);
-    if (gSc.rings.length) sawScarRing = true;
-    for (const z of gSc.zones) { if (z.kind === 'bomb') sawBomb = true; z.update(0.2, gSc); }
-    gSc.zones = gSc.zones.filter(z => !z.dead);
-  }
-  check('古傷：整圈冲击环 ＋ 延迟白爆（bomb 区）', sawScarRing && sawBomb,
-    'ring=' + sawScarRing + ' bomb=' + sawBomb);
+  for (let i = 0; i < 4; i++) gSc.player.weapons[0].update(0.1, gSc);
+  const centers = new Set(gSc.rings.map(r => Math.round(r.x) + ',' + Math.round(r.y)));
+  check('古傷：一次裂开数道圆心偏移的冲击环（不是同一圆心的一圈）',
+    gSc.rings.length >= 2 && centers.size >= 2, 'rings=' + gSc.rings.length + ' centers=' + centers.size);
 
+  /* 刻印：打上印记 → 受伤加成 → 到期爆裂 → 传染 */
   const gSt = mkRun('kokuin', 1214);
-  gSt.spawnEnemy('noise', gSt.player.x + 160, gSt.player.y);
-  let sawField = false, sawSniper = false;
-  for (let i = 0; i < 12; i++) {
-    for (const w of gSt.player.weapons) w.update(0.2, gSt);
-    if (gSt.projs.some(pr => pr.kind === 'sniper')) sawSniper = true;
-    if (gSt.zones.some(z => z.kind === 'field')) sawField = true;
-    gSt.zones.forEach(z => z.update(0.2, gSt));
-    gSt.zones = gSt.zones.filter(z => !z.dead);
+  const pSt = gSt.player;
+  const host = gSt.spawnEnemy('noise', pSt.x + 60, pSt.y);
+  host.maxhp = 1e6; host.hp = 1e6;
+  const near = gSt.spawnEnemy('noise', pSt.x + 100, pSt.y);
+  near.maxhp = 1e6; near.hp = 1e6;
+  for (let i = 0; i < 6; i++) gSt.player.weapons[0].update(0.1, gSt);   // 武器初始 t=0.3，先走几帧
+  const marked = host.stigmaT > 0 ? host : near;
+  const other = marked === host ? near : host;
+  check('刻印：最近的敌人被打上印记', marked.stigmaT > 0 && marked.stigmaAmp > 0,
+    't=' + marked.stigmaT.toFixed(2) + ' amp=' + marked.stigmaAmp);
+  const dealt = gSt.damageEnemy(marked, 10, 0, 0);
+  const amp = marked.stigmaAmp;
+  check('刻印：被刻印者受到的伤害按 amp 放大', dealt > 10 && Math.abs(dealt - 10 * (1 + amp)) < 1e-6,
+    'dealt=' + dealt.toFixed(2) + ' amp=' + amp);
+
+  /* 到期爆裂：周围的人吃伤害，印记传给旁边一个未被刻印的敌人 */
+  const otherHp = other.hp;
+  marked.stigmaT = 0.0001;
+  marked.stigmaAcc = 400;
+  marked.stigmaR = 120;
+  marked.update(0.1, gSt);
+  check('刻印：到期爆裂，周围敌人吃到伤害', other.hp < otherHp,
+    otherHp + ' → ' + other.hp);
+  check('刻印：爆裂后印记清空并传给旁边的敌人（传染）',
+    marked.stigmaT === 0 && other.stigmaT > 0,
+    'self=' + marked.stigmaT + ' other=' + other.stigmaT.toFixed(2));
+
+  /* 合并用掉的父武器不再回到卡池 */
+  const gF = mkDer(1207);
+  gF.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.note, 1));
+  gF.player.weapons.push(new KUP.WeaponRuntime(KUP.WEAPONS.orbit, 1));
+  gF.takeDerivedCard('mahou');
+  let backLeak = null;
+  for (let i = 0; i < 30; i++) {
+    gF.level = 40 + i;
+    const bad = gF.rollChoices().find(c =>
+      (c.kind === 'weapon-new' || c.kind === 'weapon-up') && (c.id === 'note' || c.id === 'orbit'));
+    if (bad) { backLeak = bad.kind + ':' + bad.id; break; }
   }
-  check('刻印：穿透音枪齐射 ＋ 目标脚下的滞留宝光（field 区）', sawSniper && sawField,
-    'sniper=' + sawSniper + ' field=' + sawField);
+  check('合并用掉的武器本局不再回到卡池（有魔法就不会再抽到私論理／食虫植物）',
+    backLeak === null, backLeak || '无回流');
+
 
   /* ---- 强度口径：每个等级都是 5 级、且合并形态没有额外覚醒档 ---- */
   check('派生武装 5 级齐全且没有 evolved（合并即覚醒）',
