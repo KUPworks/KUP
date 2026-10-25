@@ -2062,25 +2062,62 @@ check('重掷后仍是合法四选一', gRu.choices.every(c => c && c.kind));
 gRu.rerolls = 0;
 check('重掷耗尽后失败', !gRu.rerollChoices());
 check('非升级状态不可重掷', (() => { const g = new KUP.Game(canvas); g.start({ char: 'kaf', area: 'area0', seed: 113 }); return !g.rerollChoices(); })());
-/* 封禁：该 id 本局不再出现，且该格立即换成新候选 */
+/* 排除（v0.21.4）：消耗 1 次重掷、该格作废（**不补新卡**），该 id 本局不再出现 */
 const gBn = new KUP.Game(canvas);
 gBn.start({ char: 'kaf', area: 'area0', seed: 114 });
 gBn.state = 'levelup'; gBn.pendingLevels = 1; gBn.choices = gBn.rollChoices();
 const target = gBn.choices.find(c => c.id);
 const bannedId = target.id;
-const okBan = gBn.banChoice(gBn.choices.indexOf(target));
-check('封禁：加入名单并替换该格', okBan && gBn.banned.has(bannedId) && gBn.choices.length === 4);
-check('封禁后该格不再是原卡', !gBn.choices.some(c => c.id === bannedId && c.kind === target.kind));
+const banIdx = gBn.choices.indexOf(target);
+const rerollsBefore = gBn.rerolls;
+const okBan = gBn.banChoice(banIdx);
+check('排除：扣除 1 次重掷（不再免费）', okBan && gBn.rerolls === rerollsBefore - 1);
+check('排除：加入名单且该格作废', gBn.banned.has(bannedId) && gBn.choices[banIdx].kind === 'void');
+check('排除：不补新卡（本回合只剩 3 个选项）',
+  gBn.choices.length === 4 && gBn.choices.filter(c => c.kind !== 'void').length === 3);
+check('排除后该格不可再选/再排除', !gBn.banChoice(banIdx));
+check('排除后即退出排除模式', gBn.banMode === false);
 let leak = false;
 for (let i = 0; i < 300; i++) if (gBn.rollChoices().some(c => c.id === bannedId)) leak = true;
 check('封禁项不再出现在后续升级池', !leak, 'banned=' + bannedId);
-/* 封禁可累计 */
+/* 排除与重掷共用次数：耗尽后不可排除 */
+const gBn0 = new KUP.Game(canvas);
+gBn0.start({ char: 'kaf', area: 'area0', seed: 115 });
+gBn0.state = 'levelup'; gBn0.pendingLevels = 1; gBn0.choices = gBn0.rollChoices();
+gBn0.rerolls = 0;
+check('无重掷次数时不可排除', (() => {
+  const bi = gBn0.choices.findIndex(c => c.id);
+  return bi >= 0 && !gBn0.banChoice(bi);
+})());
+/* 排除可累计多项（每项各扣 1 次重掷） */
 const gBn2 = new KUP.Game(canvas);
-gBn2.start({ char: 'kaf', area: 'area0', seed: 115 });
+gBn2.start({ char: 'kaf', area: 'area0', seed: 116 });
 gBn2.state = 'levelup'; gBn2.pendingLevels = 1; gBn2.choices = gBn2.rollChoices();
-for (let k = 0; k < 2; k++) { const t = gBn2.choices.find(c => c.id); if (t) gBn2.banChoice(gBn2.choices.indexOf(t)); }
-check('封禁可累计多项', gBn2.banned.size >= 1, 'size=' + gBn2.banned.size);
-check('heal 卡不可封禁', (() => { const g = new KUP.Game(canvas); g.start({ char: 'kaf', area: 'area0', seed: 116 }); g.state = 'levelup'; g.choices = [{ kind: 'heal' }]; return !g.banChoice(0); })());
+for (let k = 0; k < 2; k++) {
+  const idx = gBn2.choices.findIndex(c => c.id && c.kind !== 'void');
+  if (idx >= 0) gBn2.banChoice(idx);
+}
+check('封禁可累计多项', gBn2.banned.size === 2 && gBn2.rerolls === 1, 'size=' + gBn2.banned.size);
+/* 只剩 1 张可选时不能再排除（必须选） */
+check('仅剩一张可选卡时不可排除', (() => {
+  gBn2.choices = [{ kind: 'void', id: 'x' }, { kind: 'void', id: 'y' }, { kind: 'void', id: 'z' }, { kind: 'item', id: 'ward' }];
+  return !gBn2.banChoice(3);
+})());
+check('heal 卡不可封禁', (() => { const g = new KUP.Game(canvas); g.start({ char: 'kaf', area: 'area0', seed: 117 }); g.state = 'levelup'; g.choices = [{ kind: 'heal' }]; g.rerolls = 3; return !g.banChoice(0); })());
+check('作废格不可被选择', (() => {
+  const g = new KUP.Game(canvas); g.start({ char: 'kaf', area: 'area0', seed: 118 });
+  g.state = 'levelup'; g.choices = [{ kind: 'void', id: 'ward' }];
+  g.choose(0);
+  return g.state === 'levelup';
+})());
+check('重掷后作废格恢复为满 4 张', (() => {
+  const g = new KUP.Game(canvas); g.start({ char: 'kaf', area: 'area0', seed: 119 });
+  g.state = 'levelup'; g.pendingLevels = 1; g.choices = g.rollChoices();
+  const bi = g.choices.findIndex(c => c.id);
+  const didBan = bi >= 0 && g.banChoice(bi);
+  const ok = g.rerollChoices();
+  return didBan && ok && g.choices.length === 4 && g.choices.every(c => c.kind !== 'void');
+})());
 check('封禁模式默认关闭', gBn2.banMode === false);
 /* 重掷参数：?reroll=N */
 const gRr = new KUP.Game(canvas);

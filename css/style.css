@@ -551,6 +551,17 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
   color: rgba(255,255,255,.45); letter-spacing: .08em;
 }
 #screen-levelup.banmode .lu-card { border-color: rgba(255,138,90,.7); }
+/* v0.21.4：被排除的格子——留位（序号不跳号）但不可选、不显示 ✕ */
+.lu-card.lu-void {
+  opacity: .42;
+  border-style: dashed;
+  border-color: rgba(150,146,180,.45);
+  box-shadow: none;
+  cursor: default;
+  filter: saturate(.35);
+}
+.lu-card.lu-void:hover { transform: none; border-color: rgba(150,146,180,.45); box-shadow: none; }
+.lu-tag.void { color: #b9b4d8; border: 1px solid rgba(160,156,190,.5); background: rgba(120,116,150,.12); }
 
 @media (max-width: 640px) {
   #hp-wrap { width: 150px; }

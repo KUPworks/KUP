@@ -2169,27 +2169,33 @@ window.KUP = window.KUP || {};
       return true;
     }
 
-    /* 封禁（v0.10）：本局不再出现该选项，并把该格立即换成新候选（`✕` 按钮 / `B`+数字） */
+    /* 排除（v0.10 封禁；v0.21.4 改为**有代价**）：
+     * 旧实现会立刻重抽一张新卡补位、且不消耗任何资源——等于**无限次免费重掷**
+     * （人类 2026-10-25：「排除卡片时实际上重抽了且无成本无限制」）。现规则：
+     *   · 消耗 1 次重掷机会（与 ⟳ 共用 `this.rerolls`，默认 3 次/局）
+     *   · 该格**直接作废、不补卡**：本回合少一个选项，换来本局池子里永久少一张
+     *   · 重掷次数为 0、或可选卡只剩 1 张时不可排除（必须做出选择）
+     * 这样「排除」既不能当刷卡器用，也不会比直接重掷更划算。 */
     banChoice(i) {
       if (this.state !== 'levelup' || !this.choices || !this.choices[i]) return false;
       const c = this.choices[i];
-      if (!c.id) return false;                      // heal 等无 id 的选项不可封禁
+      if (!c.id || c.kind === 'void') return false;  // heal / 已作废的格子不可再排除
+      if (!(this.rerolls > 0)) return false;         // 没有重掷次数＝不能排除
+      if (this.choices.filter(x => x && x.kind !== 'void').length <= 1) return false;
+      this.rerolls--;
       if (!this.banned) this.banned = new Set();
       this.banned.add(c.id);
-      const others = this.choices.filter((_, k) => k !== i);
-      const used = new Set(others.map(x => x.kind + ':' + x.id));
-      const repl = this.rollChoices().find(x =>
-        x.kind !== 'egg' &&                       // 現象卡不受封禁逻辑影响（不能当替换卡塞进来）
-        (x.kind === 'heal' || !used.has(x.kind + ':' + x.id)) && (!x.id || !this.banned.has(x.id)));
-      this.choices[i] = repl || { kind: 'heal' };
+      this.choices[i] = { kind: 'void', id: c.id };
+      this.banMode = false;                          // 排除一次即退出排除模式，避免连点误耗
       KUP.UI.showLevelUp(this.choices, this.level);
-      KUP.Audio.sfx('hurt');
+      KUP.Audio.sfx('select');
       return true;
     }
 
     choose(i) {
       if (this.state !== 'levelup' || !this.choices || !this.choices[i]) return;
       const c = this.choices[i], p = this.player;
+      if (c.kind === 'void') return;                 // 已排除的格子不可选
       if (c.kind === 'weapon-up') {
         const w = p.weapons.find(w => w.def.id === c.id);
         if (w) w.lv++;

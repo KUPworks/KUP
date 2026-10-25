@@ -45,7 +45,7 @@ window.KUP = window.KUP || {};
     init(game) {
       this.game = game;
       const ids = ['hud', 'banner', 'char-cards', 'char-detail', 'lu-cards', 'lu-lv', 'best-line',
-        'reroll-n', 'btn-reroll', 'btn-banmode', 'lu-hint',
+        'reroll-n', 'btn-reroll', 'btn-banmode', 'ban-n', 'lu-hint',
         'over-stats', 'win-stats', 'danger', 'hp-bar', 'hp-text', 'lv-num', 'timer', 'kills',
         'weapon-row', 'xp-bar-fill', 'boss-wrap', 'boss-rows', 'vol-slider', 'pause-stats',
         'shield-row', 'shield-orb', 'shield-num', 'shield-tag', 'dash-pips', 'danger-warn', 'btn-dash', 'buff-row', 'btn-aim',
@@ -991,7 +991,14 @@ window.KUP = window.KUP || {};
         card.className = 'lu-card';
         if (c.kind === 'derived') card.classList.add('lu-derived');   // v0.21 派生卡专用描边
         let tag, tagCls, name, desc, lvline, col = '#8fd0ff';
-        if (c.kind === 'awaken') {
+        if (c.kind === 'void') {
+          /* v0.21.4：排除后的空格——不补新卡（旧实现会白送一张，等于无限免费重掷） */
+          card.classList.add('lu-void');
+          card.dataset.void = '1';
+          tag = KUP.I18N.t('lu.voidTag'); tagCls = 'void';
+          name = KUP.I18N.t('lu.voidName'); desc = KUP.I18N.t('lu.voidDesc'); lvline = '—';
+          col = '#8a86a8';
+        } else if (c.kind === 'awaken') {
           // 覚醒 ★（REGENERATE「魔女の娘へと覚醒する場面」）
           const def = KUP.WEAPONS[c.id];
           col = def.color;
@@ -1049,13 +1056,14 @@ window.KUP = window.KUP || {};
         }
         card.style.setProperty('--c', col);
         card.innerHTML =
-          (c.id ? '<button class="lu-ban" title="' + KUP.I18N.t('lu.banTip') + '">✕</button>' : '') +
+          (c.id && c.kind !== 'void' ? '<button class="lu-ban" title="' + KUP.I18N.t('lu.banTip') + '">✕</button>' : '') +
           '<div class="lu-tag ' + tagCls + '">' + tag + '</div>' +
           '<div class="lu-name">' + name + '</div>' +
           '<div class="lu-desc">' + desc + '</div>' +
           '<div class="lu-lvline">' + lvline + '</div>' +
           '<div class="lu-num">' + (i + 1) + '</div>';
         card.addEventListener('click', () => {
+          if (c.kind === 'void') return;              // 作废格不可选
           if (this.game.banMode) this.game.banChoice(i); else this.game.choose(i);
         });
         /* 封禁按钮（v0.10）：阻止冒泡，避免同时触发选择 */
@@ -1069,22 +1077,37 @@ window.KUP = window.KUP || {};
       this.refreshLevelUpBar();
     },
 
-    /* 升级屏底部：重掷次数 / 封禁模式提示（v0.10） */
+    /* 升级屏底部：重掷/排除次数、排除模式提示（v0.10；v0.21.4 两者**共用**次数） */
     refreshLevelUpBar() {
       const g = this.game;
+      const left = (g.choices || []).filter(c => c && c.kind !== 'void').length;
+      const canBan = g.state === 'levelup' && g.rerolls > 0 && left > 1;
+      if (!canBan) g.banMode = false;                 // 没次数/只剩一张卡 → 自动退出排除模式
       if (this.els['reroll-n']) this.els['reroll-n'].textContent = Math.max(0, g.rerolls | 0);
+      if (this.els['ban-n']) this.els['ban-n'].textContent = Math.max(0, g.rerolls | 0);
       if (this.els['btn-reroll']) this.els['btn-reroll'].disabled = !(g.rerolls > 0);
-      if (this.els['btn-banmode']) this.els['btn-banmode'].classList.toggle('armed', !!g.banMode);
+      if (this.els['btn-banmode']) {
+        this.els['btn-banmode'].disabled = !canBan;
+        this.els['btn-banmode'].classList.toggle('armed', !!g.banMode);
+      }
       const luScreen = document.getElementById('screen-levelup');
       if (luScreen) luScreen.classList.toggle('banmode', !!g.banMode);
       if (this.els['lu-hint']) {
         this.els['lu-hint'].textContent = g.banMode
           ? KUP.I18N.t('lu.hintBan')
-          : KUP.I18N.t('lu.hint');
+          : (g.rerolls > 0 ? KUP.I18N.t('lu.hint') : KUP.I18N.t('lu.hintNone'));
       }
     },
     toggleBanMode() {
       const g = this.game;
+      if (!g.banMode) {
+        const left = (g.choices || []).filter(c => c && c.kind !== 'void').length;
+        if (!(g.rerolls > 0) || left <= 1) {         // 无次数 / 只剩一张：不能进入排除模式
+          g.banMode = false;
+          this.refreshLevelUpBar();
+          return false;
+        }
+      }
       g.banMode = !g.banMode;
       this.refreshLevelUpBar();
       KUP.Audio.sfx('select');
