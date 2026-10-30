@@ -45,7 +45,3 @@ desktop.ini
 .env.*
 *.pem
 *.key
-
-# --- 本机 Agent 工作约定：不入库，但工作区里必须留着（见该文件 §10）---
-#  这是有意忽略：仓库里没有 AGENTS.md 是正确的，不要再「帮它入库」。
-AGENTS.md

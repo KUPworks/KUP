@@ -211,5 +211,5 @@ Invoke-WebRequest 'https://srd.kamitsubaki.jp/cn/game/virtual_reality/' -UseBasi
 Invoke-WebRequest 'https://srd.kamitsubaki.jp/game/virtual_reality/' -UseBasicParsing | Select-Object -Expand Content
 ```
 
-> ⚠️ 本机沙箱下 PowerShell 的 .NET HTTPS 可能报 `SEC_E_NO_CREDENTIALS`（见 `AGENTS.md` §8）。
+> ⚠️ 本机沙箱下 PowerShell 的 .NET HTTPS 可能报 `SEC_E_NO_CREDENTIALS`（本机工具链的限制）。
 > 可用 **DSH 的 `web_fetch` 工具**直接取，实测三页均 HTTP 200。

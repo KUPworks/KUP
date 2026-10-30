@@ -9,7 +9,7 @@
 > ⇒ 请把它当作**能跑的样品，而不是完成品**：功能会增删、平衡会重调、**旧存档可能失效**。
 > 已实现／待实现清单见 [DESIGN.md](DESIGN.md)（§0 版本史、§6.8 下一步方向）。
 
-![类型](https://img.shields.io/badge/genre-生存 roguelite-7a4dd8) ![引擎](https://img.shields.io/badge/engine-纯 HTML5 Canvas-4ee6ff) ![依赖](https://img.shields.io/badge/dependencies-零-5ad0a0)
+![类型](https://img.shields.io/badge/genre-生存 roguelite-7a4dd8) ![引擎](https://img.shields.io/badge/engine-纯 HTML5 Canvas-4ee6ff) ![依赖](https://img.shields.io/badge/dependencies-零-5ad0a0) ![许可](https://img.shields.io/badge/license-MIT-4ee6ff)
 
 **文档导航**
 
@@ -17,7 +17,6 @@
 |---|---|
 | 装起来玩、看懂玩法、想改点东西 | **本文件** |
 | 知道**已经做了什么、接下来要做什么** | [DESIGN.md](DESIGN.md) |
-| 知道**怎么开发**（协作规范、提交、测试） | `AGENTS.md`（本机工作区文件，**不入库**，只在开发机上） |
 | 查**世界观设定**（考据、术语、出处） | **[docs/lore/README.md](docs/lore/README.md)** |
 
 ---
@@ -519,7 +518,7 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 2. **不要把官方素材（图片/音频）放进仓库** —— 官方 GUIDELINES 禁止直接使用官方素材；本项目的程序化绘制/合成是刻意为之（见 [docs/lore/worldview.md](docs/lore/worldview.md) §13）。
 3. **不要引入 npm / 打包器 / 框架** —— 零依赖是项目核心约束。新增**运行时依赖**属于破坏性设计决定，必须先确认。
 
-> 改完提交前跑一遍：`node tools/verify-run.js`（玩法）＋ `node tests/save.test.cjs`（存档）＋ `node tools/check-html.js`（HTML 结构）。完整清单见 `AGENTS.md` §4（本机工作区文件，不在仓库里）。
+> 改完提交前跑一遍：`node tests/save.test.cjs`（存档）＋ `node tools/verify-run.js`（玩法）＋ `node tools/check-html.js`（HTML 结构）＋ `node tools/inventory.js`（数据计数）。
 
 ---
 
@@ -531,6 +530,16 @@ index.html?t=235&lv=12&god=1&char=kaf&skip=1&xp=10&mv=1&hurt=0.5&pick=heart&gem=
 - [docs/lore/worldview.md](docs/lore/worldview.md) —— 主世界观详录（术语统一表、世界线总图、13 话副标题表、REGENERATE CAST、交叉核对 42 行、玩法映射、二创合规）
 - [docs/lore/related-settings.md](docs/lore/related-settings.md) —— 周边考据（官方年表、角色读音全表、术语词典、官方小说章目）
 - [docs/lore/legacy-research-2025.md](docs/lore/legacy-research-2025.md) —— ⚠️ 2025 年早期调研，**多处结论已被推翻，勿当依据**
+
+---
+
+## 许可（License）
+
+- **源代码**：[MIT](LICENSE) —— 可自由使用、修改、再发布，保留版权与许可声明即可。
+- **同人内容**（角色名、世界观引用、曲名等）：**不属于本许可范围**，权利归原权利方；本项目按官方[二次創作ガイドライン](https://kamitsubaki.jp/guidelines/)以**非商业同人**方式发布。
+- **不含官方素材**：所有图像与音效均为程序化生成（Canvas 绘制 ＋ WebAudio 合成），仓库内没有任何官方图片／音频。
+
+> 一句话：**代码随便用，神椿的 IP 请按官方规矩用。**
 
 ---
 
