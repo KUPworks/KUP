@@ -392,6 +392,28 @@ window.KUP = window.KUP || {};
         if (f.mods != null) need(isObj(f.mods), '形态 ' + f.id + ' 的 mods 应是对象');
       });
       need(KUP.NO_FORM && KUP.NO_FORM.id === 'none', 'KUP.NO_FORM 缺失或 id 不是 none');
+      /* v0.21.5 形態数値政策（人类 2026-11-05：「给各角色初始形态外每个形态 5% 以下比较平衡的增益」）：
+       *   ① 初始形态（KUP.defaultForm）**不许**带数值；
+       *   ② 其余每个形态**都要**带数值增益；
+       *   ③ 每个属性都必须在 ±5% 以内（KUP.FORM_BONUS_MAX），且方向只能是增益
+       *      （cd 变小＝更快；其余变大）。 */
+      need(isNum(KUP.FORM_BONUS_MAX), 'KUP.FORM_BONUS_MAX 缺失');
+      forms.forEach(function (f) {
+        var isInitial = chars.some(function (c) { return KUP.defaultForm(c.id) === f; });
+        var fmods = f.mods || {};
+        var fkeys = Object.keys(fmods);
+        if (isInitial) {
+          need(fkeys.length === 0, '初始形态 ' + f.id + ' 不应带数值增益');
+          return;
+        }
+        need(fkeys.length > 0, '非初始形态 ' + f.id + ' 缺少小幅增益（每个形态都应有）');
+        fkeys.forEach(function (k) {
+          var v = fmods[k];
+          need(isNum(v), '形态 ' + f.id + ' 的 mods.' + k + ' 不是数字');
+          need(Math.abs(v - 1) <= KUP.FORM_BONUS_MAX + 1e-9, '形态 ' + f.id + ' 的 mods.' + k + ' 超出 ±5%');
+          need(k === 'cd' ? v < 1 : v > 1, '形态 ' + f.id + ' 的 mods.' + k + ' 不是增益方向');
+        });
+      });
       chars.forEach(function (c) {
         var kind = KUP.charKind ? KUP.charKind(c) : null;
         var df = KUP.defaultForm ? KUP.defaultForm(c.id) : null;

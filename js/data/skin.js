@@ -4,7 +4,8 @@
  *       → KUP.NO_FORM（内部占位）→ 查询／分组接口（defaultForm／formFits／formsFor／
  *       formsOfChar／formGroups／charKind）。
  * 依赖：语义上依赖 char（char／kinds 绑定）；build 段必须在本文件末尾之前执行。
- * 纪律：不要改已有形态 id（已写入存档 run.form）；数值政策＝只有覚醒／戦闘形態带 mods。
+ * 纪律：不要改已有形态 id（已写入存档 run.form）；数值政策＝**初始形态无数值**，
+ *       其余每个形态带 **≤5% 的小幅增益**（v0.21.5，上限见 KUP.FORM_BONUS_MAX）。
  * 加形态＝FORMS 加一行（系列承载说明/配色/配件/出处）；加系列＝FORM_SERIES 加一条。
  * ================================================================ */
 
@@ -150,8 +151,8 @@ KUP.FORMS = [
     id: 'ouranchou', kinds: ['witch'], series: 'vwp_shared', accent: 'plume',
     name: { zh: '花魁鳥', en: 'Oiran-chō', ja: '花魁鳥' },
     label: { zh: '魔女特殊歌唱用形態 花魁鳥', en: 'Witch Special Singing Form: Oiran-chō', ja: '魔女特殊歌唱用形態 花魁鳥' },
-    desc: { zh: '华美的花魁之羽——舞台中心的高歌。<br>攻击范围 +15%、冷却 -8%，最大生命 -8%。', en: 'The gorgeous plumage of the oiran — a song for center stage.<br>Area +15%, cooldown -8%, max HP -8%.', ja: '華やかな花魁の羽——舞台中央の高歌。<br>範囲 +15%、クールタイム -8%、最大生命 -8%。' },
-    mods: { area: 1.15, cd: 0.92, hp: 0.92 },
+    desc: { zh: '华美的花魁之羽——舞台中心的高歌。', en: 'The gorgeous plumage of the oiran — a song for center stage.', ja: '華やかな花魁の羽——舞台中央の高歌。' },
+    mods: { area: 1.04, cd: 0.98 },
     color: '#ff7ad9', color2: '#8a1f52',
     src: { zh: '官方 LIVE 形态命名（粉丝 wiki 转引）', en: 'Official live-form naming (fan-wiki transcript)', ja: '公式 LIVE の形態命名（ファンwiki 転引）' },
   },
@@ -159,8 +160,8 @@ KUP.FORMS = [
     id: 'himerenjaku', kinds: ['witch'], series: 'vwp_shared', accent: 'crest',
     name: { zh: '姬連雀', en: 'Hime-renjaku', ja: '姫連雀' },
     label: { zh: '魔女特殊歌唱用形態 姬連雀', en: 'Witch Special Singing Form: Hime-renjaku', ja: '魔女特殊歌唱用形態 姫連雀' },
-    desc: { zh: '轻盈的连雀之羽——游走的低语。<br>移动速度 +12%、拾取范围 +20%、经验 +8%，攻击 -5%。', en: 'The light plumage of the waxwing — a wandering whisper.<br>Move speed +12%, pickup +20%, XP +8%, Atk -5%.', ja: '軽やかな連雀の羽——遊走の囁き。<br>移動速度 +12%、取得 +20%、経験 +8%、攻撃 -5%。' },
-    mods: { speed: 1.12, pickup: 1.2, xp: 1.08, dmg: 0.95 },
+    desc: { zh: '轻盈的连雀之羽——游走的低语。', en: 'The light plumage of the waxwing — a wandering whisper.', ja: '軽やかな連雀の羽——遊走の囁き。' },
+    mods: { speed: 1.03, pickup: 1.04 },
     color: '#8affc9', color2: '#0f6b52',
     /* v0.18.1 出处更正（人类 2026-10-21）：姬連雀 并非本作自创，而是
      * **V.W.P 4th ONE-MAN LIVE「現象Ⅳ-反転運命-」（2026-02-28）公布**的形态名。
@@ -171,8 +172,9 @@ KUP.FORMS = [
   /* ---- 全形态清单（v0.13.5：把采集稿里**有名有姓**的形态全部做出来） ------------------
    * 写法：**系列承载共同字段**（说明/配色/轮廓配件/出处），这里一条形态只写自己的差异，
    *   载入后由 KUP.FORMS 之后那段补齐 label/desc/accent/color/mods/src —— 加形态＝加一行。
-   * 数值策略（人类 2026-10-17「参数可以适当少调一些」）：**只有覚醒／戦闘形態带数值**
-   *   （五人的覚醒名 ＋ 共用的花魁鳥系／八咫烏），其余形态**纯外观**。
+   * 数值策略（人类 2026-10-17「参数可以适当少调一些」；2026-11-05 改定）：**初始形态无数值**，
+   *   其余形态各带 **每个属性 ≤5% 的小幅增益**（全部是增益，不再有旧版 ±8～15% 的取舍）；
+   *   上限由 `KUP.FORM_BONUS_MAX`(=0.05) 在数据 audit 与回归测试里封顶。
    * ⚠️ 人类 2026-10-17 的两条取舍：① **花魁鳥・八咫烏算共用**（只列一次，五位都能穿）；
    *   ② **仅用数字或括号区分的变体不做** —— 故跳过：燕(壊)／燕(想)／軍鶏(想)／雉(怪)／
    *   花魁鳥（戒）／八咫烏（解）／梟（巡）／AnemoneⅡ／NemophiraⅡ／「parallel canvasⅡ」衣装。
@@ -181,19 +183,19 @@ KUP.FORMS = [
   { id: 'hinadori', series: 'kaf_singing', name: { zh: '雏鸟', en: 'Hinadori', ja: '雛鳥（ひなどり）' }, accent: 'sparrow_wing', color: '#7fe0c0' },
   // 2026-10-21 人类要求「注释掉雏鸟黑」——本批不上线（内容一字未删，恢复只需去掉 //）
   // { id: 'hinadori_kuro', series: 'kaf_singing', name: { zh: '雏鸟黑', en: 'Hinadori Kuro', ja: '雛鳥黑（ひなどり くろ）' }, accent: 'sparrow_wing', color: '#4a4a63' },
-  { id: 'hoshigarasu', series: 'kaf_singing', name: { zh: '星鸦', en: 'Hoshigarasu', ja: '星鴉（ほしがらす）' } },
-  { id: 'ruribitaki', series: 'kaf_singing', name: { zh: '琉璃鹟', en: 'Ruribitaki', ja: '瑠璃鶲（るりびたき）' }, color: '#5ec8d8' },
+  { id: 'hoshigarasu', series: 'kaf_singing', name: { zh: '星鸦', en: 'Hoshigarasu', ja: '星鴉（ほしがらす）' }, mods: { xp: 1.04, pickup: 1.03 } },
+  { id: 'ruribitaki', series: 'kaf_singing', name: { zh: '琉璃鹟', en: 'Ruribitaki', ja: '瑠璃鶲（るりびたき）' }, color: '#5ec8d8', mods: { cd: 0.97, area: 1.01 } },
   {
     id: 'aogara', series: 'kaf_singing', name: { zh: '青雀', en: 'Aogara · Blue Sparrow', ja: '青雀（あおがら）' },
     accent: 'sparrow_wing', color: '#5ad0ff',
     note: {
-      zh: '化歩的觉醒形态——蓝青羽织配背上的青雀翼羽，袖口一线白。<br>攻击 <b>+10%</b>、范围 <b>+6%</b>，最大生命 <b>−5%</b>。',
-      en: 'Kafu\'s awakened form — a deep-blue haori with sparrow wing feathers at the back and a white cuff line.<br>Atk <b>+10%</b>, area <b>+6%</b>, max HP <b>−5%</b>.',
-      ja: '化歩の覚醒形態——藍青の羽織に背の青雀の翼羽、袖口に白の一線。<br>攻撃 <b>+10%</b>、範囲 <b>+6%</b>、最大生命 <b>−5%</b>。',
+      zh: '化歩的觉醒形态——蓝青羽织配背上的青雀翼羽，袖口一线白。',
+      en: 'Kafu\'s awakened form — a deep-blue haori with sparrow wing feathers at the back and a white cuff line.',
+      ja: '化歩の覚醒形態——藍青の羽織に背の青雀の翼羽、袖口に白の一線。',
     },
-    mods: { playerDmg: 1.10, area: 1.06, hp: 0.95 },
+    mods: { playerDmg: 1.03, area: 1.02 },
   },
-  { id: 'hayabusa', series: 'kaf_singing', name: { zh: '隼', en: 'Hayabusa', ja: '隼（はやぶさ）' }, accent: 'bird_tail', color: '#cfe8ff' },
+  { id: 'hayabusa', series: 'kaf_singing', name: { zh: '隼', en: 'Hayabusa', ja: '隼（はやぶさ）' }, accent: 'bird_tail', color: '#cfe8ff', mods: { speed: 1.04, cd: 0.99 } },
   {
     id: 'kanaria', series: 'kaf_singing', name: { zh: '金丝雀', en: 'Kanaria', ja: '金糸雀（かなりあ）' }, color: '#ffd98a',
     note: {
@@ -201,14 +203,15 @@ KUP.FORMS = [
       en: 'The costume shifts between **chartreuse and navy** (per official records).',
       ja: '衣装の色は**黄緑↔蔵青**の間で変化する（公式の記載）。',
     },
+    mods: { xp: 1.03, pickup: 1.05 },
   },
   // { id: 'aogara_kuro', series: 'kaf_singing', name: { zh: '青雀黑', en: 'Aogara Kuro', ja: '青雀黑（あおがら くろ）' }, accent: 'sparrow_wing', color: '#2f4f6f' },
   // { id: 'kinkei', series: 'kaf_singing', name: { zh: '金鸡', en: 'Kinkei', ja: '金鶏（きんけい）' }, color: '#ffb25a' },
-  { id: 'tsubame', series: 'kaf_singing', name: { zh: '燕', en: 'Tsubame', ja: '燕（つばめ）' }, accent: 'bird_tail', color: '#8fb8ff' },
+  { id: 'tsubame', series: 'kaf_singing', name: { zh: '燕', en: 'Tsubame', ja: '燕（つばめ）' }, accent: 'bird_tail', color: '#8fb8ff', mods: { speed: 1.03, cd: 0.98 } },
   // { id: 'shamo', series: 'kaf_singing', name: { zh: '军鸡', en: 'Shamo', ja: '軍鶏（しゃも）' }, color: '#e04a3f' },
-  { id: 'kiji', series: 'kaf_singing', name: { zh: '雉', en: 'Kiji', ja: '雉（きじ）' }, accent: 'bird_tail', color: '#ff8a4e' },
-  { id: 'raichou', series: 'kaf_singing', name: { zh: '雷鸟', en: 'Raichō', ja: '雷鳥（らいちょう）' }, color: '#e8ecf6' },
-  { id: 'saichou', series: 'kaf_singing', name: { zh: '犀鸟', en: 'Saichō', ja: '犀鳥（さいちょう）' }, color: '#c9a6ff' },
+  { id: 'kiji', series: 'kaf_singing', name: { zh: '雉', en: 'Kiji', ja: '雉（きじ）' }, accent: 'bird_tail', color: '#ff8a4e', mods: { playerDmg: 1.02, speed: 1.02 } },
+  { id: 'raichou', series: 'kaf_singing', name: { zh: '雷鸟', en: 'Raichō', ja: '雷鳥（らいちょう）' }, color: '#e8ecf6', mods: { cd: 0.97, area: 1.02 } },
+  { id: 'saichou', series: 'kaf_singing', name: { zh: '犀鸟', en: 'Saichō', ja: '犀鳥（さいちょう）' }, color: '#c9a6ff', mods: { hp: 1.05, playerDmg: 1.01 } },
   // { id: 'ougibato', series: 'kaf_singing', name: { zh: '扇鸠', en: 'Ōgibato', ja: '扇鳩（おうぎばと）' }, color: '#ffd98a' },
   {
     id: 'fukurou', series: 'kaf_singing', name: { zh: '枭', en: 'Fukurō', ja: '梟（ふくろう）' }, color: '#b58cff',
@@ -217,6 +220,7 @@ KUP.FORMS = [
       en: 'The official store calls this Kafu\'s **latest costume** (from 2026-03); its hood design spawned its own merchandise.',
       ja: '公式商品ページは「花譜の**最新衣装**」とする（2026-03 より）。フードデザインの派生グッズもある。',
     },
+    mods: { pickup: 1.05, xp: 1.04 },
   },
   /* 理芽（狸眼）：Metamorphose 系列（官方「歴代衣装」商品名 ＋ UBIK 官方帖） */
   { id: 'nightwings', series: 'rim_meta', name: { zh: 'Nightwings', en: 'Nightwings', ja: '1st Metamorphose「Nightwings」' } },
@@ -224,15 +228,15 @@ KUP.FORMS = [
     id: 'childhoods_end', series: 'rim_meta', name: { zh: 'Childhood\'s End', en: "Childhood's End", ja: '「Childhood\'s End」' },
     accent: 'star_ring', color: '#e8ecf6',
     note: {
-      zh: '又名「幼年期の終わり」——官方 VR 曲目表 `変身／幼年期の終わり`＝Rime\'s Awakening。拾取范围 <b>+25%</b>、经验 <b>+10%</b>、移动速度 <b>+5%</b>，最大生命 <b>−8%</b>。',
-      en: 'Also known as 幼年期の終わり — the official VR tracklist maps it to Rime\'s Awakening.Pickup <b>+25%</b>, XP <b>+10%</b>, move speed <b>+5%</b>, max HP <b>−8%</b>.',
-      ja: '別名「幼年期の終わり」——公式 VR 曲目表の `変身／幼年期の終わり`＝Rime\'s Awakening。取得 <b>+25%</b>、経験 <b>+10%</b>、移動速度 <b>+5%</b>、最大生命 <b>−8%</b>。',
+      zh: '又名「幼年期の終わり」——官方 VR 曲目表 `変身／幼年期の終わり`＝Rime\'s Awakening。',
+      en: 'Also known as 幼年期の終わり — the official VR tracklist maps it to Rime\'s Awakening.',
+      ja: '別名「幼年期の終わり」——公式 VR 曲目表の `変身／幼年期の終わり`＝Rime\'s Awakening。',
     },
-    mods: { pickup: 1.25, xp: 1.10, speed: 1.05, hp: 0.92 },
+    mods: { pickup: 1.05, xp: 1.05 },
   },
-  { id: 'cosmic_puppets', series: 'rim_meta', name: { zh: 'The Cosmic Puppets', en: 'The Cosmic Puppets', ja: '2nd Metamorphose「The Cosmic Puppets」' }, color: '#b9c2d9' },
-  { id: 'crack_in_space', series: 'rim_meta', name: { zh: 'The Crack in Space', en: 'The Crack in Space', ja: '3rd Metamorphose「The Crack in Space」' }, color: '#d6c8ff' },
-  { id: 'counter_clock', series: 'rim_meta', name: { zh: 'Counter-Clock World', en: 'Counter-Clock World', ja: 'Special Metamorphose「Counter-Clock World」' }, accent: 'star_ring', color: '#cfe0ff' },
+  { id: 'cosmic_puppets', series: 'rim_meta', name: { zh: 'The Cosmic Puppets', en: 'The Cosmic Puppets', ja: '2nd Metamorphose「The Cosmic Puppets」' }, color: '#b9c2d9', mods: { xp: 1.04, area: 1.02 } },
+  { id: 'crack_in_space', series: 'rim_meta', name: { zh: 'The Crack in Space', en: 'The Crack in Space', ja: '3rd Metamorphose「The Crack in Space」' }, color: '#d6c8ff', mods: { cd: 0.97, area: 1.02 } },
+  { id: 'counter_clock', series: 'rim_meta', name: { zh: 'Counter-Clock World', en: 'Counter-Clock World', ja: 'Special Metamorphose「Counter-Clock World」' }, accent: 'star_ring', color: '#cfe0ff', mods: { cd: 0.98, xp: 1.04 } },
   {
     id: 'dr_futurity', series: 'rim_meta', name: { zh: 'Dr.Futurity', en: 'Dr.Futurity', ja: '4th Metamorphose「Dr.Futurity」' }, color: '#cfd8e8',
     note: {
@@ -241,6 +245,7 @@ KUP.FORMS = [
       en: 'The 4th entry in the official "successive costumes" goods line.',
       ja: '公式「歴代衣装」商品シリーズの 4 件目',
     },
+    mods: { hp: 1.04, cd: 0.98 },
   },
   {
     id: 'ubik', series: 'rim_meta', name: { zh: 'UBIK', en: 'UBIK', ja: 'UBIK' }, accent: 'star_ring', color: '#f2f0ff',
@@ -249,22 +254,23 @@ KUP.FORMS = [
       en: 'Announced first-hand (Rime\'s official YouTube community post): "理芽の新衣装「UBIK」が公開されました。"; the official store lists it as the **4th ONE-MAN LIVE "NEUROMANCE Ⅳ"** costume.',
       ja: '公式の一次発信（理芽 公式 YouTube コミュニティ投稿）：「理芽の新衣装「UBIK」が公開されました。」。公式商品ページでは **4th ONE-MAN LIVE「NEUROMANCE Ⅳ」新衣装**。',
     },
+    mods: { speed: 1.03, cd: 0.98 },
   },
   /* 春猿火（派流）：纏 系列 ＋ 2025-2026 新衣装 銀兜／金兜 */
   { id: 'matoi_tanchou', series: 'haru_matoi', name: { zh: '纏 其ノ壱 -丹頂-', en: 'Matōi I · Tanchō', ja: '纏 其ノ壱 -丹頂-（たんちょう）' } },
-  { id: 'matoi_asagi', series: 'haru_matoi', name: { zh: '纏 其ノ弐 -浅黄-', en: 'Matōi II · Asagi', ja: '纏 其ノ弐 -浅黄-（あさぎ）' }, color: '#5ec8d8' },
+  { id: 'matoi_asagi', series: 'haru_matoi', name: { zh: '纏 其ノ弐 -浅黄-', en: 'Matōi II · Asagi', ja: '纏 其ノ弐 -浅黄-（あさぎ）' }, color: '#5ec8d8', mods: { speed: 1.04, pickup: 1.02 } },
   {
     id: 'kumonryu', series: 'haru_matoi', name: { zh: '纏 其ノ特 -九紋龍-', en: 'Matōi · Kumonryū', ja: '纏 其ノ特 -九紋龍-（くもんりゅう）' },
     note: {
-      zh: '派流的觉醒形态——黑地的长着「纏」束以红金龙纹之带，肩头一片鲤鳞。<br>最大生命 <b>+15%</b>、范围 <b>+8%</b>，移动速度 <b>−5%</b>。',
-      en: 'Haru\'s awakened form — a black "matōi" robe tied with a crimson-and-gold dragon sash, koi scales at the shoulder.<br>Max HP <b>+15%</b>, area <b>+8%</b>, move speed <b>−5%</b>.',
-      ja: '派流の覚醒形態——黒地の「纏」に紅金の龍紋帯、肩に鯉の鱗。<br>最大生命 <b>+15%</b>、範囲 <b>+8%</b>、移動速度 <b>−5%</b>。',
+      zh: '派流的觉醒形态——黑地的长着「纏」束以红金龙纹之带，肩头一片鲤鳞。',
+      en: 'Haru\'s awakened form — a black "matōi" robe tied with a crimson-and-gold dragon sash, koi scales at the shoulder.',
+      ja: '派流の覚醒形態——黒地の「纏」に紅金の龍紋帯、肩に鯉の鱗。',
     },
-    mods: { hp: 1.15, area: 1.08, speed: 0.95 },
+    mods: { hp: 1.05, area: 1.02 },
   },
-  { id: 'matoi_ochiba', series: 'haru_matoi', name: { zh: '纏 其ノ参 -落葉-', en: 'Matōi III · Ochiba', ja: '纏 其ノ参 -落葉-（おちば）' }, accent: 'koi_scales' },
-  { id: 'matoi_showa', series: 'haru_matoi', name: { zh: '纏 其ノ肆 -昭和三色-', en: 'Matōi IV · Shōwa Sanshoku', ja: '纏 其ノ肆 -昭和三色-（しょうわさんしょく）' }, accent: 'koi_scales', color: '#f2c14e' },
-  { id: 'matoi_goshiki', series: 'haru_matoi', name: { zh: '纏 其ノ特 -五色-', en: 'Matōi · Goshiki', ja: '纏 其ノ特 -五色-（ごしき）' }, color: '#e04a3f' },
+  { id: 'matoi_ochiba', series: 'haru_matoi', name: { zh: '纏 其ノ参 -落葉-', en: 'Matōi III · Ochiba', ja: '纏 其ノ参 -落葉-（おちば）' }, accent: 'koi_scales', mods: { pickup: 1.05, xp: 1.03 } },
+  { id: 'matoi_showa', series: 'haru_matoi', name: { zh: '纏 其ノ肆 -昭和三色-', en: 'Matōi IV · Shōwa Sanshoku', ja: '纏 其ノ肆 -昭和三色-（しょうわさんしょく）' }, accent: 'koi_scales', color: '#f2c14e', mods: { xp: 1.05, hp: 1.02 } },
+  { id: 'matoi_goshiki', series: 'haru_matoi', name: { zh: '纏 其ノ特 -五色-', en: 'Matōi · Goshiki', ja: '纏 其ノ特 -五色-（ごしき）' }, color: '#e04a3f', mods: { area: 1.04, playerDmg: 1.01 } },
   {
     id: 'ginkabuto', series: 'haru_matoi', name: { zh: '银兜', en: 'Ginkabuto', ja: '銀兜（ぎんかぶと）' }, accent: 'koi_scales', color: '#cfe0ff',
     note: {
@@ -272,21 +278,22 @@ KUP.FORMS = [
       en: 'A 2025–2026 costume — the official store\'s wording is "Haru\'s **costume 銀兜**" (with 金兜 as its sibling).',
       ja: '2025–2026 の新衣装——公式商品ページ原文「春猿火の**衣装「銀兜」**」（同系列に「金兜」）。',
     },
+    mods: { hp: 1.04, cd: 0.98 },
   },
-  { id: 'kinakabuto', series: 'haru_matoi', name: { zh: '金兜', en: 'Kinakabuto', ja: '金兜（きんかぶと）' }, accent: 'koi_scales', color: '#ffd98a' },
+  { id: 'kinakabuto', series: 'haru_matoi', name: { zh: '金兜', en: 'Kinakabuto', ja: '金兜（きんかぶと）' }, accent: 'koi_scales', color: '#ffd98a', mods: { playerDmg: 1.02, hp: 1.03 } },
   /* ヰ世界情緒（世界）：普遍体・変異体（花名） */
   { id: 'anemone_1', series: 'sekai_anima', name: { zh: '普遍体 AnemoneⅠ', en: 'Universal Anemone I', ja: '普遍体 AnemoneⅠ' }, color: '#efe0ff' },
-  { id: 'nemophira_1', series: 'sekai_anima', name: { zh: '普遍体 NemophiraⅠ', en: 'Universal Nemophira I', ja: '普遍体 NemophiraⅠ' }, accent: 'flower_veil', color: '#9f7ad6' },
+  { id: 'nemophira_1', series: 'sekai_anima', name: { zh: '普遍体 NemophiraⅠ', en: 'Universal Nemophira I', ja: '普遍体 NemophiraⅠ' }, accent: 'flower_veil', color: '#9f7ad6', mods: { area: 1.04 } },
   {
     id: 'heliotrope', series: 'sekai_anima', name: { zh: '変異体 Heliotrope', en: 'Variant Heliotrope', ja: '変異体：Heliotrope（ヘリオトロープ）' },
     note: {
-      zh: '世界的觉醒形态——淡紫的汉宁帽缀一圈天芥菜花冠，胸前一枚花饰。<br>冷却 <b>−10%</b>、范围 <b>+8%</b>，最大生命 <b>−5%</b>。',
-      en: 'Sekai\'s awakened form — a pale violet hennin crowned with heliotrope blossoms, a single flower at the breast.<br>Cooldown <b>−10%</b>, area <b>+8%</b>, max HP <b>−5%</b>.',
-      ja: '世界の覚醒形態——淡紫のヘニン帽にヘリオトロープの花冠、胸元に花飾り。<br>クールタイム <b>−10%</b>、範囲 <b>+8%</b>、最大生命 <b>−5%</b>。',
+      zh: '世界的觉醒形态——淡紫的汉宁帽缀一圈天芥菜花冠，胸前一枚花饰。',
+      en: 'Sekai\'s awakened form — a pale violet hennin crowned with heliotrope blossoms, a single flower at the breast.',
+      ja: '世界の覚醒形態——淡紫のヘニン帽にヘリオトロープの花冠、胸元に花飾り。',
     },
-    mods: { cd: 0.90, area: 1.08, hp: 0.95 },
+    mods: { cd: 0.97, area: 1.02 },
   },
-  { id: 'calla_lily', series: 'sekai_anima', name: { zh: '変異体 Calla lily', en: 'Variant Calla Lily', ja: '変異体：Calla lily（カラーリリー）' }, color: '#f6f1ff' },
+  { id: 'calla_lily', series: 'sekai_anima', name: { zh: '変異体 Calla lily', en: 'Variant Calla Lily', ja: '変異体：Calla lily（カラーリリー）' }, color: '#f6f1ff', mods: { pickup: 1.04, xp: 1.04 } },
   {
     id: 'pc_1', series: 'sekai_anima', name: { zh: '「parallel canvas」衣装', en: '"parallel canvas" costume', ja: '「parallel canvas」での衣装' },
     accent: 'flower_veil', color: '#b9c2d9',
@@ -295,20 +302,21 @@ KUP.FORMS = [
       en: 'The source marks this one "**name unknown**" — we do not invent a name, only record which show it appeared in.',
       ja: '出典はこの項目に「**名称不明**」と明記——本作は名前を**作らない**。どの公演の衣装かだけを残す。',
     },
+    mods: { speed: 1.03, area: 1.02 },
   },
   /* 幸祜（此処）：type- 系列（恒星名） */
   { id: 'bellatrix', series: 'koko_type', name: { zh: 'type-1st Bellatrix', en: 'type-1st Bellatrix', ja: 'type-1st Bellatrix' }, color: '#cfe8ff' },
   {
     id: 'alnair', series: 'koko_type', name: { zh: 'type-real Alnair', en: 'type-real Alnair', ja: 'type-real Alnair（アルナイル）' },
     note: {
-      zh: '此処的觉醒形态——蓝白星光外套配星冕，衣摆拖出一道星屑。<br>移动速度 <b>+12%</b>、攻击 <b>+6%</b>，冷却 <b>+4%</b>。',
-      en: 'Koko\'s awakened form — a blue-white starlight coat with a star tiara, a trail of stardust at the hem.<br>Move speed <b>+12%</b>, Atk <b>+6%</b>, cooldown <b>+4%</b>.',
-      ja: '此処の覚醒形態——藍白のスターライトコートに星のティアラ、裾に星屑の尾。<br>移動速度 <b>+12%</b>、攻撃 <b>+6%</b>、クールタイム <b>+4%</b>。',
+      zh: '此処的觉醒形态——蓝白星光外套配星冕，衣摆拖出一道星屑。',
+      en: 'Koko\'s awakened form — a blue-white starlight coat with a star tiara, a trail of stardust at the hem.',
+      ja: '此処の覚醒形態——藍白のスターライトコートに星のティアラ、裾に星屑の尾。',
     },
-    mods: { speed: 1.12, playerDmg: 1.06, cd: 1.04 },
+    mods: { speed: 1.03, playerDmg: 1.02 },
   },
-  { id: 'zeta_capricorni', series: 'koko_type', name: { zh: 'type-2nd ζ Capricorni', en: 'type-2nd ζ Capricorni', ja: 'type-2nd ζ Capricorni' }, accent: 'star_orbit', color: '#7fb6ff' },
-  { id: 'betelgeuse', series: 'koko_type', name: { zh: 'type-real Betelgeuse', en: 'type-real Betelgeuse', ja: 'type-real Betelgeuse' }, accent: 'star_orbit', color: '#ff9f8a' },
+  { id: 'zeta_capricorni', series: 'koko_type', name: { zh: 'type-2nd ζ Capricorni', en: 'type-2nd ζ Capricorni', ja: 'type-2nd ζ Capricorni' }, accent: 'star_orbit', color: '#7fb6ff', mods: { cd: 0.97, speed: 1.02 } },
+  { id: 'betelgeuse', series: 'koko_type', name: { zh: 'type-real Betelgeuse', en: 'type-real Betelgeuse', ja: 'type-real Betelgeuse' }, accent: 'star_orbit', color: '#ff9f8a', mods: { playerDmg: 1.03, hp: 1.02 } },
   // /* 五人共用（人类 2026-10-17：花魁鳥・八咫烏算共用） */
   // {
   //   id: 'ouranchou_rev', series: 'vwp_shared', name: { zh: '花魁鳥 Revolutions', en: 'Oiran-chō Revolutions', ja: '花魁鳥 Revolutions（えとぴりか れぼりゅーしょんず）' },
@@ -322,19 +330,19 @@ KUP.FORMS = [
   {
     id: 'yatagarasu', series: 'vwp_shared', name: { zh: '八咫烏', en: 'Yatagarasu', ja: '八咫烏（やたがらす）' }, accent: 'crest', color: '#d94fb0',
     note: {
-      zh: '五人共用的形态（2024「現象Ⅱ -魔女拡成-」，官方商品为五人各出一件）。<br>攻击 <b>+8%</b>、范围 <b>+10%</b>，最大生命 <b>−8%</b>。',
-      en: 'The shared form from 2024\'s "現象Ⅱ -魔女拡成-" (official goods list one per member).<br>Atk <b>+8%</b>, area <b>+10%</b>, max HP <b>−8%</b>.',
-      ja: '五人共用の形態（2024「現象Ⅱ -魔女拡成-」。公式商品は五人分が各一件）。<br>攻撃 <b>+8%</b>、範囲 <b>+10%</b>、最大生命 <b>−8%</b>。',
+      zh: '五人共用的形态（2024「現象Ⅱ -魔女拡成-」，官方商品为五人各出一件）。',
+      en: 'The shared form from 2024\'s "現象Ⅱ -魔女拡成-" (official goods list one per member).',
+      ja: '五人共用の形態（2024「現象Ⅱ -魔女拡成-」。公式商品は五人分が各一件）。',
     },
-    mods: { playerDmg: 1.08, area: 1.10, hp: 0.92 },
+    mods: { playerDmg: 1.03, area: 1.02 },
   },
   /* ---- 可招募角色（魔女候補）与同伴：皮肤暂定「黑」「白」 ---- */
   {
     id: 'kuro', kinds: ['recruit'], accent: 'veil',
     name: { zh: '黑', en: 'Black', ja: '黒' },
     label: { zh: '皮肤「黑」（暂定）', en: 'Skin "Black" (tentative)', ja: '皮膚「黒」（暫定）' },
-    desc: { zh: '夜之装束——歌声更加锐利。<br>攻击 +6%。', en: 'Night vestment — a sharper song.<br>Atk +6%.', ja: '夜の装い——歌はより鋭く。<br>攻撃 +6%。' },
-    mods: { playerDmg: 1.06 },
+    desc: { zh: '夜之装束——歌声更加锐利。', en: 'Night vestment — a sharper song.', ja: '夜の装い——歌はより鋭く。' },
+    mods: { playerDmg: 1.03 },
     color: '#4a4a63', color2: '#12121c',
     src: { zh: '本作暂定皮肤（黑／白）', en: 'Tentative skin (Black/White) original to this work', ja: '本作の暫定皮膚（黒／白）' },
   },
@@ -342,8 +350,7 @@ KUP.FORMS = [
     id: 'shiro', kinds: ['recruit'], accent: 'halo',
     name: { zh: '白', en: 'White', ja: '白' },
     label: { zh: '皮肤「白」（暂定）', en: 'Skin "White" (tentative)', ja: '皮膚「白」（暫定）' },
-    desc: { zh: '昼之装束——歌声更易牵引フラグメント。<br>拾取范围 +15%。', en: 'Day vestment — a song that gathers fragments.<br>Pickup +15%.', ja: '昼の装い——歌がフラグメントを引き寄せる。<br>取得 +15%。' },
-    mods: { pickup: 1.15 },
+    desc: { zh: '昼之装束——歌声更易牵引フラグメント。', en: 'Day vestment — a song that gathers fragments.', ja: '昼の装い——歌がフラグメントを引き寄せる。' },
     color: '#f2f0ff', color2: '#a9b6d8',
     src: { zh: '本作暂定皮肤（黑／白）', en: 'Tentative skin (Black/White) original to this work', ja: '本作の暫定皮膚（黒／白）' },
   },
@@ -353,11 +360,11 @@ KUP.FORMS = [
   //   name: { zh: 'JK制服・夏服', en: 'JK Uniform · Summer', ja: 'JK制服・夏服' },
   //   label: { zh: 'JK制服（夏服）—— 白襟水手服', en: 'JK uniform (summer) — white sailor collar', ja: 'JK制服（夏服）——白襟セーラー' },
   //   desc: {
-  //     zh: '復興課的夏季制服——白襟水手服。<br>拾取范围 <b>+10%</b>、移动速度 <b>+5%</b>。',
-  //     en: 'The Division\'s summer uniform — a white sailor collar.<br>Pickup <b>+10%</b>, move speed <b>+5%</b>.',
-  //     ja: '復興課の夏制服——白襟セーラー。<br>取得 <b>+10%</b>、移動速度 <b>+5%</b>。',
+  //     zh: '復興課的夏季制服——白襟水手服。<br>拾取范围 <b>+4%</b>、移动速度 <b>+3%</b>。',
+  //     en: 'The Division\'s summer uniform — a white sailor collar.<br>Pickup <b>+4%</b>, move speed <b>+3%</b>.',
+  //     ja: '復興課の夏制服——白襟セーラー。<br>取得 <b>+4%</b>、移動速度 <b>+3%</b>。',
   //   },
-  //   mods: { pickup: 1.1, speed: 1.05 },
+  //   mods: { pickup: 1.04, speed: 1.03 },
   //   color: '#eaf4ff', color2: '#2f5fa8',
   //   src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
   // },
@@ -366,11 +373,11 @@ KUP.FORMS = [
   //   name: { zh: 'JK制服・冬服', en: 'JK Uniform · Winter', ja: 'JK制服・冬服' },
   //   label: { zh: 'JK制服（冬服）—— 深蓝西装外套', en: 'JK uniform (winter) — navy blazer', ja: 'JK制服（冬服）——紺ブレザー' },
   //   desc: {
-  //     zh: '復興課的冬季制服——深蓝西装外套。<br>最大生命 <b>+6%</b>、全部冷却 <b>−3%</b>。',
-  //     en: 'The Division\'s winter uniform — a navy blazer.<br>Max HP <b>+6%</b>, all cooldowns <b>−3%</b>.',
-  //     ja: '復興課の冬制服——紺ブレザー。<br>最大生命 <b>+6%</b>、全クールダウン <b>−3%</b>。',
+  //     zh: '復興課的冬季制服——深蓝西装外套。<br>最大生命 <b>+4%</b>、全部冷却 <b>−2%</b>。',
+  //     en: 'The Division\'s winter uniform — a navy blazer.<br>Max HP <b>+4%</b>, all cooldowns <b>−2%</b>.',
+  //     ja: '復興課の冬制服——紺ブレザー。<br>最大生命 <b>+4%</b>、全クールダウン <b>−2%</b>。',
   //   },
-  //   mods: { hp: 1.06, cd: 0.97 },
+  //   mods: { hp: 1.04, cd: 0.98 },
   //   color: '#f6f1e6', color2: '#1d2a52',
   //   src: { zh: '本作设定（JK 制服；后续每位同伴分别定制）', en: 'Original to this work (JK uniform; per-companion designs later)', ja: '本作設定（JK制服。後日、同行ごとに個別デザイン）' },
   // },
@@ -409,6 +416,8 @@ KUP.NO_FORM = {
   label: { zh: '無皮膚', en: 'No skin', ja: '皮膚なし' },
   desc: { zh: '', en: '', ja: '' },
 };
+/* 非初始形态的单个属性增益上限（v0.21.5：人类要求「5% 以下」） */
+KUP.FORM_BONUS_MAX = 0.05;
 KUP.FORM = id => (id === 'none' ? KUP.NO_FORM : (KUP.FORMS.find(f => f.id === id) || null));
 /* 角色的默认形态（v0.18.2）：魔女候補＝白；其余＝该角色系列的第一件形态 */
 KUP.defaultForm = charId => {

@@ -52,7 +52,7 @@ window.KUP = window.KUP || {};
         'area-cards', 'area-detail', 'fukkou-fill', 'fukkou-label',
         'ult-wrap', 'ult-fill', 'ult-label', 'win-sub',
         'companion-strip', 'companion-detail', 'companion-form-wrap', 'companion-form-strip',
-        'companion-form-detail', 'form-strip', 'form-detail', 'form-title', 'form-chips', 'hud-companion', 'companion-form-title',
+        'companion-form-detail', 'companion-form-bonus', 'form-strip', 'form-detail', 'form-bonus', 'form-title', 'form-chips', 'hud-companion', 'companion-form-title',
         'shop-list', 'shop-tickets', 'shop-cash', 'btn-exchange', 'fukkou-menu-tickets',
         'menu-slot-line', 'slot-list', 'slot-warn', 'slot-io-text', 'slot-io-msg',
         'order-best-line', 'hud-wave', 'hud-space', 'space-rules'];
@@ -851,6 +851,21 @@ window.KUP = window.KUP || {};
       }
       this.selectCompanionForm(this.selectedCompanionForm);
     },
+    /* v0.21.5：形态增益行——数字**只**来自数据层 `form.mods`，界面不再写死
+     * （人类：初始形态外每个形态给 5% 以下的小幅增益）。 */
+    formBonusLine(f) {
+      const mods = (f && f.mods) || {};
+      const keys = Object.keys(mods);
+      if (!keys.length) return KUP.I18N.t('form.bonus.none');
+      const order = ['playerDmg', 'dmg', 'area', 'cd', 'hp', 'speed', 'pickup', 'xp'];
+      keys.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+      const parts = keys.map(k => {
+        const pct = Math.round(Math.abs(mods[k] - 1) * 100);
+        const sign = (k === 'cd') ? '−' : '+';
+        return KUP.I18N.t('form.bonus.item', { k: KUP.I18N.t('form.stat.' + k), v: sign + pct + '%' });
+      });
+      return '◆ ' + KUP.I18N.t('form.bonus') + ' · ' + parts.join(' · ');
+    },
     selectCompanionForm(id) {
       this.selectedCompanionForm = id || 'none';
       KUP.META.setCompanionForm(this.selectedCompanionForm);
@@ -859,6 +874,7 @@ window.KUP = window.KUP || {};
       const f = KUP.FORM(this.selectedCompanionForm) || KUP.NO_FORM;
       /* 同伴皮肤的出处行不再显示（同 selectForm，见该处说明） */
       this.els['companion-form-detail'].innerHTML = KUP.I18N.tv(f.desc);
+      if (this.els['companion-form-bonus']) this.els['companion-form-bonus'].textContent = this.formBonusLine(f);
     },
     /* 皮肤（形態）选择条 —— **同一屏**内按系列切换 + 横向滚动。
      * v0.13.5：全量形态有 45+ 条（花譜 17／狸眼 7／派流 8／世界 5／此処 4／共用 3／自创 1），
@@ -947,6 +963,7 @@ window.KUP = window.KUP || {};
        * this.els['form-detail'].innerHTML = KUP.I18N.tv(f.desc) + '<br><span class="area-src">' + (f.src ? KUP.I18N.tv(f.src) : '') + '</span>';
        */
       this.els['form-detail'].innerHTML = KUP.I18N.tv(f.desc);
+      if (this.els['form-bonus']) this.els['form-bonus'].textContent = this.formBonusLine(f);
     },
     selectChar(id) {
       /* 未招募的角色不可选用 */

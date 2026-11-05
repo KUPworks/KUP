@@ -133,6 +133,8 @@ html[lang="ja"] .logo-jp { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic Pr
 .char-weapon { font-size: 11px; color: #8fd0ff; margin-top: 6px; }
 #char-detail { min-height: 52px; font-size: 13px; color: #c9c2ee; line-height: 1.9; margin-top: 4px; }
 #char-detail .detail-weapon { color: #8fd0ff; }
+/* v0.21.5：形态增益行（数字由数据层的 form.mods 生成；单独一行，不受详情行的行数钳制影响） */
+.pick-bonus { font-size: 13px; font-weight: 700; color: #ffe08a; line-height: 1.6; margin-top: 2px; }
 
 /* ============ HUD ============ */
 #hud { position: absolute; inset: 0; pointer-events: none; z-index: 30; }

@@ -16,6 +16,9 @@ tmp/
 # --- PDF 转出的页面图片：可由 pdftoppm 随时重建，不入库 ---
 docs/lore/research/pdfpages/
 
+# --- Playwright MCP 的页面快照/控制台转储（本机调试产物，随时重建）---
+.playwright-mcp/
+
 # --- 兜底：任何位置的截图与临时文件 ---
 screenshot-*.png
 *.tmp

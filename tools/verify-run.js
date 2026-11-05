@@ -635,20 +635,21 @@ check('形態按角色类型匹配', KUP.formFits(KUP.FORM('ouranchou'), 'witch'
   KUP.formFits(KUP.FORM('kuro'), 'recruit') && !KUP.formFits(KUP.FORM('kuro'), 'companion'));
 check('角色类型判定', KUP.charKind(KUP.CHAR('kaf')) === 'witch' && KUP.charKind(KUP.CHAR('aru')) === 'recruit');
 
-// 11d. 形態/皮肤接线到 Player 数值
-const pBase = new KUP.Player(KUP.CHAR('kaf'), KUP.modsFor('none'), {});
+// 11d. 形態/皮肤接线到 Player 数值（v0.21.5：初始形态无数值，其余形态 ≤5% 小幅增益）
+const pBase = new KUP.Player(KUP.CHAR('kaf'), KUP.modsFor('none'), {});   // 無皮膚＝基准
 const pOiran = new KUP.Player(KUP.CHAR('kaf'), KUP.modsFor('none'), { form: KUP.FORM('ouranchou') });
-check('花魁鳥：范围 +15% / 生命 -8%',
-  Math.abs(pOiran.areaMult - pBase.areaMult * 1.15) < 1e-9 && pOiran.maxhp === Math.round(pBase.maxhp * 0.92));
+check('花魁鳥：范围 +4% / 冷却 -2%',
+  Math.abs(pOiran.areaMult - pBase.areaMult * 1.04) < 1e-9 && Math.abs(pOiran.cdMult - pBase.cdMult * 0.98) < 1e-9);
 const pWax = new KUP.Player(KUP.CHAR('kaf'), KUP.modsFor('none'), { form: KUP.FORM('himerenjaku') });
-check('姬連雀：速度 +12% / 拾取 +20%',
-  Math.abs(pWax.speed - pBase.speed * 1.12) < 1e-9 && Math.abs(pWax.pickup - pBase.pickup * 1.2) < 1e-9);
+check('姬連雀：速度 +3% / 拾取 +4%',
+  Math.abs(pWax.speed - pBase.speed * 1.03) < 1e-9 && Math.abs(pWax.pickup - pBase.pickup * 1.04) < 1e-9);
 const pKuro = new KUP.Player(KUP.CHAR('aru'), KUP.modsFor('none'), { form: KUP.FORM('kuro') });
-const pAruBase = new KUP.Player(KUP.CHAR('aru'), KUP.modsFor('none'), { form: KUP.NO_FORM });
-check('招募角色皮肤「黑」：攻击 +6%（基线＝無皮膚）', Math.abs(pKuro.dmgMult - pAruBase.dmgMult * 1.06) < 1e-9);
+const pAruBase = new KUP.Player(KUP.CHAR('aru'), KUP.modsFor('none'), { form: KUP.FORM('shiro') }); // 初始形态
+check('招募角色：初始「白」无数值，「黑」攻击 +3%（基线＝白）',
+  Math.abs(pKuro.dmgMult - pAruBase.dmgMult * 1.03) < 1e-9);
 const pComp = new KUP.Player(KUP.CHAR('kaf'), KUP.modsFor('none'), { recruit: KUP.COMPANION('ciel'), perk: KUP.COMPANION('ciel').perk, recruitForm: KUP.FORM('shiro') });
-check('同伴 perk（拾取/经验）与皮肤「白」并入数值',
-  Math.abs(pComp.pickup - pBase.pickup * 1.2 * 1.15) < 1e-9 && Math.abs(pComp.xpMult - pBase.xpMult * 1.15) < 1e-9);
+check('同伴 perk（拾取 +20%／经验 +15%）与初始皮肤「白」（无数值）并入数值',
+  Math.abs(pComp.pickup - pBase.pickup * 1.2) < 1e-9 && Math.abs(pComp.xpMult - pBase.xpMult * 1.15) < 1e-9);
 check('形態调色板与轮廓配件齐备', pOiran.color === '#ff7ad9' && pOiran.form.accent === 'plume' && KUP.FORM('kuro').accent === 'veil');
 check('角色皮肤可覆盖调色板', new KUP.Player(KUP.CHAR('asu'), KUP.modsFor('none'), { form: KUP.FORM('shiro') }).color === '#f2f0ff');
 
@@ -2944,25 +2945,43 @@ check('stats 含 Boss 名与復活次数（v0.17：卵不再进图鉴）',
     (() => { const f = KUP.FORM('pc_1'); return !!f && f.name.zh.indexOf('parallel canvas') >= 0; })());
 }
 
-// 25r-3. 数值从简：只有覚醒／戦闘形態带数值，其余纯外观
+// 25r-3. 形态数值政策（v0.21.5）：初始形态无数值，其余每个形态 ≤5% 的小幅增益
 {
-  const withMods = KUP.FORMS.filter(f => f.kinds && f.kinds.indexOf('witch') >= 0)
-    .filter(f => f.mods && Object.keys(f.mods).length).map(f => f.id).sort();
-  const expect = ['aogara', 'alnair', 'childhoods_end', 'heliotrope', 'himerenjaku', 'kumonryu', 'ouranchou', 'yatagarasu'].sort();
-  check('带数值的魔女形态恰为「覚醒／戦闘形態」8 条（其余形态纯外观）',
-    withMods.join(',') === expect.join(','), withMods.join(','));
+  const MAX = 0.05;
+  const isInitial = f => KUP.CHARS.some(c => KUP.defaultForm(c.id) === f);
+  const badRange = [], missing = [], notBuff = [], initialWithMods = [];
+  for (const f of KUP.FORMS) {
+    const keys = Object.keys(f.mods || {});
+    if (isInitial(f)) { if (keys.length) initialWithMods.push(f.id); continue; }
+    if (!keys.length) { missing.push(f.id); continue; }
+    for (const k of keys) {
+      const v = f.mods[k];
+      if (Math.abs(v - 1) > MAX + 1e-9) badRange.push(f.id + '.' + k + '=' + v);
+      if (!(k === 'cd' ? v < 1 : v > 1)) notBuff.push(f.id + '.' + k);
+    }
+  }
+  check('初始形态一律不带数值（雏鸟／Nightwings／丹頂／AnemoneⅠ／Bellatrix／白）',
+    initialWithMods.length === 0 &&
+    ['hinadori', 'nightwings', 'matoi_tanchou', 'anemone_1', 'bellatrix', 'shiro']
+      .every(id => Object.keys(KUP.FORM(id).mods || {}).length === 0), initialWithMods.join(','));
+  check('初始形态外每个形态都带增益（不再有"纯外观"形态）',
+    missing.length === 0, '缺: ' + missing.join(','));
+  check('每个属性都在 ±5% 以内', badRange.length === 0, badRange.join(','));
+  check('每个属性方向都是增益（cd 更快／其余更高）', notBuff.length === 0, notBuff.join(','));
+  check('增益上限常量＝5%（KUP.FORM_BONUS_MAX）', KUP.FORM_BONUS_MAX === MAX);
   const probe = (char, form) => { const g = new KUP.Game(canvas); g.start({ char, area: 'area0', seed: 831, form }); return g.player; };
-  const baseK = probe('kaf', 'hinadori');   // 纯外观形态作基准（通常形態已取消）
+  const baseK = probe('kaf', 'hinadori');   // 初始形态作基准（通常形態已取消）
   check('花魁鳥 Revolutions 已注释保留（不生效、不可选）', !KUP.FORMS.some(f => f.id === 'ouranchou_rev') &&
     KUP.formsFor('witch', 'kaf').every(f => f.id !== 'ouranchou_rev'));
   const baseKo = probe('koko', 'bellatrix'), yata = probe('koko', 'yatagarasu');
-  check('八咫烏生效：攻击 ×1.08／范围 ×1.10',
-    Math.abs(yata.dmgMult - baseKo.dmgMult * 1.08) < 1e-6 && Math.abs(yata.areaMult - baseKo.areaMult * 1.10) < 1e-6);
+  check('八咫烏生效：攻击 +3%／范围 +2%',
+    Math.abs(yata.dmgMult - baseKo.dmgMult * 1.03) < 1e-6 && Math.abs(yata.areaMult - baseKo.areaMult * 1.02) < 1e-6);
   const baseH = probe('harusaruhi', 'matoi_tanchou'), kumo = probe('harusaruhi', 'kumonryu');
-  check('九紋龍生效：生命 ×1.15／范围 ×1.08', Math.abs(kumo.maxhp - Math.round(baseH.maxhp * 1.15)) <= 1);
-  const pure = probe('kaf', 'fukurou');
-  check('纯外观形态不改变任何数值（梟＝与基准形态同值）',
-    Math.abs(pure.dmgMult - baseK.dmgMult) < 1e-6 && pure.maxhp === baseK.maxhp && Math.abs(pure.areaMult - baseK.areaMult) < 1e-6);
+  check('九紋龍生效：生命 +5%／范围 +2%',
+    kumo.maxhp === Math.round(baseH.maxhp * 1.05) && Math.abs(kumo.areaMult - baseH.areaMult * 1.02) < 1e-6);
+  const fuk = probe('kaf', 'fukurou');
+  check('梟生效：拾取 +5%／经验 +4%',
+    Math.abs(fuk.pickup - baseK.pickup * 1.05) < 1e-9 && Math.abs(fuk.xpMult - baseK.xpMult * 1.04) < 1e-9);
   /* 专属绑定仍然成立 */
   check('专属形态对别的魔女之子仍不可用',
     !KUP.formFits(KUP.FORM('aogara'), 'witch', 'koko') && !KUP.formFits(KUP.FORM('ubik'), 'witch', 'kaf'));
