@@ -9,8 +9,6 @@
 > ⇒ 请把它当作**能跑的样品，而不是完成品**：功能会增删、平衡会重调、**旧存档可能失效**。
 > 已实现／待实现清单见 [DESIGN.md](DESIGN.md)（§0 版本史、§6.8 下一步方向）。
 
-![类型](https://img.shields.io/badge/genre-生存 roguelite-7a4dd8) ![引擎](https://img.shields.io/badge/engine-纯 HTML5 Canvas-4ee6ff) ![依赖](https://img.shields.io/badge/dependencies-零-5ad0a0) ![许可](https://img.shields.io/badge/license-MIT-4ee6ff)
-
 **文档导航**
 
 | 我想要… | 看 |
